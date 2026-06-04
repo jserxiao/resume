@@ -3,14 +3,21 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { PlusOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
+import { getDensity } from '@/utils/density';
 import SortableBlockCard from './SortableBlockCard';
 import './index.less';
 
+interface EditorCanvasProps {
+  mode?: 'edit' | 'preview';
+}
+
 /**
- * 编辑画布 —— 按布局分割的编辑区域
- * 支持从左侧拖入块模板、放置后显示删除按钮、块内字段可即时编辑
+ * 编辑画布 —— 按布局分割的编辑/预览区域
+ * mode='edit'  —— 支持拖入块模板、排序、删除、字段编辑
+ * mode='preview' —— 只读预览，隐藏所有编辑元素
  */
-export default function EditorCanvas() {
+export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
+  const isPreview = mode === 'preview';
   const { resume, blockTemplates, editor, addBlockToSlot, removeBlock, updateBlockField, selectBlock } = useResumeStore();
   const [dragOverSlot, setDragOverSlot] = useState<string | null>(null);
 
@@ -19,13 +26,7 @@ export default function EditorCanvas() {
   const { colorScheme, layout } = resume;
   const isDoubleLayout = layout.type === 'double' || layout.type === 'mixed';
 
-  // 密度对应的字号/行距
-  const densityStyles: Record<string, { fontSize: number; lineHeight: number; spacing: number }> = {
-    compact: { fontSize: 12, lineHeight: 1.4, spacing: 8 },
-    standard: { fontSize: 13, lineHeight: 1.5, spacing: 12 },
-    spacious: { fontSize: 14, lineHeight: 1.65, spacing: 16 },
-  };
-  const density = densityStyles[layout.density] || densityStyles.standard;
+  const density = getDensity(layout.density);
 
   const leftRatio = layout.columnRatio[0] / 100;
   const rightRatio = layout.columnRatio[1] / 100;
@@ -34,89 +35,128 @@ export default function EditorCanvas() {
   const leftBlocks = resume.blocks.filter((b) => b.column === 'left' && b.visible);
   const rightBlocks = resume.blocks.filter((b) => b.column === 'right' && b.visible);
 
+  // 页面样式 —— 编辑区和预览区完全共享
+  const pageStyle: React.CSSProperties = {
+    backgroundColor: colorScheme.background,
+    fontSize: density.fontSize,
+    lineHeight: density.lineHeight,
+    '--resume-primary': colorScheme.primary,
+    '--resume-secondary': colorScheme.secondary,
+    '--resume-text': colorScheme.textPrimary,
+    '--resume-text-secondary': colorScheme.textSecondary,
+    '--resume-text-muted': colorScheme.textMuted,
+    '--resume-accent': colorScheme.accent,
+    '--resume-block-bg': colorScheme.blockBackground,
+    '--resume-spacing': `${density.spacing}px`,
+  } as React.CSSProperties;
+
   return (
-    <div className="editor-canvas">
+    <div className={`editor-canvas ${isPreview ? 'preview-mode' : ''}`}>
       <div
         className="editor-canvas-page"
-        style={{
-          backgroundColor: colorScheme.background,
-          fontSize: density.fontSize,
-          lineHeight: density.lineHeight,
-          '--resume-primary': colorScheme.primary,
-          '--resume-secondary': colorScheme.secondary,
-          '--resume-text': colorScheme.textPrimary,
-          '--resume-text-secondary': colorScheme.textSecondary,
-          '--resume-text-muted': colorScheme.textMuted,
-          '--resume-accent': colorScheme.accent,
-          '--resume-block-bg': colorScheme.blockBackground,
-          '--resume-spacing': `${density.spacing}px`,
-        } as React.CSSProperties}
+        style={pageStyle}
       >
-        {/* 头部槽位 —— 可拖入块 */}
-        <HeaderSlot
-          blocks={headerBlocks}
-          blockTemplates={blockTemplates}
-          selectedBlockId={editor.selectedBlockId}
-          dragOverSlot={dragOverSlot}
-          setDragOverSlot={setDragOverSlot}
-          addBlockToSlot={addBlockToSlot}
-          removeBlock={removeBlock}
-          updateBlockField={updateBlockField}
-          selectBlock={selectBlock}
-          density={density}
-          colorScheme={colorScheme}
-        />
+        {/* 头部槽位 */}
+        {isPreview ? (
+          headerBlocks.length > 0 && (
+            <div className="editor-canvas-header-slot">
+              {headerBlocks.map((block) => {
+                const template = blockTemplates.find((t) => t.id === block.templateId);
+                return (
+                  <SortableBlockCard
+                    key={block.id}
+                    block={block}
+                    template={template}
+                    isSelected={false}
+                    onSelect={() => {}}
+                    density={density}
+                    colorScheme={colorScheme}
+                    mode="preview"
+                  />
+                );
+              })}
+            </div>
+          )
+        ) : (
+          <HeaderSlot
+            blocks={headerBlocks}
+            blockTemplates={blockTemplates}
+            selectedBlockId={editor.selectedBlockId}
+            dragOverSlot={dragOverSlot}
+            setDragOverSlot={setDragOverSlot}
+            addBlockToSlot={addBlockToSlot}
+            removeBlock={removeBlock}
+            updateBlockField={updateBlockField}
+            selectBlock={selectBlock}
+            density={density}
+            colorScheme={colorScheme}
+          />
+        )}
 
+        {/* 页面主体 */}
         {isDoubleLayout ? (
           <div className="editor-canvas-body double">
-            <ColumnSlot
-              id="left"
-              width={`${leftRatio * 100}%`}
-              blocks={leftBlocks}
-              blockTemplates={blockTemplates}
-              selectedBlockId={editor.selectedBlockId}
-              dragOverSlot={dragOverSlot}
-              setDragOverSlot={setDragOverSlot}
-              addBlockToSlot={addBlockToSlot}
-              removeBlock={removeBlock}
-              updateBlockField={updateBlockField}
-              selectBlock={selectBlock}
-              density={density}
-              colorScheme={colorScheme}
-            />
-            <ColumnSlot
-              id="right"
-              width={`${rightRatio * 100}%`}
-              blocks={rightBlocks}
-              blockTemplates={blockTemplates}
-              selectedBlockId={editor.selectedBlockId}
-              dragOverSlot={dragOverSlot}
-              setDragOverSlot={setDragOverSlot}
-              addBlockToSlot={addBlockToSlot}
-              removeBlock={removeBlock}
-              updateBlockField={updateBlockField}
-              selectBlock={selectBlock}
-              density={density}
-              colorScheme={colorScheme}
-            />
+            {isPreview ? (
+              <>
+                <PreviewColumn id="left" width={`${leftRatio * 100}%`} blocks={leftBlocks} blockTemplates={blockTemplates} density={density} colorScheme={colorScheme} />
+                <PreviewColumn id="right" width={`${rightRatio * 100}%`} blocks={rightBlocks} blockTemplates={blockTemplates} density={density} colorScheme={colorScheme} />
+              </>
+            ) : (
+              <>
+                <ColumnSlot
+                  id="left"
+                  width={`${leftRatio * 100}%`}
+                  blocks={leftBlocks}
+                  blockTemplates={blockTemplates}
+                  selectedBlockId={editor.selectedBlockId}
+                  dragOverSlot={dragOverSlot}
+                  setDragOverSlot={setDragOverSlot}
+                  addBlockToSlot={addBlockToSlot}
+                  removeBlock={removeBlock}
+                  updateBlockField={updateBlockField}
+                  selectBlock={selectBlock}
+                  density={density}
+                  colorScheme={colorScheme}
+                />
+                <ColumnSlot
+                  id="right"
+                  width={`${rightRatio * 100}%`}
+                  blocks={rightBlocks}
+                  blockTemplates={blockTemplates}
+                  selectedBlockId={editor.selectedBlockId}
+                  dragOverSlot={dragOverSlot}
+                  setDragOverSlot={setDragOverSlot}
+                  addBlockToSlot={addBlockToSlot}
+                  removeBlock={removeBlock}
+                  updateBlockField={updateBlockField}
+                  selectBlock={selectBlock}
+                  density={density}
+                  colorScheme={colorScheme}
+                />
+              </>
+            )}
           </div>
         ) : (
           <div className="editor-canvas-body single">
-            <ColumnSlot
-              id="right"
-              width="100%"
-              blocks={rightBlocks}
-              blockTemplates={blockTemplates}
-              selectedBlockId={editor.selectedBlockId}
-              dragOverSlot={dragOverSlot}
-              setDragOverSlot={setDragOverSlot}
-              addBlockToSlot={addBlockToSlot}
-              removeBlock={removeBlock}
-              updateBlockField={updateBlockField}
-              selectBlock={selectBlock}
-              density={density}
-              colorScheme={colorScheme}
-            />
+            {isPreview ? (
+              <PreviewColumn id="right" width="100%" blocks={rightBlocks} blockTemplates={blockTemplates} density={density} colorScheme={colorScheme} />
+            ) : (
+              <ColumnSlot
+                id="right"
+                width="100%"
+                blocks={rightBlocks}
+                blockTemplates={blockTemplates}
+                selectedBlockId={editor.selectedBlockId}
+                dragOverSlot={dragOverSlot}
+                setDragOverSlot={setDragOverSlot}
+                addBlockToSlot={addBlockToSlot}
+                removeBlock={removeBlock}
+                updateBlockField={updateBlockField}
+                selectBlock={selectBlock}
+                density={density}
+                colorScheme={colorScheme}
+              />
+            )}
           </div>
         )}
       </div>
@@ -124,7 +164,44 @@ export default function EditorCanvas() {
   );
 }
 
-// ========== 头部槽位组件 ==========
+// ========== 预览栏位组件（简洁，无拖放） ==========
+interface PreviewColumnProps {
+  id: 'left' | 'right';
+  width: string;
+  blocks: ReturnType<typeof useResumeStore>['resume'] extends { blocks: infer B } | null ? B : never;
+  blockTemplates: ReturnType<typeof useResumeStore>['blockTemplates'];
+  density: { fontSize: number; lineHeight: number; spacing: number };
+  colorScheme: ReturnType<typeof useResumeStore>['resume'] extends { colorScheme: infer C } | null ? C : never;
+}
+
+function PreviewColumn({ id, width, blocks, blockTemplates, density, colorScheme }: PreviewColumnProps) {
+  return (
+    <div
+      className={`editor-canvas-column ${id}`}
+      style={{ width }}
+    >
+      <div className="editor-canvas-column-content">
+        {blocks.map((block) => {
+          const template = blockTemplates.find((t) => t.id === block.templateId);
+          return (
+            <SortableBlockCard
+              key={block.id}
+              block={block}
+              template={template}
+              isSelected={false}
+              onSelect={() => {}}
+              density={density}
+              colorScheme={colorScheme}
+              mode="preview"
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ========== 头部槽位组件（编辑模式） ==========
 interface HeaderSlotProps {
   blocks: ReturnType<typeof useResumeStore>['resume'] extends { blocks: infer B } | null ? B : never;
   blockTemplates: ReturnType<typeof useResumeStore>['blockTemplates'];
@@ -220,7 +297,7 @@ function HeaderSlot({
   );
 }
 
-// ========== 栏位槽位组件 ==========
+// ========== 栏位槽位组件（编辑模式） ==========
 interface ColumnSlotProps {
   id: 'left' | 'right';
   width: string;

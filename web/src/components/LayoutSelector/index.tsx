@@ -16,7 +16,13 @@ export default function LayoutSelector() {
   const [resumeTitle, setResumeTitle] = useState('我的简历');
 
   const handleCreate = () => {
-    initResume(resumeTitle, presetLayouts[selectedLayout].config, selectedColorScheme);
+    const selectedLayoutConfig = presetLayouts[selectedLayout];
+    initResume(
+      resumeTitle,
+      selectedLayoutConfig.config,
+      selectedColorScheme,
+      selectedLayoutConfig.config.type
+    );
     navigate('/editor');
   };
 

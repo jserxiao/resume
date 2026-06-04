@@ -7,6 +7,14 @@
   align-items: center;
   padding: 32px 24px;
 
+  // ===== 预览模式容器 =====
+  &.preview-mode {
+    background: #f5f6fa;
+    padding: 24px 0;
+    justify-content: flex-start;
+    align-items: center;
+  }
+
   &-page {
     width: 100%;
     max-width: 860px;
@@ -18,6 +26,8 @@
     position: relative;
     font-family: var(--font-sans);
     color: var(--resume-text);
+    display: flex;
+    flex-direction: column;
 
     // 纸张顶部装饰线
     &::before {
@@ -30,6 +40,8 @@
       background: var(--resume-primary, var(--color-primary));
       border-radius: 4px 4px 0 0;
     }
+
+    // 预览模式下与编辑区完全一致，不做额外缩放/固定尺寸
   }
 
   // ===== 头部槽位 =====
@@ -74,6 +86,8 @@
   }
 
   &-body {
+    flex: 1;
+
     &.single {
       display: flex;
       flex-direction: column;
@@ -85,15 +99,6 @@
     }
   }
 
-  &-divider {
-    width: 1px;
-    align-self: stretch;
-    opacity: 0.12;
-    border-radius: 1px;
-    flex-shrink: 0;
-    margin: 0 8px;
-  }
-
   // ===== 栏位槽位 =====
   &-column {
     display: flex;
@@ -101,6 +106,7 @@
     border-radius: 6px;
     transition: background 0.2s ease, box-shadow 0.2s ease;
     position: relative;
+    min-height: 100%;
 
     &.drag-over {
       background: rgba(26, 86, 219, 0.04) !important;
@@ -123,6 +129,9 @@
     &-content {
       flex: 1;
       position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
     }
   }
 

@@ -1,0 +1,301 @@
+.template-builder {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+// ========== 顶部工具栏 ==========
+.template-builder-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  flex-shrink: 0;
+  height: 48px;
+
+  .template-builder-toolbar-left,
+  .template-builder-toolbar-right,
+  .template-builder-toolbar-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+// 缩放比例显示
+.template-builder-zoom-label {
+  font-size: 12px;
+  color: #666;
+  min-width: 40px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    color: #1a56db;
+  }
+}
+
+// ========== 主体布局 ==========
+.template-builder-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+// ========== 左侧面板 ==========
+.template-builder-left {
+  width: 240px;
+  background: #fff;
+  border-right: 1px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 8px 12px;
+}
+
+.template-builder-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// 拖拽提示文字
+.template-builder-deco-hint {
+  font-size: 10px;
+  color: #aaa;
+  margin-bottom: 6px;
+  font-style: italic;
+}
+
+// ========== 装饰图形列表 ==========
+.template-builder-deco-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.template-builder-deco-group {
+  margin-bottom: 8px;
+}
+
+.template-builder-deco-group-label {
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.template-builder-deco-items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.template-builder-deco-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  border-radius: 6px;
+  border: 1px solid #eee;
+  cursor: grab;
+  transition: all 0.2s;
+  background: #fafafa;
+  user-select: none;
+
+  &:hover {
+    border-color: #1a56db;
+    background: #f0f5ff;
+    transform: scale(1.05);
+  }
+
+  &:active {
+    cursor: grabbing;
+    transform: scale(0.95);
+    border-color: #1a56db;
+    background: #e0ebff;
+  }
+}
+
+.template-builder-deco-item-name {
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+}
+
+// ========== 可拖拽元素的通用样式 ==========
+.template-builder-draggable {
+  cursor: grab;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+// ========== 字段列表 ==========
+.template-builder-fields-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.template-builder-field-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  border: 1px solid transparent;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+
+  &.selected {
+    background: #f0f5ff;
+    border-color: #1a56db;
+  }
+
+  // 字段已在画布中的标记
+  &.on-canvas {
+    background: #f8faff;
+
+    .template-builder-field-name::after {
+      content: ' ✓';
+      color: #22c55e;
+      font-size: 10px;
+    }
+  }
+}
+
+.template-builder-field-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+
+  &.template-builder-draggable {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+}
+
+.template-builder-field-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-builder-field-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.template-builder-field-item:hover .template-builder-field-actions {
+  opacity: 1;
+}
+
+.template-builder-field-delete {
+  color: #ef4444;
+}
+
+// ========== 中间画布 ==========
+.template-builder-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #e8e8e8;
+}
+
+.template-builder-x6-container {
+  width: 100%;
+  height: 100%;
+}
+
+.template-builder-canvas-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #bbb;
+  pointer-events: none;
+
+  p {
+    margin-top: 8px;
+    font-size: 13px;
+  }
+}
+
+// ========== 右侧属性面板 ==========
+.template-builder-right {
+  width: 260px;
+  background: #fff;
+  border-left: 1px solid #e8e8e8;
+  padding: 12px 16px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.template-builder-prop-group {
+  margin-bottom: 12px;
+
+  label {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+  }
+}
+
+.template-builder-prop-hint {
+  font-size: 11px;
+  color: #1a56db;
+  text-align: center;
+  padding: 8px;
+  border: 1px dashed #1a56db;
+  border-radius: 6px;
+  background: #f0f5ff;
+}
+
+.template-builder-right-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #bbb;
+  font-size: 12px;
+  text-align: center;
+  padding: 20px;
+}
+
+// ========== X6 画布内辅助线样式覆盖 ==========
+.my-snapline {
+  color: #1a56db;
+}

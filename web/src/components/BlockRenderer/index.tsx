@@ -1,5 +1,6 @@
 import type { BlockInstance, BlockTemplate } from '@/types';
 import { FieldType } from '@/types';
+import { presetDecorations } from '@/utils/decorations';
 import './index.less';
 
 interface BlockRendererProps {
@@ -91,6 +92,47 @@ export default function BlockRenderer({
   const isBasicInfo = template.name === '基本信息';
   const isSkills = template.name === '技能';
 
+  // 渲染装饰元素
+  const renderDecorations = () => {
+    if (!block.decorations || block.decorations.length === 0) return null;
+    return (
+      <div className="block-renderer-decorations">
+        {block.decorations.map((deco) => {
+          const def = presetDecorations.find((d) => d.id === deco.decorationId);
+          if (!def) return null;
+          const isDashed = deco.decorationId.includes('dashed');
+          return (
+            <svg
+              key={deco.id}
+              className="block-renderer-decoration"
+              style={{
+                position: 'absolute',
+                left: deco.x,
+                top: deco.y,
+                width: deco.width,
+                height: deco.height,
+                transform: `rotate(${deco.rotation}deg)`,
+                opacity: deco.opacity,
+                zIndex: deco.zIndex,
+                pointerEvents: 'none',
+              }}
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              <path
+                d={def.svgPath}
+                fill={deco.color === 'transparent' ? 'none' : deco.color}
+                stroke={deco.strokeColor === 'transparent' ? 'none' : deco.strokeColor}
+                strokeWidth={deco.strokeWidth * 3}
+                strokeDasharray={isDashed ? '5,3' : undefined}
+              />
+            </svg>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div
       className={`block-renderer ${isSelected ? 'selected' : ''}`}
@@ -98,6 +140,9 @@ export default function BlockRenderer({
     >
       {/* 选中指示器 */}
       {isSelected && <div className="block-renderer-selected-indicator" />}
+
+      {/* 装饰元素层 */}
+      {renderDecorations()}
 
       {/* 块标题 */}
       {!isBasicInfo && !isHeaderInfo && (

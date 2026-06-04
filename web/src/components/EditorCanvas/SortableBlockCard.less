@@ -8,6 +8,22 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   margin-bottom: var(--resume-spacing, 10px);
 
+  // ===== 预览模式 =====
+  &.preview-mode {
+    border: none;
+    border-radius: 0;
+    padding: 6px 8px;
+    cursor: default;
+    box-shadow: none;
+    // 保留与编辑区一致的间距
+    margin-bottom: var(--resume-spacing, 10px);
+
+    &:hover {
+      border: none;
+      box-shadow: none;
+    }
+  }
+
   &:hover {
     border-color: rgba(0, 0, 0, 0.06);
   }
@@ -298,6 +314,11 @@
   &:hover {
     background: rgba(0, 0, 0, 0.04);
   }
+
+  // 预览模式下隐藏
+  .sortable-block-card.preview-mode & {
+    display: none;
+  }
 }
 
 .editable-field-text {
@@ -308,6 +329,16 @@
 
   &:hover {
     background: rgba(0, 0, 0, 0.04);
+  }
+
+  // 预览模式下无交互效果
+  .sortable-block-card.preview-mode & {
+    cursor: default;
+    padding: 0;
+
+    &:hover {
+      background: transparent;
+    }
   }
 }
 
@@ -323,6 +354,16 @@
 
   p { margin: 0; }
   ul, ol { padding-left: 1.2em; margin: 2px 0; }
+
+  // 预览模式下无交互效果
+  .sortable-block-card.preview-mode & {
+    cursor: default;
+    padding: 0;
+
+    &:hover {
+      background: transparent;
+    }
+  }
 }
 
 .editable-field-tags {
@@ -352,4 +393,17 @@
   &:hover {
     text-decoration: underline;
   }
+}
+
+// ===== 装饰元素 =====
+.sortable-block-decorations {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.sortable-block-decoration {
+  pointer-events: auto;
+  transition: opacity 0.15s;
 }

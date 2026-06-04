@@ -5,6 +5,7 @@ import {
   SaveOutlined,
   EyeOutlined,
   BgColorsOutlined,
+  AppstoreAddOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import ExportMenu from '@/components/ExportMenu';
@@ -59,6 +60,15 @@ export default function Toolbar() {
         <Tooltip title="保存 (Ctrl+S)">
           <Button type="text" icon={<SaveOutlined />} onClick={markSaved}>
             保存
+          </Button>
+        </Tooltip>
+        <Tooltip title="创建块模板">
+          <Button
+            type="text"
+            icon={<AppstoreAddOutlined />}
+            onClick={() => navigate('/template-builder')}
+          >
+            创建模板
           </Button>
         </Tooltip>
         <ExportMenu />

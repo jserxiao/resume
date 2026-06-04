@@ -14,6 +14,7 @@ export enum FieldType {
   Number = 'number',           // 数字
   Percentage = 'percentage',   // 百分比
   Color = 'color',             // 颜色
+  Decoration = 'decoration',   // 装饰元素（不规则图形）
 }
 
 // ========== 字段定义（块模板中的字段） ==========
@@ -43,25 +44,31 @@ export interface BlockTemplate {
 export interface BlockInstance {
   id: string;
   templateId: string;
-  name: string;                 // 可从模板继承，也可单独重命名
+  templateName: string;           // 模板名称冗余，用于导入时模板ID匹配失败的降级识别
+  name: string;                   // 可从模板继承，也可单独重命名
   fields: Record<string, string>; // fieldId -> value
-  visible: boolean;             // 是否可见（导出时是否包含）
-  locked: boolean;              // 是否锁定
-  colorTag?: string;            // 颜色标记
-  column?: 'header' | 'left' | 'right';   // 布局中的位置：头部 / 左栏 / 右栏
+  fieldNamesMap?: Record<string, string>; // fieldId -> fieldName 映射，用于导入时字段ID变更后按名称恢复数据
+  decorations: DecorationElement[]; // 块内的装饰元素列表
+  visible: boolean;               // 是否可见（导出时是否包含）
+  locked: boolean;                // 是否锁定
+  order: number;                  // 同一栏位内的排序权重，值越小越靠前
+  colorTag?: string;              // 颜色标记
+  column: 'header' | 'left' | 'right';   // 布局中的位置：头部 / 左栏 / 右栏
 }
 
 // ========== 简历 ==========
 export interface Resume {
-  id: string;
-  title: string;
-  templateId: string;           // 当前使用的布局模板ID
+  id: string;                   // 简历唯一ID
+  name: string;                 // 简历名称（展示用）
+  title: string;                // 简历标题（PDF导出用）
+  layoutId: string;             // 当前使用的布局模板ID（如 'classic-single', 'tech-double'）
   blocks: BlockInstance[];
   colorScheme: ColorScheme;
   layout: LayoutConfig;
   createdAt: number;
   updatedAt: number;
   lastSavedAt: number | null;
+  version: number;              // 数据版本号，便于后续迁移（当前为 2）
 }
 
 // ========== 色彩方案 ==========
@@ -124,4 +131,52 @@ export interface EditorState {
   autoSave: boolean;
   autoSaveInterval: number;     // 秒
   previewOpen: boolean;          // 预览抽屉是否打开
+}
+
+// ========== 装饰元素 ==========
+export enum DecorationType {
+  Triangle = 'triangle',         // 三角形
+  Circle = 'circle',             // 圆形
+  Diamond = 'diamond',           // 菱形
+  Pentagon = 'pentagon',         // 五边形
+  Hexagon = 'hexagon',           // 六边形
+  Star = 'star',                 // 五角星
+  Arrow = 'arrow',               // 箭头
+  Wave = 'wave',                 // 波浪线
+  Bracket = 'bracket',           // 花括号装饰
+  Divider = 'divider',           // 分割线装饰
+  Ribbon = 'ribbon',             // 缎带
+  CustomSvg = 'custom-svg',      // 自定义SVG路径
+}
+
+/** 装饰元素定义 — 描述一种可放置的装饰图形 */
+export interface DecorationDefinition {
+  id: string;                     // 装饰类型ID（如 'deco-triangle'）
+  name: string;                   // 显示名称
+  type: DecorationType;
+  svgPath: string;                // SVG path data（不规则图形的路径描述）
+  defaultWidth: number;           // 默认宽度（px）
+  defaultHeight: number;          // 默认高度（px）
+  defaultColor: string;           // 默认填充色
+  defaultStrokeColor: string;     // 默认描边色
+  defaultStrokeWidth: number;     // 默认描边宽度
+  defaultOpacity: number;         // 默认透明度 0-1
+  category: string;               // 分类，如 "几何"、"线条"、"标签"
+  isPreset: boolean;
+}
+
+/** 装饰元素实例 — 放置在块中的具体装饰 */
+export interface DecorationElement {
+  id: string;                     // 实例唯一ID
+  decorationId: string;           // 引用 DecorationDefinition.id
+  x: number;                      // 在块内的X偏移（相对于块左上角）
+  y: number;                      // 在块内的Y偏移
+  width: number;                  // 宽度
+  height: number;                 // 高度
+  rotation: number;               // 旋转角度（度）
+  color: string;                  // 填充色
+  strokeColor: string;            // 描边色
+  strokeWidth: number;            // 描边宽度
+  opacity: number;                // 透明度 0-1
+  zIndex: number;                 // 层级
 }

@@ -200,7 +200,6 @@ interface ResumeStore {
   renameBlock: (blockId: string, name: string) => void;
 
   // 块模板操作
-  addBlockTemplate: (template: Omit<BlockTemplate, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateBlockTemplate: (templateId: string, updates: Partial<BlockTemplate>) => void;
   removeBlockTemplate: (templateId: string) => void;
 
@@ -556,16 +555,6 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
     })),
 
   // ========== 块模板操作 ==========
-  addBlockTemplate: (template) =>
-    set(produce<ResumeStore>((state) => {
-      state.blockTemplates.push({
-        ...template,
-        id: uuid(),
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
-    })),
-
   updateBlockTemplate: (templateId, updates) =>
     set(produce<ResumeStore>((state) => {
       const idx = state.blockTemplates.findIndex((t) => t.id === templateId);

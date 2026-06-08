@@ -8,21 +8,52 @@
   flex-shrink: 0;
   overflow: hidden;
 
-  // ===== 搜索 =====
-  &-search {
-    padding: 12px 12px 8px;
-    border-bottom: 1px solid var(--color-border-light);
+  // ===== 可折叠组件面板区域 =====
+  &-components {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-top: 1px solid var(--color-border);
   }
 
-  // ===== 提示 =====
-  &-hint {
-    padding: 6px 12px;
-    font-size: 11px;
-    color: var(--color-text-muted);
-    text-align: center;
+  &-components-header {
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text);
     background: var(--color-border-light);
-    border-radius: 4px;
-    margin: 8px 12px 0;
+    border-bottom: 1px solid var(--color-border-light);
+    flex-shrink: 0;
+  }
+
+  // ===== 搜索 =====
+  &-search {
+    padding: 8px 12px 6px;
+    border-bottom: 1px solid var(--color-border-light);
+    flex-shrink: 0;
+  }
+
+  // ===== 多选操作区 =====
+  &-multi-select-actions {
+    padding: 8px 12px;
+    background: rgba(26, 86, 219, 0.04);
+    border-bottom: 1px solid var(--color-border-light);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  &-selected-count {
+    font-size: 12px;
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+
+  &-action-buttons {
+    display: flex;
+    gap: 6px;
   }
 
   // ===== 模板列表 =====
@@ -84,6 +115,24 @@
     &:active {
       cursor: grabbing;
       opacity: 0.7;
+    }
+
+    &.custom-element-item {
+      background: rgba(139, 92, 246, 0.04);
+
+      &:hover {
+        background: rgba(139, 92, 246, 0.08);
+        border-color: rgba(139, 92, 246, 0.2);
+      }
+    }
+
+    &.group-item {
+      background: rgba(245, 158, 11, 0.04);
+
+      &:hover {
+        background: rgba(245, 158, 11, 0.08);
+        border-color: rgba(245, 158, 11, 0.2);
+      }
     }
   }
 

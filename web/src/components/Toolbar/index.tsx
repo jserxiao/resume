@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { Button, Tooltip, Divider, Badge } from 'antd';
+import { Button, Tooltip, Divider, Switch } from 'antd';
 import {
   ArrowLeftOutlined,
   SaveOutlined,
   EyeOutlined,
-  BgColorsOutlined,
+  BorderOutlined,
   AppstoreAddOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
@@ -13,7 +13,7 @@ import './index.less';
 
 export default function Toolbar() {
   const navigate = useNavigate();
-  const { resume, editor, toggleFullscreen, markSaved, clearResume, setPreviewOpen } = useResumeStore();
+  const { resume, editor, markSaved, clearResume, setPreviewOpen, setShowAlignGuides, setSnapToGrid } = useResumeStore();
 
   if (!resume) return null;
 
@@ -25,8 +25,6 @@ export default function Toolbar() {
   const saveStatus = resume.lastSavedAt
     ? `已保存于 ${new Date(resume.lastSavedAt).toLocaleTimeString()}`
     : '未保存';
-
-  const blockCount = resume.blocks.length;
 
   return (
     <div className="toolbar">
@@ -45,6 +43,26 @@ export default function Toolbar() {
       </div>
 
       <div className="toolbar-center">
+        <Tooltip title="对齐辅助线">
+          <div className="toolbar-toggle">
+            <BorderOutlined />
+            <Switch
+              size="small"
+              checked={editor.showAlignGuides}
+              onChange={setShowAlignGuides}
+            />
+          </div>
+        </Tooltip>
+        <Tooltip title="吸附网格">
+          <div className="toolbar-toggle">
+            <AppstoreAddOutlined />
+            <Switch
+              size="small"
+              checked={editor.snapToGrid}
+              onChange={setSnapToGrid}
+            />
+          </div>
+        </Tooltip>
       </div>
 
       <div className="toolbar-right">
@@ -60,15 +78,6 @@ export default function Toolbar() {
         <Tooltip title="保存 (Ctrl+S)">
           <Button type="text" icon={<SaveOutlined />} onClick={markSaved}>
             保存
-          </Button>
-        </Tooltip>
-        <Tooltip title="创建块模板">
-          <Button
-            type="text"
-            icon={<AppstoreAddOutlined />}
-            onClick={() => navigate('/template-builder')}
-          >
-            创建模板
           </Button>
         </Tooltip>
         <ExportMenu />

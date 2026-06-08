@@ -6,6 +6,7 @@
   flex-direction: column;
   align-items: center;
   padding: 32px 24px;
+  position: relative;
 
   // ===== 预览模式容器 =====
   &.preview-mode {
@@ -16,18 +17,12 @@
   }
 
   &-page {
-    width: 100%;
-    max-width: 860px;
-    min-height: calc(100vh - var(--toolbar-height) - 64px);
+    position: relative;
     background: #ffffff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.08);
     border-radius: 4px;
-    padding: 48px 40px;
-    position: relative;
     font-family: var(--font-sans);
     color: var(--resume-text);
-    display: flex;
-    flex-direction: column;
 
     // 纸张顶部装饰线
     &::before {
@@ -39,127 +34,161 @@
       height: 3px;
       background: var(--resume-primary, var(--color-primary));
       border-radius: 4px 4px 0 0;
-    }
-
-    // 预览模式下与编辑区完全一致，不做额外缩放/固定尺寸
-  }
-
-  // ===== 头部槽位 =====
-  &-header-slot {
-    position: relative;
-    border-radius: 6px;
-    margin-bottom: 20px;
-    transition: background 0.2s ease, box-shadow 0.2s ease;
-
-    &.drag-over {
-      background: rgba(26, 86, 219, 0.04) !important;
-      box-shadow: inset 0 0 0 1.5px var(--color-primary-light);
-      border-radius: 6px;
+      z-index: 9999;
     }
   }
 
-  // ===== 头部空槽位 =====
-  &-header-empty {
+  // ===== 网格 =====
+  &-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    border-radius: 4px;
+  }
+
+  // ===== 对齐线 =====
+  &-align-guides {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+  }
+
+  &-align-guide {
+    position: absolute;
+    z-index: 9998;
+
+    &.horizontal {
+      height: 1px;
+      background: #f43f5e;
+      left: 0;
+    }
+
+    &.vertical {
+      width: 1px;
+      background: #f43f5e;
+      top: 0;
+    }
+  }
+
+  // ===== 距离标注 =====
+  &-distances {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9997;
+  }
+
+  &-distance {
+    position: absolute;
+
+    &.horizontal {
+      border-top: 1px dashed #8b5cf6;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 2px;
+    }
+
+    &.vertical {
+      border-left: 1px dashed #8b5cf6;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding-left: 2px;
+    }
+  }
+
+  &-distance-value {
+    font-size: 10px;
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.08);
+    padding: 1px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  // ===== 拖入提示 =====
+  &-drop-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(26, 86, 219, 0.04);
+    border: 2px dashed var(--color-primary);
+    border-radius: 4px;
+    z-index: 9999;
+    color: var(--color-primary);
+    font-size: 16px;
+    font-weight: 500;
+    pointer-events: none;
+  }
+
+  // ===== 空状态 =====
+  &-empty {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    min-height: 80px;
-    border: 1.5px dashed var(--color-border);
-    border-radius: 6px;
+    gap: 8px;
     color: var(--color-text-muted);
+    pointer-events: none;
+  }
+
+  &-empty-icon {
+    font-size: 48px;
+    opacity: 0.3;
+  }
+
+  &-empty-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+
+  &-empty-hint {
     font-size: 13px;
-    gap: 6px;
-    transition: all 0.2s ease;
-    background: rgba(0, 0, 0, 0.008);
-
-    .editor-canvas-header-slot.drag-over & {
-      border-color: var(--color-primary);
-      background: rgba(26, 86, 219, 0.03);
-      color: var(--color-primary);
-    }
-
-    p {
-      margin: 0;
-      font-size: 12px;
-    }
-  }
-
-  &-body {
-    flex: 1;
-
-    &.single {
-      display: flex;
-      flex-direction: column;
-    }
-
-    &.double {
-      display: flex;
-      gap: 24px;
-    }
-  }
-
-  // ===== 栏位槽位 =====
-  &-column {
-    display: flex;
-    flex-direction: column;
-    border-radius: 6px;
-    transition: background 0.2s ease, box-shadow 0.2s ease;
-    position: relative;
-    min-height: 100%;
-
-    &.drag-over {
-      background: rgba(26, 86, 219, 0.04) !important;
-      box-shadow: inset 0 0 0 1.5px var(--color-primary-light);
-      border-radius: 6px;
-    }
-
-    // 左栏 —— 浅色背景区域
-    &.left {
-      background: linear-gradient(135deg, rgba(0,0,0,0.012) 0%, rgba(0,0,0,0.022) 100%);
-      border-radius: 6px;
-    }
-
-    // 右栏 —— 白色背景区域
-    &.right {
-      background: transparent;
-      border-radius: 6px;
-    }
-
-    &-content {
-      flex: 1;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      min-height: 100%;
-    }
-  }
-
-  // ===== 空槽位 —— 填满内容区 =====
-  &-empty-slot {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    min-height: 300px;
-    border: 1.5px dashed var(--color-border);
-    border-radius: 6px;
     color: var(--color-text-muted);
-    font-size: 13px;
-    gap: 6px;
-    transition: all 0.2s ease;
-    background: rgba(0, 0, 0, 0.008);
+  }
 
-    .editor-canvas-column.drag-over & {
-      border-color: var(--color-primary);
-      background: rgba(26, 86, 219, 0.03);
-      color: var(--color-primary);
-    }
+  // ===== 分组边框 =====
+  &-group-border {
+    border: 1.5px dashed rgba(245, 158, 11, 0.5);
+    border-radius: 8px;
+    transition: border-color 0.15s ease;
 
-    p {
-      margin: 0;
-      font-size: 12px;
+    &.selected {
+      border-color: rgba(245, 158, 11, 0.85);
+      border-width: 2px;
+      background: rgba(245, 158, 11, 0.03);
     }
+  }
+
+  &-group-label {
+    position: absolute;
+    top: -20px;
+    left: 8px;
+    font-size: 10px;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+    padding: 1px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  // ===== 框选矩形 =====
+  &-marquee {
+    border: 1.5px solid rgba(26, 86, 219, 0.6);
+    background: rgba(26, 86, 219, 0.08);
+    border-radius: 2px;
   }
 }

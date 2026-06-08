@@ -1,4 +1,4 @@
-import type { BlockTemplate, ColorScheme, LayoutConfig } from '../types';
+import type { BlockTemplate, ColorScheme } from '../types';
 import { FieldType } from '../types';
 
 // ========== 预设块模板（ID 固定，确保 JSON 导入导出可恢复） ==========
@@ -259,74 +259,5 @@ export const presetColorSchemes: ColorScheme[] = [
     textMuted: '#9ca3af',
     accent: '#f43f5e',
     isPreset: true,
-  },
-];
-
-// ========== 预设布局 ==========
-export const presetLayouts: { name: string; description: string; config: LayoutConfig }[] = [
-  {
-    name: '经典单栏',
-    description: '经典叙事型，适合管理岗',
-    config: {
-      type: 'single',
-      columnRatio: [100, 0],
-      headerStyle: 'center',
-      density: 'standard',
-      pageSize: { name: 'A4', width: 210, height: 297 },
-      pageMargin: { top: 15, right: 20, bottom: 15, left: 20 },
-      pageBreakStrategy: 'auto',
-    },
-  },
-  {
-    name: '技术双栏',
-    description: '左栏技能+证书，右栏经历，适合技术岗',
-    config: {
-      type: 'double',
-      columnRatio: [30, 70],
-      headerStyle: 'left-align',
-      density: 'compact',
-      pageSize: { name: 'A4', width: 210, height: 297 },
-      pageMargin: { top: 12, right: 15, bottom: 12, left: 15 },
-      pageBreakStrategy: 'force-one',
-    },
-  },
-  {
-    name: '创意设计',
-    description: '双栏带头像，适合设计类岗位',
-    config: {
-      type: 'double',
-      columnRatio: [35, 65],
-      headerStyle: 'with-avatar',
-      density: 'spacious',
-      pageSize: { name: 'A4', width: 210, height: 297 },
-      pageMargin: { top: 20, right: 20, bottom: 20, left: 20 },
-      pageBreakStrategy: 'auto',
-    },
-  },
-  {
-    name: '紧凑一页',
-    description: '双栏紧凑布局，适合内容较多的简历',
-    config: {
-      type: 'double',
-      columnRatio: [25, 75],
-      headerStyle: 'left-align',
-      density: 'compact',
-      pageSize: { name: 'A4', width: 210, height: 297 },
-      pageMargin: { top: 10, right: 12, bottom: 10, left: 12 },
-      pageBreakStrategy: 'force-one',
-    },
-  },
-  {
-    name: '功能混合',
-    description: '页头通栏+下方双栏，中西结合',
-    config: {
-      type: 'mixed',
-      columnRatio: [35, 65],
-      headerStyle: 'center',
-      density: 'standard',
-      pageSize: { name: 'A4', width: 210, height: 297 },
-      pageMargin: { top: 15, right: 18, bottom: 15, left: 18 },
-      pageBreakStrategy: 'auto',
-    },
   },
 ];

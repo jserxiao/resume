@@ -40,7 +40,28 @@ export interface BlockTemplate {
   updatedAt: number;
 }
 
-// ========== 块实例 ==========
+// ========== 块边距/内边距 ==========
+export interface BoxSides {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+// ========== 块样式 ==========
+export interface BlockStyle {
+  margin?: BoxSides;              // 外边距（编辑模式以暗色显示）
+  padding?: BoxSides;             // 内边距
+  backgroundColor?: string;       // 背景颜色（空字符串跟随主题）
+  backgroundImage?: string;       // 背景图片URL
+  backgroundSize?: 'cover' | 'contain' | 'auto'; // 背景图片适配方式
+  borderRadius?: number;          // 圆角(px)
+  borderColor?: string;           // 边框颜色
+  borderWidth?: number;           // 边框宽度(px)
+  opacity?: number;               // 透明度 0-1
+}
+
+// ========== 块实例（自由定位元素） ==========
 export interface BlockInstance {
   id: string;
   templateId: string;
@@ -51,9 +72,53 @@ export interface BlockInstance {
   decorations: DecorationElement[]; // 块内的装饰元素列表
   visible: boolean;               // 是否可见（导出时是否包含）
   locked: boolean;                // 是否锁定
-  order: number;                  // 同一栏位内的排序权重，值越小越靠前
   colorTag?: string;              // 颜色标记
-  column: 'header' | 'left' | 'right';   // 布局中的位置：头部 / 左栏 / 右栏
+  // ---- 自由定位属性 ----
+  x: number;                      // 在画布上的X坐标（px）
+  y: number;                      // 在画布上的Y坐标（px）
+  width: number;                  // 块宽度（px）
+  height: number;                 // 块高度（px）
+  zIndex: number;                 // 层级
+  // ---- 样式属性 ----
+  style?: BlockStyle;             // 块样式（外边距、内边距、背景等）
+  // ---- 旋转属性 ----
+  rotation?: number;              // 旋转角度（度），默认0
+  // ---- 分组信息 ----
+  groupId?: string;               // 所属分组ID（可选）
+}
+
+// ========== 分组定义 ==========
+export interface BlockGroup {
+  id: string;
+  name: string;                   // 分组名称
+  blockIds: string[];             // 分组内块实例ID列表
+  rotation?: number;              // 分组旋转角度（度），默认0
+  createdAt: number;
+  updatedAt: number;
+}
+
+// ========== 自定义元素模板（由分组保存而来） ==========
+export interface CustomElementTemplate {
+  id: string;
+  name: string;                   // 元素模板名称
+  category: string;               // 分类
+  isPreset: boolean;              // 是否预设
+  createdAt: number;
+  updatedAt: number;
+  // 分组内各块的相对布局
+  blocks: {
+    templateId: string;
+    templateName: string;
+    name: string;
+    fields: Record<string, string>;
+    fieldNamesMap?: Record<string, string>;
+    decorations: DecorationElement[];
+    relativeX: number;            // 相对于分组左上角的X偏移
+    relativeY: number;            // 相对于分组左上角的Y偏移
+    width: number;
+    height: number;
+    zIndex: number;
+  }[];
 }
 
 // ========== 简历 ==========
@@ -61,14 +126,24 @@ export interface Resume {
   id: string;                   // 简历唯一ID
   name: string;                 // 简历名称（展示用）
   title: string;                // 简历标题（PDF导出用）
-  layoutId: string;             // 当前使用的布局模板ID（如 'classic-single', 'tech-double'）
   blocks: BlockInstance[];
+  groups: BlockGroup[];         // 分组信息
   colorScheme: ColorScheme;
-  layout: LayoutConfig;
+  canvas: CanvasConfig;         // 画布配置（替代旧的LayoutConfig）
   createdAt: number;
   updatedAt: number;
   lastSavedAt: number | null;
-  version: number;              // 数据版本号，便于后续迁移（当前为 2）
+  version: number;              // 数据版本号，便于后续迁移（当前为 4）
+}
+
+// ========== 画布配置 ==========
+export interface CanvasConfig {
+  width: number;                // 画布宽度（px），默认794（A4 210mm@96dpi）
+  height: number;               // 画布高度（px），默认1123（A4 297mm@96dpi）
+  padding: number;              // 内边距（px）
+  background: string;           // 画布背景色
+  backgroundImage?: string;     // 画布背景图片URL
+  backgroundSize?: 'cover' | 'contain' | 'auto'; // 背景图片适配方式
 }
 
 // ========== 色彩方案 ==========
@@ -86,10 +161,10 @@ export interface ColorScheme {
   isPreset: boolean;
 }
 
-// ========== 布局配置 ==========
+// ========== 旧布局配置（兼容迁移） ==========
 export interface LayoutConfig {
   type: 'single' | 'double' | 'triple' | 'mixed';
-  columnRatio: [number, number]; // 双栏比例，如 [30, 70]
+  columnRatio: [number, number];
   headerStyle: HeaderStyle;
   density: 'compact' | 'standard' | 'spacious';
   pageSize: PageSize;
@@ -123,14 +198,18 @@ export interface ExportOptions {
 // ========== 编辑器状态 ==========
 export interface EditorState {
   selectedBlockId: string | null;
+  selectedBlockIds: string[];     // 多选的块ID列表（Shift多选）
+  selectedGroupId: string | null; // 选中的分组ID
   isFullscreen: boolean;
-  zoom: number;                  // 75 / 100 / 150
   theme: 'light' | 'dark' | 'system';
   leftPanelWidth: number;
   rightPanelWidth: number;
   autoSave: boolean;
   autoSaveInterval: number;     // 秒
   previewOpen: boolean;          // 预览抽屉是否打开
+  showAlignGuides: boolean;      // 是否显示对齐线
+  snapToGrid: boolean;           // 是否吸附网格
+  gridSize: number;              // 网格大小（px）
 }
 
 // ========== 装饰元素 ==========
@@ -179,4 +258,20 @@ export interface DecorationElement {
   strokeWidth: number;            // 描边宽度
   opacity: number;                // 透明度 0-1
   zIndex: number;                 // 层级
+}
+
+// ========== 对齐线 ==========
+export interface AlignGuide {
+  type: 'horizontal' | 'vertical';
+  position: number;              // 对齐线的位置（px）
+  start: number;                 // 线段起点
+  end: number;                   // 线段终点
+}
+
+// ========== 距离标注 ==========
+export interface DistanceIndicator {
+  direction: 'horizontal' | 'vertical';
+  from: number;                  // 起始位置（px）
+  to: number;                    // 终止位置（px）
+  value: number;                 // 距离值（px）
 }

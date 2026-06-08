@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Button, Input, Segmented, ColorPicker, message } from 'antd';
-import { DeleteOutlined, SaveOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { Button, Input, Segmented, ColorPicker, Select, message } from 'antd';
+import { DeleteOutlined, SaveOutlined, ThunderboltOutlined, BgColorsOutlined, CloseOutlined, CameraOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import { presetColorSchemes } from '@/utils/presets';
 import { generateColorScheme, generateBatchSchemes, getContrastRatio } from '@/utils/color';
+import { uploadImage } from '@/utils/imageUpload';
 import type { ColorScheme } from '@/types';
 import './ColorSchemePanel.less';
 
 export default function ColorSchemePanel() {
-  const { resume, setColorScheme, customColorSchemes, addCustomColorScheme, removeCustomColorScheme } = useResumeStore();
+  const { resume, setColorScheme, setCanvasConfig, customColorSchemes, addCustomColorScheme, removeCustomColorScheme } = useResumeStore();
   const [mode, setMode] = useState<'preset' | 'generate' | 'custom'>('preset');
   const [primaryColor, setPrimaryColor] = useState('#1a56db');
   const [generatedSchemes, setGeneratedSchemes] = useState<ColorScheme[]>([]);
@@ -231,6 +232,54 @@ export default function ColorSchemePanel() {
             </Button>
           </div>
         )}
+      </div>
+
+      {/* 画布背景设置 */}
+      <div className="color-scheme-canvas-bg">
+        <div className="color-scheme-section-title"><BgColorsOutlined /> 画布背景</div>
+        <div className="color-scheme-custom-row">
+          <label className="color-scheme-label">背景图片</label>
+          {resume.canvas.backgroundImage ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <img
+                  src={resume.canvas.backgroundImage}
+                  alt="画布背景"
+                  style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: '1px solid #e5e7eb' }}
+                />
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={() => setCanvasConfig({ backgroundImage: undefined })}
+                />
+              </div>
+              <Select
+                value={resume.canvas.backgroundSize || 'cover'}
+                onChange={(val) => setCanvasConfig({ backgroundSize: val })}
+                size="small"
+                style={{ width: '100%' }}
+                options={[
+                  { label: '覆盖 (cover)', value: 'cover' },
+                  { label: '包含 (contain)', value: 'contain' },
+                  { label: '原始 (auto)', value: 'auto' },
+                ]}
+              />
+            </div>
+          ) : (
+            <Button
+              icon={<CameraOutlined />}
+              onClick={async () => {
+                const result = await uploadImage();
+                if (result) setCanvasConfig({ backgroundImage: result });
+              }}
+              size="small"
+            >
+              上传背景图片
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

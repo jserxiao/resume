@@ -1,3 +1,120 @@
-.editor-page {
-  // 编辑器页面不需要额外样式，样式由 .app 容器控制
+.layout-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding: 48px 24px;
+
+  &-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  &-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 8px;
+
+    .anticon {
+      color: var(--color-primary);
+      margin-right: 8px;
+    }
+  }
+
+  &-subtitle {
+    font-size: 15px;
+    color: var(--color-text-secondary);
+  }
+
+  &-body {
+    max-width: 720px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  &-section {
+    &-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+
+      h2 {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--color-text);
+        margin: 0;
+      }
+    }
+
+    &-icon {
+      color: var(--color-primary);
+      font-size: 16px;
+    }
+  }
+
+  &-colors {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+  }
+
+  &-color-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 12px;
+    border-radius: var(--radius-md);
+    border: 2px solid var(--color-border-light);
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      border-color: var(--color-primary-light);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    &.selected {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+      box-shadow: 0 0 0 1px var(--color-primary);
+    }
+  }
+
+  &-color-swatches {
+    display: flex;
+    gap: 4px;
+  }
+
+  &-color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  &-color-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+
+  &-actions {
+    display: flex;
+    justify-content: center;
+    padding-top: 8px;
+  }
+
+  &-create-btn {
+    min-width: 200px;
+    font-size: 16px;
+    height: 44px;
+  }
 }

@@ -1,0 +1,108 @@
+.layer-panel {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--color-border);
+
+  // ===== 头部 =====
+  &-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--color-border-light);
+    border-bottom: 1px solid var(--color-border-light);
+  }
+
+  &-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  // ===== 图层列表 =====
+  &-list {
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  // ===== 图层项 =====
+  &-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+
+    &:hover {
+      background: var(--color-primary-light);
+    }
+
+    &.selected {
+      background: rgba(26, 86, 219, 0.08);
+      border-left-color: var(--color-primary);
+    }
+
+    &.hidden-layer {
+      opacity: 0.5;
+    }
+
+    &.group-layer {
+      background: rgba(245, 158, 11, 0.03);
+    }
+  }
+
+  &-group-icon {
+    color: #f59e0b;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  &-item-name {
+    flex: 1;
+    font-size: 12px;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  &-item-zindex {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    background: var(--color-border-light);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  // ===== 操作按钮 =====
+  &-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+
+    .layer-panel-item:hover &,
+    .layer-panel-item.selected & {
+      opacity: 1;
+    }
+  }
+
+  &-action-btn {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    font-size: 10px !important;
+    padding: 0 !important;
+    border-radius: 3px !important;
+
+    .anticon {
+      font-size: 10px;
+    }
+  }
+}

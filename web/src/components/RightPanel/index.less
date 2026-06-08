@@ -57,15 +57,6 @@
     gap: 2px;
   }
 
-  &-column-select {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--color-border-light);
-  }
-
   &-fill-status {
     margin-bottom: 12px;
   }
@@ -80,6 +71,18 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+
+    &.compact {
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+
+      .right-panel-label {
+        min-width: 28px;
+        margin-bottom: 0;
+        flex-shrink: 0;
+      }
+    }
   }
 
   &-label {
@@ -97,6 +100,114 @@
     font-size: 11px;
     color: var(--color-text-muted);
     font-style: italic;
+  }
+
+  // ===== 位置/尺寸网格 =====
+  &-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 12px 0 6px;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  &-position-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  // ===== 位置信息紧凑显示 =====
+  &-position-compact {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--color-text-muted);
+    background: var(--color-border-light);
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+
+  // ===== 分组信息 =====
+  &-group-info {
+    font-size: 12px;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.06);
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  // ===== 分组头部 =====
+  &-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border-light);
+  }
+
+  // ===== 分组提示 =====
+  &-group-hint {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    background: var(--color-border-light);
+    padding: 8px;
+    border-radius: 4px;
+    line-height: 1.5;
+  }
+
+  // ===== 对齐网格 =====
+  &-align-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 8px;
+
+    .ant-btn {
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+  }
+
+  // ===== 分布按钮行 =====
+  &-distribute-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+
+    .ant-btn {
+      flex: 1;
+      font-size: 12px;
+    }
+  }
+
+  // ===== 多选信息 =====
+  &-multi-info {
+    margin-bottom: 12px;
+  }
+
+  &-multi-count {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+
+  &-multi-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
   // Image upload
@@ -136,5 +247,37 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  // ===== 边距网格 (上右下左) =====
+  &-sides-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+
+    .right-panel-label {
+      min-width: 16px;
+    }
+  }
+
+  // ===== 颜色行 =====
+  &-color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  // ===== 背景图片行 =====
+  &-bg-image-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  // ===== 边框行 =====
+  &-border-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
   }
 }

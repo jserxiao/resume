@@ -4,37 +4,37 @@
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  background: #f5f7fa;
-  color: #1f2937;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
 
   // ===== 顶部工具栏 =====
   &-toolbar {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px 16px;
-    background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
+    gap: var(--gap-lg);
+    padding: var(--gap-base) var(--gap-xl);
+    background: var(--color-bg-white);
+    border-bottom: 1px solid var(--color-border);
     flex-shrink: 0;
 
     .deco-editor-toolbar-left {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--gap-base);
     }
 
     .deco-editor-toolbar-title {
-      font-size: 14px;
+      font-size: var(--font-size-14);
       font-weight: 600;
-      color: #111827;
+      color: var(--color-text-dark);
     }
 
     .deco-editor-toolbar-right {
       margin-left: auto;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--gap-base);
     }
   }
 
@@ -53,14 +53,14 @@
     align-items: center;
     justify-content: center;
     padding: 32px;
-    background: #eef1f5;
+    background: var(--color-bg-stage);
   }
 
   &-stage {
     position: relative;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
-    border: 1px solid #d1d5db;
+    background: var(--color-bg-white);
+    box-shadow: var(--shadow-stage);
+    border: 1px solid var(--color-border-active);
     cursor: crosshair;
     isolation: isolate;
   }
@@ -78,8 +78,8 @@
     position: absolute;
     bottom: -22px;
     right: 0;
-    font-size: 11px;
-    color: #9ca3af;
+    font-size: var(--font-size-11);
+    color: var(--color-text-muted);
     white-space: nowrap;
     pointer-events: none;
   }
@@ -102,25 +102,25 @@
       height: 1px;
       left: 0;
       right: 0;
-      border-top: 1px dashed #f43f5e;
+      border-top: 1px dashed var(--color-guide);
     }
 
     &.vertical {
       width: 1px;
       top: 0;
       bottom: 0;
-      border-left: 1px dashed #f43f5e;
+      border-left: 1px dashed var(--color-guide);
     }
   }
 
   // ===== 距离标注 =====
   &-distance {
     position: absolute;
-    font-size: 10px;
-    color: #7c3aed;
-    background: rgba(124, 58, 237, 0.08);
-    padding: 1px 4px;
-    border-radius: 3px;
+    font-size: var(--font-size-10);
+    color: var(--color-distance);
+    background: var(--color-distance-light);
+    padding: 1px var(--gap-sm);
+    border-radius: var(--radius-xs);
     white-space: nowrap;
     pointer-events: none;
     z-index: 5;
@@ -132,38 +132,38 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #1a56db;
-    border: 2px solid #fff;
+    background: var(--color-primary);
+    border: 2px solid var(--color-bg-white);
     transform: translate(-5px, -5px);
     cursor: grab;
     z-index: 6;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-anchor);
     pointer-events: auto;
 
     &:hover {
-      background: #2563eb;
+      background: var(--color-primary-hover);
       transform: translate(-5px, -5px) scale(1.2);
     }
 
     &.first-anchor {
-      background: #f59e0b;
-      border-color: #fff;
+      background: var(--color-warning);
+      border-color: var(--color-bg-white);
       cursor: pointer;
 
       &:hover {
-        background: #d97706;
+        background: var(--color-warning-hover);
       }
     }
 
     &.selected {
-      background: #f43f5e;
-      border-color: #fff;
+      background: var(--color-guide);
+      border-color: var(--color-bg-white);
     }
   }
 
   // ===== 鼠标追踪线 =====
   &-tracking-line {
-    stroke: #1a56db;
+    stroke: var(--color-primary);
     stroke-width: 1.5;
     stroke-dasharray: 6 3;
     fill: none;
@@ -172,21 +172,21 @@
   // ===== 右侧面板 =====
   &-panel {
     width: 300px;
-    background: #ffffff;
-    border-left: 1px solid #e5e7eb;
+    background: var(--color-bg-white);
+    border-left: 1px solid var(--color-border);
     overflow-y: auto;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
 
     &-section {
-      padding: 14px 16px;
-      border-bottom: 1px solid #f3f4f6;
+      padding: 14px var(--gap-xl);
+      border-bottom: 1px solid var(--color-border-light);
 
       &-title {
-        font-size: 11px;
+        font-size: var(--font-size-11);
         font-weight: 600;
-        color: #6b7280;
+        color: var(--color-text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 10px;
@@ -200,15 +200,15 @@
 
     &-label {
       display: block;
-      font-size: 11px;
-      color: #6b7280;
-      margin-bottom: 4px;
+      font-size: var(--font-size-11);
+      color: var(--color-text-secondary);
+      margin-bottom: var(--gap-sm);
     }
 
     &-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--gap-base);
     }
   }
 
@@ -216,26 +216,26 @@
   &-path-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--gap-sm);
   }
 
   &-path-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    border-radius: 6px;
+    gap: var(--gap-base);
+    padding: var(--gap-md) var(--gap-base);
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background var(--transition-fast);
     border: 1px solid transparent;
 
     &:hover {
-      background: #f9fafb;
+      background: var(--color-bg-hover);
     }
 
     &.active {
-      background: #eff6ff;
-      border-color: #bfdbfe;
+      background: var(--color-bg-selected);
+      border-color: var(--color-primary-light);
     }
 
     &-color {
@@ -246,14 +246,14 @@
     }
 
     &-name {
-      font-size: 13px;
+      font-size: var(--font-size-13);
       font-weight: 500;
-      color: #1f2937;
+      color: var(--color-text);
     }
 
     &-info {
-      font-size: 11px;
-      color: #9ca3af;
+      font-size: var(--font-size-11);
+      color: var(--color-text-muted);
       flex: 1;
       text-align: right;
     }
@@ -261,9 +261,9 @@
     &-actions {
       display: flex;
       align-items: center;
-      gap: 2px;
+      gap: var(--gap-xs);
       opacity: 0;
-      transition: opacity 0.15s;
+      transition: opacity var(--transition-fast);
     }
 
     &:hover &-actions {
@@ -271,19 +271,19 @@
     }
 
     &-btn {
-      font-size: 12px;
-      color: #9ca3af;
+      font-size: var(--font-size-12);
+      color: var(--color-text-muted);
       cursor: pointer;
-      padding: 2px 4px;
-      border-radius: 3px;
+      padding: 2px var(--gap-sm);
+      border-radius: var(--radius-xs);
 
       &:hover {
-        color: #1a56db;
-        background: #eff6ff;
+        color: var(--color-primary);
+        background: var(--color-bg-selected);
       }
 
       &--danger:hover {
-        color: #ef4444;
+        color: var(--color-danger);
         background: #fef2f2;
       }
     }
@@ -299,29 +299,29 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    color: #374151;
+    padding: var(--gap-sm) var(--gap-base);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-12);
+    color: var(--color-text-tertiary);
 
     &:hover {
-      background: #f9fafb;
+      background: var(--color-bg-hover);
     }
 
     &-coord {
-      font-family: 'Menlo', 'Monaco', monospace;
-      font-size: 11px;
-      color: #9ca3af;
+      font-family: var(--font-mono);
+      font-size: var(--font-size-11);
+      color: var(--color-text-muted);
     }
 
     &-delete {
       opacity: 0;
       cursor: pointer;
-      color: #9ca3af;
-      font-size: 11px;
+      color: var(--color-text-muted);
+      font-size: var(--font-size-11);
 
       &:hover {
-        color: #f43f5e;
+        color: var(--color-guide);
       }
     }
 
@@ -334,25 +334,25 @@
   &-statusbar {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 4px 16px;
-    background: #ffffff;
-    border-top: 1px solid #e5e7eb;
-    font-size: 11px;
-    color: #9ca3af;
+    gap: var(--gap-xl);
+    padding: var(--gap-sm) var(--gap-xl);
+    background: var(--color-bg-white);
+    border-top: 1px solid var(--color-border);
+    font-size: var(--font-size-11);
+    color: var(--color-text-muted);
     flex-shrink: 0;
 
     .status-item {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: var(--gap-sm);
     }
   }
 }
 
 // ===== antd 浅色覆盖 =====
 .deco-editor .ant-btn {
-  font-size: 12px;
+  font-size: var(--font-size-12);
 }
 
 .deco-editor .ant-input-number {

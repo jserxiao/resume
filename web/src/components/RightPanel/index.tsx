@@ -2,11 +2,6 @@ import { useState } from 'react';
 import { getGroupBounds as getGroupBoundsUtil } from '@/utils/geometry';
 import { Button, Input, InputNumber, Switch, Rate, Tabs, Popconfirm, Tooltip, Progress, Divider, Select, ColorPicker, Slider, Modal } from 'antd';
 import {
-  EyeOutlined,
-  EyeInvisibleOutlined,
-  LockOutlined,
-  UnlockOutlined,
-  CopyOutlined,
   DeleteOutlined,
   CameraOutlined,
   CloseOutlined,
@@ -34,6 +29,10 @@ import { uploadImage } from '@/utils/imageUpload';
 import RichTextField from './RichTextField';
 import TagListField from './TagListField';
 import ColorSchemePanel from './ColorSchemePanel';
+import BlockActionsToolbar from '@/components/shared/BlockActionsToolbar';
+import ColorFieldInput from '@/components/shared/ColorFieldInput';
+import SidesInput from '@/components/shared/SidesInput';
+import ImageUploadField from '@/components/shared/ImageUploadField';
 import './index.less';
 
 export default function RightPanel() {
@@ -351,62 +350,20 @@ export default function RightPanel() {
             <div className="right-panel-section-title" style={{ fontSize: 12 }}><BgColorsOutlined /> 背景</div>
             <div className="right-panel-field">
               <label className="right-panel-label">背景颜色</label>
-              <div className="right-panel-color-row">
-                <ColorPicker
-                  value={resume.canvas.background || '#ffffff'}
-                  onChange={(_, hex) => setCanvasConfig({ background: hex })}
-                  size="small"
-                />
-                <Input
-                  value={resume.canvas.background || '#ffffff'}
-                  onChange={(e) => setCanvasConfig({ background: e.target.value })}
-                  placeholder="#ffffff"
-                  size="small"
-                  style={{ flex: 1 }}
-                />
-              </div>
+              <ColorFieldInput
+                value={resume.canvas.background || '#ffffff'}
+                onChange={(hex) => setCanvasConfig({ background: hex })}
+                placeholder="#ffffff"
+              />
             </div>
 
             <div className="right-panel-field">
               <label className="right-panel-label">背景图片</label>
-              {resume.canvas.backgroundImage ? (
-                <div className="right-panel-image-upload">
-                  <div className="right-panel-image-preview">
-                    <img src={resume.canvas.backgroundImage} alt="画布背景" />
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      className="right-panel-image-clear"
-                      icon={<CloseOutlined />}
-                      onClick={() => setCanvasConfig({ backgroundImage: undefined })}
-                    />
-                  </div>
-                  <Select
-                    value={resume.canvas.backgroundSize || 'cover'}
-                    onChange={(val) => setCanvasConfig({ backgroundSize: val })}
-                    size="small"
-                    style={{ width: '100%', marginTop: 4 }}
-                    options={[
-                      { label: '覆盖 (cover)', value: 'cover' },
-                      { label: '包含 (contain)', value: 'contain' },
-                      { label: '原始 (auto)', value: 'auto' },
-                    ]}
-                  />
-                </div>
-              ) : (
-                <Button
-                  icon={<CameraOutlined />}
-                  onClick={async () => {
-                    const result = await uploadImage();
-                    if (result) setCanvasConfig({ backgroundImage: result });
-                  }}
-                  size="small"
-                  style={{ width: '100%' }}
-                >
-                  上传背景图片
-                </Button>
-              )}
+              <ImageUploadField
+                value={resume.canvas.backgroundImage || ''}
+                onChange={(val) => setCanvasConfig({ backgroundImage: val || undefined })}
+                uploadText="上传背景图片"
+              />
             </div>
 
             <Divider style={{ margin: '8px 0' }} />
@@ -570,57 +527,19 @@ export default function RightPanel() {
 
             {/* 外边距 */}
             <div className="right-panel-section-title"><BorderOutlined /> 外边距</div>
-            <div className="right-panel-sides-grid">
-              {(['top', 'right', 'bottom', 'left'] as const).map((side) => {
-                const labelMap = { top: '上', right: '右', bottom: '下', left: '左' };
-                const margin = selectedBlock.style?.margin || BLOCK_DEFAULT_MARGIN;
-                return (
-                  <div key={side} className="right-panel-field compact">
-                    <label className="right-panel-label">{labelMap[side]}</label>
-                    <InputNumber
-                      value={margin[side]}
-                      onChange={(val) => {
-                        const current = selectedBlock.style?.margin || { ...BLOCK_DEFAULT_MARGIN };
-                        updateBlockStyle(selectedBlock.id, {
-                          margin: { ...current, [side]: val || 0 },
-                        });
-                      }}
-                      size="small"
-                      style={{ width: '100%' }}
-                      min={0}
-                      step={1}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            <SidesInput
+              value={selectedBlock.style?.margin || BLOCK_DEFAULT_MARGIN}
+              onChange={(val) => updateBlockStyle(selectedBlock.id, { margin: val })}
+              defaultValue={BLOCK_DEFAULT_MARGIN}
+            />
 
             {/* 内边距 */}
             <div className="right-panel-section-title">内边距</div>
-            <div className="right-panel-sides-grid">
-              {(['top', 'right', 'bottom', 'left'] as const).map((side) => {
-                const labelMap = { top: '上', right: '右', bottom: '下', left: '左' };
-                const padding = selectedBlock.style?.padding || BLOCK_DEFAULT_PADDING;
-                return (
-                  <div key={side} className="right-panel-field compact">
-                    <label className="right-panel-label">{labelMap[side]}</label>
-                    <InputNumber
-                      value={padding[side]}
-                      onChange={(val) => {
-                        const current = selectedBlock.style?.padding || { ...BLOCK_DEFAULT_PADDING };
-                        updateBlockStyle(selectedBlock.id, {
-                          padding: { ...current, [side]: val || 0 },
-                        });
-                      }}
-                      size="small"
-                      style={{ width: '100%' }}
-                      min={0}
-                      step={1}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            <SidesInput
+              value={selectedBlock.style?.padding || BLOCK_DEFAULT_PADDING}
+              onChange={(val) => updateBlockStyle(selectedBlock.id, { padding: val })}
+              defaultValue={BLOCK_DEFAULT_PADDING}
+            />
 
             <Divider style={{ margin: '8px 0' }} />
 
@@ -628,67 +547,23 @@ export default function RightPanel() {
             <div className="right-panel-section-title"><BgColorsOutlined /> 背景</div>
             <div className="right-panel-field">
               <label className="right-panel-label">背景颜色</label>
-              <div className="right-panel-color-row">
-                <ColorPicker
-                  value={selectedBlock.style?.backgroundColor || ''}
-                  onChange={(_, hex) => {
-                    updateBlockStyle(selectedBlock.id, { backgroundColor: hex });
-                  }}
-                  size="small"
-                  allowClear
-                  onClear={() => updateBlockStyle(selectedBlock.id, { backgroundColor: '' })}
-                />
-                <Input
-                  value={selectedBlock.style?.backgroundColor || ''}
-                  onChange={(e) => updateBlockStyle(selectedBlock.id, { backgroundColor: e.target.value })}
-                  placeholder="跟随主题"
-                  size="small"
-                  style={{ flex: 1 }}
-                />
-              </div>
+              <ColorFieldInput
+                value={selectedBlock.style?.backgroundColor || ''}
+                onChange={(hex) => updateBlockStyle(selectedBlock.id, { backgroundColor: hex })}
+                placeholder="跟随主题"
+                allowClear
+                onClear={() => updateBlockStyle(selectedBlock.id, { backgroundColor: '' })}
+              />
             </div>
 
             {/* 背景图片 */}
             <div className="right-panel-field">
               <label className="right-panel-label">背景图片</label>
-              {selectedBlock.style?.backgroundImage ? (
-                <div className="right-panel-image-upload">
-                  <div className="right-panel-image-preview">
-                    <img src={selectedBlock.style.backgroundImage} alt="块背景" />
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      className="right-panel-image-clear"
-                      icon={<CloseOutlined />}
-                      onClick={() => updateBlockStyle(selectedBlock.id, { backgroundImage: '' })}
-                    />
-                  </div>
-                  <Select
-                    value={selectedBlock.style?.backgroundSize || 'cover'}
-                    onChange={(val) => updateBlockStyle(selectedBlock.id, { backgroundSize: val })}
-                    size="small"
-                    style={{ width: '100%', marginTop: 4 }}
-                    options={[
-                      { label: '覆盖 (cover)', value: 'cover' },
-                      { label: '包含 (contain)', value: 'contain' },
-                      { label: '原始 (auto)', value: 'auto' },
-                    ]}
-                  />
-                </div>
-              ) : (
-                <Button
-                  icon={<CameraOutlined />}
-                  onClick={async () => {
-                    const result = await uploadImage();
-                    if (result) updateBlockStyle(selectedBlock.id, { backgroundImage: result });
-                  }}
-                  size="small"
-                  style={{ width: '100%' }}
-                >
-                  上传背景图片
-                </Button>
-              )}
+              <ImageUploadField
+                value={selectedBlock.style?.backgroundImage || ''}
+                onChange={(val) => updateBlockStyle(selectedBlock.id, { backgroundImage: val })}
+                uploadText="上传背景图片"
+              />
             </div>
 
             {/* 透明度 */}
@@ -759,55 +634,17 @@ export default function RightPanel() {
         // 自定义装饰块属性面板
         <div className="right-panel-content">
           <div className="right-panel-block-header">
-            <Input
-              variant="borderless"
-              value={selectedBlock.name}
-              onChange={(e) => renameBlock(selectedBlock.id, e.target.value)}
-              className="right-panel-block-name"
-              style={{ color: '#1a56db' }}
+            <BlockActionsToolbar
+              name={selectedBlock.name}
+              onNameChange={(val) => renameBlock(selectedBlock.id, val)}
+              nameStyle={{ color: '#1a56db' }}
+              visible={selectedBlock.visible}
+              locked={selectedBlock.locked}
+              onToggleVisibility={() => toggleBlockVisibility(selectedBlock.id)}
+              onToggleLock={() => toggleBlockLock(selectedBlock.id)}
+              onClone={() => cloneBlock(selectedBlock.id)}
+              onDelete={() => removeBlock(selectedBlock.id)}
             />
-            <div className="right-panel-block-actions">
-              <Tooltip title={selectedBlock.visible ? '隐藏块' : '显示块'}>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={selectedBlock.visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-                  onClick={() => toggleBlockVisibility(selectedBlock.id)}
-                />
-              </Tooltip>
-              <Tooltip title={selectedBlock.locked ? '解锁块' : '锁定块'}>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={selectedBlock.locked ? <LockOutlined /> : <UnlockOutlined />}
-                  onClick={() => toggleBlockLock(selectedBlock.id)}
-                />
-              </Tooltip>
-              <Tooltip title="克隆块">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<CopyOutlined />}
-                  onClick={() => cloneBlock(selectedBlock.id)}
-                />
-              </Tooltip>
-              <Popconfirm
-                title="确认删除该块？"
-                onConfirm={() => removeBlock(selectedBlock.id)}
-                okText="删除"
-                cancelText="取消"
-                okButtonProps={{ danger: true }}
-              >
-                <Tooltip title="删除块">
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<DeleteOutlined />}
-                  />
-                </Tooltip>
-              </Popconfirm>
-            </div>
           </div>
 
           {/* 装饰类型标识 */}
@@ -1172,54 +1009,17 @@ export default function RightPanel() {
         <div className="right-panel-content">
           {/* 块头部信息 */}
           <div className="right-panel-block-header">
-            <Input
-              variant="borderless"
-              value={selectedBlock.name}
-              onChange={(e) => renameBlock(selectedBlock.id, e.target.value)}
-              className="right-panel-block-name"
+            <BlockActionsToolbar
+              name={selectedBlock.name}
+              onNameChange={(val) => renameBlock(selectedBlock.id, val)}
+              visible={selectedBlock.visible}
+              locked={selectedBlock.locked}
+              hasGroup={!!selectedBlock.groupId}
+              onToggleVisibility={() => toggleBlockVisibility(selectedBlock.id)}
+              onToggleLock={() => toggleBlockLock(selectedBlock.id)}
+              onClone={() => cloneBlock(selectedBlock.id)}
+              onDelete={() => removeBlock(selectedBlock.id)}
             />
-            <div className="right-panel-block-actions">
-              <Tooltip title={selectedBlock.visible ? '隐藏块' : '显示块'}>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={selectedBlock.visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-                  onClick={() => toggleBlockVisibility(selectedBlock.id)}
-                />
-              </Tooltip>
-              <Tooltip title={selectedBlock.locked ? '解锁块' : '锁定块'}>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={selectedBlock.locked ? <LockOutlined /> : <UnlockOutlined />}
-                  onClick={() => toggleBlockLock(selectedBlock.id)}
-                />
-              </Tooltip>
-              <Tooltip title="克隆块">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<CopyOutlined />}
-                  onClick={() => cloneBlock(selectedBlock.id)}
-                />
-              </Tooltip>
-              <Popconfirm
-                title="确认删除该块？"
-                onConfirm={() => removeBlock(selectedBlock.id)}
-                okText="删除"
-                cancelText="取消"
-                okButtonProps={{ danger: true }}
-              >
-                <Tooltip title="删除块">
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<DeleteOutlined />}
-                  />
-                </Tooltip>
-              </Popconfirm>
-            </div>
           </div>
 
           {/* 分组信息 */}

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Input, InputNumber, ColorPicker, Tooltip, message, Popconfirm } from 'antd';
+import { Button, Input, InputNumber, Tooltip, message, Popconfirm } from 'antd';
 import {
   ArrowLeftOutlined,
   UndoOutlined,
@@ -15,6 +15,8 @@ import {
 import { v4 as uuid } from 'uuid';
 import { useResumeStore } from '@/store';
 import type { CustomDecorationDefinition, DecorationPath } from '@/types';
+import { DECO_GRID_SIZE, DECO_SNAP_THRESHOLD, DECO_CLOSE_THRESHOLD, PATH_COLORS } from '@/utils/constants';
+import ColorFieldInput from '@/components/shared/ColorFieldInput';
 import './DecorationEditorPage.less';
 
 /** 锚点坐标（像素） */
@@ -48,9 +50,6 @@ interface DistanceLabel {
   text: string;
 }
 
-const GRID_SIZE = 20;
-const SNAP_THRESHOLD = 5;
-const CLOSE_THRESHOLD = 12;
 
 /** 创建新的空白路径 */
 function createEmptyPath(): EditablePath {
@@ -165,7 +164,7 @@ export default function DecorationEditorPage() {
 
   // ===== 吸附到网格 =====
   const snapToGrid = useCallback((val: number): number => {
-    return Math.round(val / GRID_SIZE) * GRID_SIZE;
+    return Math.round(val / DECO_GRID_SIZE) * DECO_GRID_SIZE;
   }, []);
 
   // ===== 辅助线计算 =====
@@ -174,21 +173,21 @@ export default function DecorationEditorPage() {
       const guides: GuideLine[] = [];
       // 对齐到当前路径的其他锚点
       for (const a of activePath.anchors) {
-        if (Math.abs(a.x - x) < SNAP_THRESHOLD) {
-          guides.push({ type: 'vertical', position: a.x });
-        }
-        if (Math.abs(a.y - y) < SNAP_THRESHOLD) {
-          guides.push({ type: 'horizontal', position: a.y });
-        }
+      if (Math.abs(a.x - x) < DECO_SNAP_THRESHOLD) {
+        guides.push({ type: 'vertical', position: a.x });
+      }
+      if (Math.abs(a.y - y) < DECO_SNAP_THRESHOLD) {
+        guides.push({ type: 'horizontal', position: a.y });
+      }
       }
       const cx = stageWidth / 2;
       const cy = stageHeight / 2;
-      if (Math.abs(cx - x) < SNAP_THRESHOLD) guides.push({ type: 'vertical', position: cx });
-      if (Math.abs(cy - y) < SNAP_THRESHOLD) guides.push({ type: 'horizontal', position: cy });
-      if (Math.abs(x) < SNAP_THRESHOLD) guides.push({ type: 'vertical', position: 0 });
-      if (Math.abs(x - stageWidth) < SNAP_THRESHOLD) guides.push({ type: 'vertical', position: stageWidth });
-      if (Math.abs(y) < SNAP_THRESHOLD) guides.push({ type: 'horizontal', position: 0 });
-      if (Math.abs(y - stageHeight) < SNAP_THRESHOLD) guides.push({ type: 'horizontal', position: stageHeight });
+      if (Math.abs(cx - x) < DECO_SNAP_THRESHOLD) guides.push({ type: 'vertical', position: cx });
+      if (Math.abs(cy - y) < DECO_SNAP_THRESHOLD) guides.push({ type: 'horizontal', position: cy });
+      if (Math.abs(x) < DECO_SNAP_THRESHOLD) guides.push({ type: 'vertical', position: 0 });
+      if (Math.abs(x - stageWidth) < DECO_SNAP_THRESHOLD) guides.push({ type: 'vertical', position: stageWidth });
+      if (Math.abs(y) < DECO_SNAP_THRESHOLD) guides.push({ type: 'horizontal', position: 0 });
+      if (Math.abs(y - stageHeight) < DECO_SNAP_THRESHOLD) guides.push({ type: 'horizontal', position: stageHeight });
 
       const seen = new Set<string>();
       return guides.filter((g) => {
@@ -232,8 +231,8 @@ export default function DecorationEditorPage() {
 
       const guides = computeGuides(x, y);
       for (const g of guides) {
-        if (g.type === 'vertical' && Math.abs(g.position - x) < SNAP_THRESHOLD) x = g.position;
-        if (g.type === 'horizontal' && Math.abs(g.position - y) < SNAP_THRESHOLD) y = g.position;
+        if (g.type === 'vertical' && Math.abs(g.position - x) < DECO_SNAP_THRESHOLD) x = g.position;
+        if (g.type === 'horizontal' && Math.abs(g.position - y) < DECO_SNAP_THRESHOLD) y = g.position;
       }
 
       if (guides.length === 0) {
@@ -269,7 +268,7 @@ export default function DecorationEditorPage() {
         const first = activePath.anchors[0];
         const dx = pos.x - first.x;
         const dy = pos.y - first.y;
-        if (Math.sqrt(dx * dx + dy * dy) < CLOSE_THRESHOLD) {
+        if (Math.sqrt(dx * dx + dy * dy) < DECO_CLOSE_THRESHOLD) {
           updatePath(activePathIdx, { isClosed: true });
           return;
         }
@@ -485,12 +484,12 @@ export default function DecorationEditorPage() {
   // ===== 渲染网格 =====
   const renderGrid = () => {
     const lines: React.ReactNode[] = [];
-    for (let x = 0; x <= stageWidth; x += GRID_SIZE) {
+    for (let x = 0; x <= stageWidth; x += DECO_GRID_SIZE) {
       lines.push(
         <line key={`v-${x}`} x1={x} y1={0} x2={x} y2={stageHeight} stroke="#e5e7eb" strokeWidth={0.5} />,
       );
     }
-    for (let y = 0; y <= stageHeight; y += GRID_SIZE) {
+    for (let y = 0; y <= stageHeight; y += DECO_GRID_SIZE) {
       lines.push(
         <line key={`h-${y}`} x1={0} y1={y} x2={stageWidth} y2={y} stroke="#e5e7eb" strokeWidth={0.5} />,
       );
@@ -527,7 +526,7 @@ export default function DecorationEditorPage() {
           const first = path.anchors[0];
           const dx = mousePos.x - first.x;
           const dy = mousePos.y - first.y;
-          if (Math.sqrt(dx * dx + dy * dy) < CLOSE_THRESHOLD) {
+          if (Math.sqrt(dx * dx + dy * dy) < DECO_CLOSE_THRESHOLD) {
             trackingPathD += ` M ${mousePos.x} ${mousePos.y} L ${first.x} ${first.y}`;
           }
         }
@@ -625,11 +624,10 @@ export default function DecorationEditorPage() {
     const first = activePath.anchors[0];
     const dx = mousePos.x - first.x;
     const dy = mousePos.y - first.y;
-    return Math.sqrt(dx * dx + dy * dy) < CLOSE_THRESHOLD;
+    return Math.sqrt(dx * dx + dy * dy) < DECO_CLOSE_THRESHOLD;
   })();
 
-  // ===== 路径颜色标识 =====
-  const pathColors = ['#1a56db', '#c026d3', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
+  // PATH_COLORS 已从 constants 导入
 
   return (
     <div className="deco-editor">
@@ -769,7 +767,7 @@ export default function DecorationEditorPage() {
             </div>
             <div className="deco-editor-path-list">
               {paths.map((path, idx) => {
-                const colorIdx = idx % pathColors.length;
+                const colorIdx = idx % PATH_COLORS.length;
                 const isActive = idx === activePathIdx;
                 return (
                   <div
@@ -779,7 +777,7 @@ export default function DecorationEditorPage() {
                   >
                     <div
                       className="deco-editor-path-item-color"
-                      style={{ background: pathColors[colorIdx] }}
+                      style={{ background: PATH_COLORS[colorIdx] }}
                     />
                     <span className="deco-editor-path-item-name">
                       路径 {idx + 1}
@@ -818,35 +816,19 @@ export default function DecorationEditorPage() {
             <div className="deco-editor-panel-section-title">路径属性</div>
             <div className="deco-editor-field">
               <div className="deco-editor-field-label">填充色</div>
-              <div className="deco-editor-field-row">
-                <ColorPicker
-                  value={activePath?.fillColor || '#1a56db'}
-                  onChange={(_, hex) => updatePath(activePathIdx, { fillColor: hex })}
-                  size="small"
-                />
-                <Input
-                  value={activePath?.fillColor || '#1a56db'}
-                  onChange={(e) => updatePath(activePathIdx, { fillColor: e.target.value })}
-                  size="small"
-                  style={{ flex: 1 }}
-                />
-              </div>
+              <ColorFieldInput
+                value={activePath?.fillColor || '#1a56db'}
+                onChange={(hex) => updatePath(activePathIdx, { fillColor: hex })}
+                rowClassName="deco-editor-field-row"
+              />
             </div>
             <div className="deco-editor-field">
               <div className="deco-editor-field-label">线条色</div>
-              <div className="deco-editor-field-row">
-                <ColorPicker
-                  value={activePath?.strokeColor || '#1a56db'}
-                  onChange={(_, hex) => updatePath(activePathIdx, { strokeColor: hex })}
-                  size="small"
-                />
-                <Input
-                  value={activePath?.strokeColor || '#1a56db'}
-                  onChange={(e) => updatePath(activePathIdx, { strokeColor: e.target.value })}
-                  size="small"
-                  style={{ flex: 1 }}
-                />
-              </div>
+              <ColorFieldInput
+                value={activePath?.strokeColor || '#1a56db'}
+                onChange={(hex) => updatePath(activePathIdx, { strokeColor: hex })}
+                rowClassName="deco-editor-field-row"
+              />
             </div>
             <div className="deco-editor-field">
               <div className="deco-editor-field-label">线条宽度</div>

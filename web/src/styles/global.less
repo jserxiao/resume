@@ -1,35 +1,99 @@
 /* ========== CSS Variables ========== */
 :root {
+  // ===== 品牌色 =====
   --color-primary: #1a56db;
   --color-primary-light: #d1e0ff;
-  --color-bg: #f5f6fa;
-  --color-bg-white: #ffffff;
-  --color-border: #e5e7eb;
-  --color-border-light: #f3f4f6;
-  --color-text: #1f2937;
-  --color-text-secondary: #6b7280;
-  --color-text-muted: #9ca3af;
+  --color-primary-hover: #2563eb;
+  --color-primary-bg: rgba(26, 86, 219, 0.04);
+  --color-primary-bg-hover: rgba(26, 86, 219, 0.08);
+  --color-primary-bg-selected: rgba(26, 86, 219, 0.08);
+
+  // ===== 语义色 =====
   --color-accent: #2563eb;
   --color-danger: #ef4444;
+  --color-danger-bg: rgba(239, 68, 68, 0.06);
   --color-success: #22c55e;
   --color-warning: #f59e0b;
+  --color-warning-hover: #d97706;
+  --color-warning-bg: rgba(245, 158, 11, 0.04);
+  --color-warning-bg-hover: rgba(245, 158, 11, 0.08);
+  --color-warning-border: rgba(245, 158, 11, 0.2);
+  --color-warning-border-selected: rgba(245, 158, 11, 0.85);
 
+  // ===== 辅助色（对齐线/距离标注/装饰） =====
+  --color-guide: #f43f5e;
+  --color-distance: #8b5cf6;
+  --color-distance-light: rgba(139, 92, 246, 0.08);
+  --color-deco: #c026d3;
+  --color-deco-dark: #a21caf;
+  --color-deco-bg: rgba(192, 38, 211, 0.04);
+  --color-deco-bg-hover: rgba(192, 38, 211, 0.08);
+  --color-deco-border: rgba(192, 38, 211, 0.2);
+
+  // ===== 中性色/背景 =====
+  --color-bg: #f5f6fa;
+  --color-bg-white: #ffffff;
+  --color-bg-stage: #eef1f5;
+  --color-bg-hover: #f9fafb;
+  --color-bg-selected: #eff6ff;
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+  --color-border-active: #d1d5db;
+
+  // ===== 文字色 =====
+  --color-text: #1f2937;
+  --color-text-dark: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+  --color-text-tertiary: #374151;
+  --color-text-on-primary: #ffffff;
+
+  // ===== 阴影 =====
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-page: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-stage: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-anchor: 0 0 0 1px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.2);
 
+  // ===== 圆角 =====
+  --radius-xs: 3px;
   --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
 
+  // ===== 字号 =====
+  --font-size-10: 10px;
+  --font-size-11: 11px;
+  --font-size-12: 12px;
+  --font-size-13: 13px;
+  --font-size-14: 14px;
+  --font-size-15: 15px;
+  --font-size-16: 16px;
+
+  // ===== 字体 =====
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 
-  /* A4 paper dimensions */
+  // ===== 间距 =====
+  --gap-xs: 2px;
+  --gap-sm: 4px;
+  --gap-md: 6px;
+  --gap-base: 8px;
+  --gap-lg: 12px;
+  --gap-xl: 16px;
+
+  // ===== 过渡 =====
+  --transition-fast: 0.15s ease;
+  --transition-normal: all 0.15s;
+  --transition-slow: all 0.2s;
+
+  // ===== A4 纸张 =====
   --a4-width: 210mm;
   --a4-height: 297mm;
 
-  /* Editor layout */
+  // ===== 编辑器布局 =====
   --toolbar-height: 48px;
   --left-panel-min-width: 220px;
   --right-panel-min-width: 280px;
@@ -95,8 +159,36 @@ body {
   align-items: center;
 }
 
+.justify-center {
+  justify-content: center;
+}
+
 .justify-between {
   justify-content: space-between;
+}
+
+.gap-xs {
+  gap: var(--gap-xs);
+}
+
+.gap-sm {
+  gap: var(--gap-sm);
+}
+
+.gap-md {
+  gap: var(--gap-md);
+}
+
+.gap-base {
+  gap: var(--gap-base);
+}
+
+.gap-lg {
+  gap: var(--gap-lg);
+}
+
+.gap-xl {
+  gap: var(--gap-xl);
 }
 
 .gap-4 {
@@ -115,6 +207,152 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ========== Panel Base ========== */
+.panel-base {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-bg-white);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.panel-base--left {
+  border-right: 1px solid var(--color-border);
+}
+
+.panel-base--right {
+  border-left: 1px solid var(--color-border);
+}
+
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--gap-lg) var(--gap-xl);
+}
+
+/* ========== Section Header ========== */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+  font-size: var(--font-size-12);
+  font-weight: 600;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border-light);
+
+  &--with-padding {
+    padding: var(--gap-base) var(--gap-lg);
+  }
+
+  .anticon {
+    font-size: var(--font-size-13);
+  }
+}
+
+.section-title {
+  font-size: var(--font-size-12);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: var(--gap-lg) 0 var(--gap-sm);
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+/* ========== Field Label ========== */
+.field-label {
+  font-size: var(--font-size-12);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.field-required {
+  color: var(--color-danger);
+  margin-left: var(--gap-xs);
+}
+
+.field-hint {
+  font-size: var(--font-size-11);
+  color: var(--color-text-muted);
+}
+
+/* ========== Action Button (small) ========== */
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+  flex-shrink: 0;
+
+  &--sm {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    font-size: var(--font-size-10) !important;
+    padding: 0 !important;
+    border-radius: var(--radius-xs) !important;
+
+    .anticon {
+      font-size: var(--font-size-10);
+    }
+  }
+
+  &--md {
+    font-size: var(--font-size-12) !important;
+    color: var(--color-text-muted) !important;
+    width: 22px !important;
+    height: 22px !important;
+    padding: 0 !important;
+    border-radius: var(--radius-sm) !important;
+
+    &:hover {
+      color: var(--color-primary) !important;
+      background: var(--color-primary-bg-hover) !important;
+    }
+  }
+}
+
+.action-btn--danger:hover {
+  color: var(--color-danger) !important;
+  background: var(--color-danger-bg) !important;
+}
+
+/* ========== Hover Reveal Actions ========== */
+.hover-reveal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+}
+
+/* ========== Tag/Badge Small ========== */
+.badge-xs {
+  font-size: var(--font-size-10);
+  color: var(--color-text-muted);
+  background: var(--color-border-light);
+  padding: 1px var(--gap-sm);
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+}
+
+/* ========== Full Viewport Layout ========== */
+.layout-full {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.layout-full-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 /* ========== TipTap Editor Styles ========== */
@@ -139,9 +377,9 @@ body {
     font-weight: 600;
   }
 
-em {
-  font-style: normal;
-}
+  em {
+    font-style: normal;
+  }
 
   u {
     text-decoration: underline;

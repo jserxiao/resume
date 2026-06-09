@@ -10,7 +10,7 @@
 
   // ===== 预览模式容器 =====
   &.preview-mode {
-    background: #f5f6fa;
+    background: var(--color-bg);
     padding: 24px 0;
     justify-content: flex-start;
     align-items: center;
@@ -18,25 +18,12 @@
 
   &-page {
     position: relative;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.08);
-    border-radius: 4px;
+    background: var(--color-bg-white);
+    box-shadow: var(--shadow-page);
+    border-radius: var(--radius-sm);
     font-family: var(--font-sans);
-    color: var(--resume-text);
+    color: var(--color-text);
     isolation: isolate;
-
-    // 纸张顶部装饰线
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--resume-primary, var(--color-primary));
-      border-radius: 4px 4px 0 0;
-      z-index: 9999;
-    }
   }
 
   // ===== 网格 =====
@@ -48,7 +35,7 @@
     background-image:
       linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
   }
 
   // ===== 对齐线 =====
@@ -65,13 +52,13 @@
 
     &.horizontal {
       height: 1px;
-      background: #f43f5e;
+      background: var(--color-guide);
       left: 0;
     }
 
     &.vertical {
       width: 1px;
-      background: #f43f5e;
+      background: var(--color-guide);
       top: 0;
     }
   }
@@ -88,7 +75,7 @@
     position: absolute;
 
     &.horizontal {
-      border-top: 1px dashed #8b5cf6;
+      border-top: 1px dashed var(--color-distance);
       display: flex;
       justify-content: center;
       align-items: flex-start;
@@ -96,7 +83,7 @@
     }
 
     &.vertical {
-      border-left: 1px dashed #8b5cf6;
+      border-left: 1px dashed var(--color-distance);
       display: flex;
       align-items: center;
       justify-content: flex-start;
@@ -105,11 +92,11 @@
   }
 
   &-distance-value {
-    font-size: 10px;
-    color: #8b5cf6;
-    background: rgba(139, 92, 246, 0.08);
-    padding: 1px 4px;
-    border-radius: 3px;
+    font-size: var(--font-size-10);
+    color: var(--color-distance);
+    background: var(--color-distance-light);
+    padding: 1px var(--gap-sm);
+    border-radius: var(--radius-xs);
     white-space: nowrap;
   }
 
@@ -120,12 +107,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(26, 86, 219, 0.04);
+    background: var(--color-primary-bg);
     border: 2px dashed var(--color-primary);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     z-index: 9999;
     color: var(--color-primary);
-    font-size: 16px;
+    font-size: var(--font-size-16);
     font-weight: 500;
     pointer-events: none;
   }
@@ -139,7 +126,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: var(--gap-base);
     color: var(--color-text-muted);
     pointer-events: none;
   }
@@ -150,38 +137,38 @@
   }
 
   &-empty-title {
-    font-size: 16px;
+    font-size: var(--font-size-16);
     font-weight: 500;
     color: var(--color-text-secondary);
   }
 
   &-empty-hint {
-    font-size: 13px;
+    font-size: var(--font-size-13);
     color: var(--color-text-muted);
   }
 
   // ===== 分组边框 =====
   &-group-border {
     border: 1.5px dashed rgba(245, 158, 11, 0.5);
-    border-radius: 8px;
-    transition: border-color 0.15s ease;
+    border-radius: var(--radius-lg);
+    transition: border-color var(--transition-fast);
 
     &.selected {
-      border-color: rgba(245, 158, 11, 0.85);
+      border-color: var(--color-warning-border-selected);
       border-width: 2px;
-      background: rgba(245, 158, 11, 0.03);
+      background: var(--color-warning-bg);
     }
   }
 
   &-group-label {
     position: absolute;
     top: -20px;
-    left: 8px;
-    font-size: 10px;
-    color: #f59e0b;
+    left: var(--gap-base);
+    font-size: var(--font-size-10);
+    color: var(--color-warning);
     background: rgba(245, 158, 11, 0.08);
-    padding: 1px 6px;
-    border-radius: 3px;
+    padding: 1px var(--gap-md);
+    border-radius: var(--radius-xs);
     white-space: nowrap;
     pointer-events: none;
   }
@@ -189,7 +176,7 @@
   // ===== 框选矩形 =====
   &-marquee {
     border: 1.5px solid rgba(26, 86, 219, 0.6);
-    background: rgba(26, 86, 219, 0.08);
+    background: var(--color-primary-bg);
     border-radius: 2px;
   }
 }

@@ -30,7 +30,7 @@ export default function PreviewDrawer() {
         style={{
           display: 'flex',
           justifyContent: 'center',
-          padding: '24px 0',
+          padding: '24px',
           minHeight: '100%',
         }}
       >

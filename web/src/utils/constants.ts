@@ -86,5 +86,15 @@ export function getDefaultBlockHeight(name: string): number {
   }
 }
 
+// ========== 装饰编辑器常量 ==========
+/** 装饰编辑器网格大小(px) */
+export const DECO_GRID_SIZE = 20;
+/** 装饰编辑器吸附阈值(px) */
+export const DECO_SNAP_THRESHOLD = 5;
+/** 装饰编辑器闭合路径阈值(px) - 鼠标靠近第一个锚点多近时闭合路径 */
+export const DECO_CLOSE_THRESHOLD = 12;
+/** 路径颜色标识 - 用于区分不同路径 */
+export const PATH_COLORS = ['#1a56db', '#c026d3', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
+
 // ========== 版本号 ==========
 export const CURRENT_DATA_VERSION = 4;

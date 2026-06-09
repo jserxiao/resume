@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input, Collapse, Tag, Button, Tooltip, Empty, Modal, Popconfirm } from 'antd';
 import {
@@ -13,7 +13,7 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
-import { createBlockDragPreview, createCustomElementDragPreview, createGroupDragPreview, createCustomDecorationDragPreview, cleanupDragPreview } from '@/utils/dragPreview';
+import { useDragPreview } from '@/hooks/useDragPreview';
 import LayerPanel from './LayerPanel';
 import './index.less';
 
@@ -28,8 +28,21 @@ export default function LeftPanel() {
   const { resume, blockTemplates, customElementTemplates, customDecorations, editor, selectBlocks, createGroup, addBlocksToGroup, saveAsCustomTemplate, removeCustomDecoration } = useResumeStore();
   const [searchText, setSearchText] = useState('');
 
-  // 拖拽预览元素引用，用于拖拽结束后清理
-  const dragPreviewRef = useRef<HTMLElement | null>(null);
+  // 拖拽预览 Hook
+  const {
+    handleBlockDragStart,
+    handleCustomDragStart,
+    handleGroupDragStart,
+    handleDecorationDragStart,
+    handleDragEnd,
+  } = useDragPreview({
+    blockTemplates,
+    customElementTemplates,
+    customDecorations,
+    blocks: resume?.blocks || [],
+    groups: resume?.groups || [],
+    colorScheme: resume?.colorScheme as any,
+  });
 
   if (!resume) return null;
 
@@ -50,74 +63,7 @@ export default function LeftPanel() {
     groupedTemplates[cat].push(t);
   });
 
-  // 清理上一个拖拽预览元素
-  const cleanupPrevPreview = () => {
-    if (dragPreviewRef.current) {
-      cleanupDragPreview(dragPreviewRef.current);
-      dragPreviewRef.current = null;
-    }
-  };
-
-  // 拖拽开始（块模板）
-  const handleDragStart = (e: React.DragEvent, templateId: string) => {
-    e.dataTransfer.setData('templateId', templateId);
-    e.dataTransfer.effectAllowed = 'copy';
-
-    const template = blockTemplates.find(t => t.id === templateId);
-    if (template) {
-      cleanupPrevPreview();
-      const previewEl = createBlockDragPreview(template, colorScheme);
-      dragPreviewRef.current = previewEl;
-      e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
-    }
-  };
-
-  // 拖拽开始（自定义元素）
-  const handleCustomDragStart = (e: React.DragEvent, templateId: string) => {
-    e.dataTransfer.setData('customTemplateId', templateId);
-    e.dataTransfer.effectAllowed = 'copy';
-
-    const template = customElementTemplates.find(t => t.id === templateId);
-    if (template) {
-      cleanupPrevPreview();
-      const previewEl = createCustomElementDragPreview(template, colorScheme);
-      dragPreviewRef.current = previewEl;
-      e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
-    }
-  };
-
-  // 拖拽开始（分组）
-  const handleGroupDragStart = (e: React.DragEvent, groupId: string) => {
-    e.dataTransfer.setData('groupId', groupId);
-    e.dataTransfer.effectAllowed = 'copy';
-
-    const group = resume.groups.find(g => g.id === groupId);
-    if (group) {
-      cleanupPrevPreview();
-      const previewEl = createGroupDragPreview(group, resume.blocks, colorScheme);
-      dragPreviewRef.current = previewEl;
-      e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
-    }
-  };
-
-  // 拖拽开始（自定义装饰）
-  const handleDecorationDragStart = (e: React.DragEvent, decorationId: string) => {
-    e.dataTransfer.setData('customDecorationId', decorationId);
-    e.dataTransfer.effectAllowed = 'copy';
-
-    const decoration = customDecorations.find(d => d.id === decorationId);
-    if (decoration) {
-      cleanupPrevPreview();
-      const previewEl = createCustomDecorationDragPreview(decoration);
-      dragPreviewRef.current = previewEl;
-      e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
-    }
-  };
-
-  // 拖拽结束后清理预览元素
-  const handleDragEnd = () => {
-    cleanupPrevPreview();
-  };
+// 拖拽逻辑已抽取到 useDragPreview Hook
 
   // 创建分组
   const handleCreateGroup = () => {
@@ -167,7 +113,7 @@ export default function LeftPanel() {
             key={template.id}
             className="left-panel-template-item"
             draggable
-            onDragStart={(e) => handleDragStart(e, template.id)}
+            onDragStart={(e) => handleBlockDragStart(e, template.id)}
             onDragEnd={handleDragEnd}
           >
             <HolderOutlined className="left-panel-template-drag-icon" />

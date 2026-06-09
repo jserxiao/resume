@@ -12,6 +12,7 @@ import type {
   DecorationElement,
   BlockGroup,
   CustomElementTemplate,
+  CustomDecorationDefinition,
   LayoutConfig,
 } from '../types';
 import { presetBlockTemplates, presetColorSchemes } from '../utils/presets';
@@ -430,6 +431,7 @@ interface ResumeStore {
   blockTemplates: BlockTemplate[];
   customElementTemplates: CustomElementTemplate[];
   customColorSchemes: ColorScheme[];
+  customDecorations: CustomDecorationDefinition[];
 
   // 编辑器状态
   editor: EditorState;
@@ -483,6 +485,11 @@ interface ResumeStore {
   saveAsCustomTemplate: (name: string, blockIds: string[]) => void;
   removeCustomTemplate: (templateId: string) => void;
 
+  // 自定义装饰元素操作
+  saveCustomDecoration: (decoration: CustomDecorationDefinition) => void;
+  removeCustomDecoration: (decorationId: string) => void;
+  addBlockFromCustomDecoration: (decorationId: string, x: number, y: number) => void;
+
   // 块模板操作
   updateBlockTemplate: (templateId: string, updates: Partial<BlockTemplate>) => void;
   removeBlockTemplate: (templateId: string) => void;
@@ -524,6 +531,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   blockTemplates: [...presetBlockTemplates],
   customElementTemplates: [],
   customColorSchemes: [],
+  customDecorations: [],
 
   editor: {
     selectedBlockId: null,
@@ -1080,6 +1088,99 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   removeCustomTemplate: (templateId) =>
     set(produce<ResumeStore>((state) => {
       state.customElementTemplates = state.customElementTemplates.filter((t) => t.id !== templateId);
+    })),
+
+  // ========== 自定义装饰元素操作 ==========
+  saveCustomDecoration: (decoration) =>
+    set(produce<ResumeStore>((state) => {
+      const idx = state.customDecorations.findIndex((d) => d.id === decoration.id);
+      if (idx !== -1) {
+        state.customDecorations[idx] = { ...decoration, updatedAt: Date.now() };
+      } else {
+        state.customDecorations.push({ ...decoration, createdAt: Date.now(), updatedAt: Date.now() });
+      }
+    })),
+
+  removeCustomDecoration: (decorationId) =>
+    set(produce<ResumeStore>((state) => {
+      state.customDecorations = state.customDecorations.filter((d) => d.id !== decorationId);
+    })),
+
+  addBlockFromCustomDecoration: (decorationId, x, y) =>
+    set(produce<ResumeStore>((state) => {
+      if (!state.resume) return;
+      const decoration = state.customDecorations.find((d) => d.id === decorationId);
+      if (!decoration) return;
+
+      // 计算所有路径的边界框来确定默认尺寸
+      const allAnchors = decoration.paths.flatMap((p) => p.anchors);
+      const minX = allAnchors.length > 0 ? Math.min(...allAnchors.map((a) => a.x)) : 0;
+      const minY = allAnchors.length > 0 ? Math.min(...allAnchors.map((a) => a.y)) : 0;
+      const maxX = allAnchors.length > 0 ? Math.max(...allAnchors.map((a) => a.x)) : 100;
+      const maxY = allAnchors.length > 0 ? Math.max(...allAnchors.map((a) => a.y)) : 100;
+
+      // 锚点坐标是百分比(0-100)，计算装饰的实际显示尺寸
+      // 确保宽高比与内容一致，避免 preserveAspectRatio 留白
+      const rangeX = maxX - minX;
+      const rangeY = maxY - minY;
+      const aspectRatio = rangeX > 0 && rangeY > 0 ? rangeX / rangeY : 1;
+      const baseSize = Math.max(60, Math.round(Math.max(rangeX, rangeY) * 2));
+      const defaultWidth = Math.round(aspectRatio >= 1 ? baseSize : baseSize * aspectRatio);
+      const defaultHeight = Math.round(aspectRatio >= 1 ? baseSize / aspectRatio : baseSize);
+
+      // 为每条路径生成 SVG path data
+      // strokeWidth 已在装饰编辑器保存时转为 viewBox 0-100 空间的比例值，无需再次转换
+      const svgPaths = decoration.paths.map((p) => ({
+        pathD: p.anchors.map((a, i) => `${i === 0 ? 'M' : 'L'} ${a.x} ${a.y}`).join(' ') + (p.isClosed ? ' Z' : ''),
+        fillColor: p.fillColor,
+        strokeColor: p.strokeColor,
+        strokeWidth: Math.max(0.5, p.strokeWidth),
+        isClosed: p.isClosed,
+      }));
+
+      const blockId = `${state.resume.id}-cdeco-${uuid().slice(0, 8)}`;
+      const block: BlockInstance = {
+        id: blockId,
+        templateId: `custom-decoration`,
+        templateName: '自定义装饰',
+        name: decoration.name,
+        fields: {},
+        decorations: [{
+          id: uuid(),
+          decorationId: decorationId,
+          x: 0,
+          y: 0,
+          width: defaultWidth,
+          height: defaultHeight,
+          rotation: 0,
+          color: decoration.paths[0]?.fillColor || '#1a56db',
+          strokeColor: decoration.paths[0]?.strokeColor || '#1a56db',
+          strokeWidth: decoration.paths[0]?.strokeWidth ?? 2,
+          opacity: 1,
+          zIndex: 1,
+          // 自定义装饰特有字段：存储多路径 SVG 数据
+          customSvgPaths: svgPaths,
+        } as any],
+        visible: true,
+        locked: false,
+        x,
+        y,
+        width: defaultWidth,
+        height: defaultHeight,
+        zIndex: getNextZIndex(state.resume.blocks),
+        style: {
+          backgroundColor: 'transparent',
+          borderRadius: 0,
+          borderWidth: 0,
+          padding: { top: 0, right: 0, bottom: 0, left: 0 },
+          margin: { top: 0, right: 0, bottom: 0, left: 0 },
+        },
+      };
+
+      state.resume.blocks.push(block);
+      state.resume.updatedAt = Date.now();
+      state.editor.selectedBlockId = block.id;
+      state.editor.selectedBlockIds = [block.id];
     })),
 
   // ========== 块模板操作 ==========

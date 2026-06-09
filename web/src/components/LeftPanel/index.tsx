@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { Input, Collapse, Tag, Button, Tooltip, Empty, Modal } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { Input, Collapse, Tag, Button, Tooltip, Empty, Modal, Popconfirm } from 'antd';
 import {
   SearchOutlined,
   AppstoreOutlined,
@@ -7,19 +8,24 @@ import {
   SaveOutlined,
   GroupOutlined,
   StarOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
-import { createBlockDragPreview, createCustomElementDragPreview, createGroupDragPreview, cleanupDragPreview } from '@/utils/dragPreview';
+import { createBlockDragPreview, createCustomElementDragPreview, createGroupDragPreview, createCustomDecorationDragPreview, cleanupDragPreview } from '@/utils/dragPreview';
 import LayerPanel from './LayerPanel';
 import './index.less';
 
 /**
- * 左侧面板 —— 图层面板 + 组件面板
+ * 左侧面板 —— 图层面板 + 组件面板 + 装饰面板
  * 上方：图层面板（显示当前舞台/分组图层）
- * 下方：可折叠的组件模板面板
+ * 中间：可折叠的组件模板面板
+ * 下方：自定义装饰面板
  */
 export default function LeftPanel() {
-  const { resume, blockTemplates, customElementTemplates, editor, selectBlocks, createGroup, addBlocksToGroup, saveAsCustomTemplate } = useResumeStore();
+  const navigate = useNavigate();
+  const { resume, blockTemplates, customElementTemplates, customDecorations, editor, selectBlocks, createGroup, addBlocksToGroup, saveAsCustomTemplate, removeCustomDecoration } = useResumeStore();
   const [searchText, setSearchText] = useState('');
 
   // 拖拽预览元素引用，用于拖拽结束后清理
@@ -57,13 +63,11 @@ export default function LeftPanel() {
     e.dataTransfer.setData('templateId', templateId);
     e.dataTransfer.effectAllowed = 'copy';
 
-    // 创建与放置后元素样式一致的拖拽预览图
     const template = blockTemplates.find(t => t.id === templateId);
     if (template) {
       cleanupPrevPreview();
       const previewEl = createBlockDragPreview(template, colorScheme);
       dragPreviewRef.current = previewEl;
-      // 偏移：让鼠标位于预览元素中心
       e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
     }
   };
@@ -91,6 +95,20 @@ export default function LeftPanel() {
     if (group) {
       cleanupPrevPreview();
       const previewEl = createGroupDragPreview(group, resume.blocks, colorScheme);
+      dragPreviewRef.current = previewEl;
+      e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
+    }
+  };
+
+  // 拖拽开始（自定义装饰）
+  const handleDecorationDragStart = (e: React.DragEvent, decorationId: string) => {
+    e.dataTransfer.setData('customDecorationId', decorationId);
+    e.dataTransfer.effectAllowed = 'copy';
+
+    const decoration = customDecorations.find(d => d.id === decorationId);
+    if (decoration) {
+      cleanupPrevPreview();
+      const previewEl = createCustomDecorationDragPreview(decoration);
       dragPreviewRef.current = previewEl;
       e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
     }
@@ -267,10 +285,11 @@ export default function LeftPanel() {
         </div>
       )}
 
-      {/* 下方：可折叠组件面板 */}
+      {/* 组件面板 */}
       <div className="left-panel-components">
-        <div className="left-panel-components-header">
-          🧩 组件
+        <div className="left-panel-section-header left-panel-section-header--component">
+          <AppstoreOutlined />
+          <span>组件</span>
         </div>
 
         {/* 搜索 */}
@@ -299,6 +318,90 @@ export default function LeftPanel() {
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description="没有匹配的模板"
             />
+          )}
+        </div>
+      </div>
+
+      {/* 自定义装饰面板 */}
+      <div className="left-panel-decorations">
+        <div className="left-panel-section-header left-panel-section-header--deco">
+          <StarOutlined />
+          <span>自定义装饰</span>
+          <Button
+            type="text"
+            size="small"
+            icon={<PlusOutlined />}
+            className="left-panel-section-header-action"
+            onClick={() => navigate('/decoration-editor')}
+          >
+            新建
+          </Button>
+        </div>
+
+        <div className="left-panel-deco-list">
+          {customDecorations.length > 0 ? (
+            <div className="left-panel-template-list">
+              {customDecorations.map((deco) => (
+                <div
+                  key={deco.id}
+                  className="left-panel-template-item decoration-item"
+                  draggable
+                  onDragStart={(e) => handleDecorationDragStart(e, deco.id)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <svg width="22" height="22" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
+                    {deco.paths.map((p, pIdx) => (
+                      <path
+                        key={pIdx}
+                        d={p.anchors.map((a, i) => `${i === 0 ? 'M' : 'L'} ${a.x} ${a.y}`).join(' ') + (p.isClosed ? ' Z' : '')}
+fill={p.isClosed ? p.fillColor : 'none'}
+stroke={p.strokeColor}
+                        strokeWidth={3}
+                      />
+                    ))}
+                  </svg>
+                  <div className="left-panel-template-info">
+                    <span className="left-panel-template-name">{deco.name}</span>
+                    <span className="left-panel-template-fields">
+                      {deco.paths.length} 路径 · {deco.paths.reduce((sum, p) => sum + p.anchors.length, 0)} 锚点
+                    </span>
+                  </div>
+                  <div className="left-panel-item-actions">
+                    <Tooltip title="编辑">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<EditOutlined />}
+                        className="left-panel-item-action-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/decoration-editor?id=${deco.id}`);
+                        }}
+                      />
+                    </Tooltip>
+                    <Popconfirm
+                      title="确定删除该装饰？"
+                      onConfirm={() => removeCustomDecoration(deco.id)}
+                      okText="删除"
+                      cancelText="取消"
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        className="left-panel-item-action-btn left-panel-item-action-btn--danger"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </Popconfirm>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="left-panel-empty-hint">
+              暂无自定义装饰<br />点击上方"新建"按钮创建
+            </div>
           )}
         </div>
       </div>

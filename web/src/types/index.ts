@@ -261,6 +261,31 @@ export interface DecorationElement {
   zIndex: number;                 // 层级
 }
 
+// ========== 自定义装饰元素定义（用户通过锚点绘制的装饰图形） ==========
+/** 自定义装饰的一条路径 */
+export interface DecorationPath {
+  id: string;
+  /** 锚点列表，坐标为 0-100 的百分比 */
+  anchors: { x: number; y: number }[];
+  /** 路径是否已闭合 */
+  isClosed: boolean;
+  /** 填充色 */
+  fillColor: string;
+  /** 描边色 */
+  strokeColor: string;
+  /** 描边宽度 */
+  strokeWidth: number;
+}
+
+export interface CustomDecorationDefinition {
+  id: string;
+  name: string;
+  /** 路径列表，一个装饰可包含多条路径 */
+  paths: DecorationPath[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 // ========== 对齐线 ==========
 export interface AlignGuide {
   type: 'horizontal' | 'vertical';

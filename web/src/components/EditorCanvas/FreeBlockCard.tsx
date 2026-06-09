@@ -46,9 +46,12 @@ export default function FreeBlockCard({
   const { removeBlock, cloneBlock, updateBlockField } = useResumeStore();
   const cardRef = useRef<HTMLDivElement>(null);
 
-  if (!template) return null;
+  // 判断是否为自定义装饰块
+  const isCustomDecorationBlock = block.templateId === 'custom-decoration';
 
-  const fields = [...template.fields].sort((a, b) => a.order - b.order);
+  if (!template && !isCustomDecorationBlock) return null;
+
+  const fields = template ? [...template.fields].sort((a, b) => a.order - b.order) : [];
   const blockStyle = block.style || {};
   const margin = blockStyle.margin || { top: 0, right: 0, bottom: 0, left: 0 };
   const padding = blockStyle.padding || { top: 0, right: 0, bottom: 0, left: 0 };
@@ -237,9 +240,9 @@ export default function FreeBlockCard({
     }
   };
 
-  const isHeaderInfo = template.name === '头部信息';
-  const isBasicInfo = template.name === '基本信息';
-  const isSkills = template.name === '技能';
+  const isHeaderInfo = template?.name === '头部信息';
+  const isBasicInfo = template?.name === '基本信息';
+  const isSkills = template?.name === '技能';
 
   /** 渲染装饰元素覆盖层 */
   const renderDecorations = () => {
@@ -249,8 +252,19 @@ export default function FreeBlockCard({
       <div className="free-block-decorations">
         {block.decorations.map((deco) => {
           const def = presetDecorations.find((d) => d.id === deco.decorationId);
-          if (!def) return null;
           const isDashed = deco.decorationId.includes('dashed');
+          const customDeco = deco as any;
+
+          // 多路径自定义装饰（新格式）
+          const hasMultiPaths = !!customDeco.customSvgPaths;
+          // 单路径自定义装饰（旧格式兼容）
+          const hasSinglePath = !!customDeco.customSvgPath;
+          const isCustomDeco = hasMultiPaths || hasSinglePath;
+          const svgPath = customDeco.customSvgPath || (def?.svgPath);
+
+          // 没有任何可渲染的路径数据
+          if (!svgPath && !hasMultiPaths) return null;
+
           return (
             <svg
               key={deco.id}
@@ -259,23 +273,65 @@ export default function FreeBlockCard({
                 position: 'absolute',
                 left: deco.x,
                 top: deco.y,
-                width: deco.width,
-                height: deco.height,
+                width: isCustomDeco ? '100%' : deco.width,
+                height: isCustomDeco ? '100%' : deco.height,
                 transform: `rotate(${deco.rotation}deg)`,
                 opacity: deco.opacity,
                 zIndex: deco.zIndex,
                 pointerEvents: isPreview ? 'none' : 'auto',
               }}
               viewBox="0 0 100 100"
-              preserveAspectRatio="none"
+              preserveAspectRatio={isCustomDeco ? 'xMidYMid meet' : 'none'}
             >
-              <path
-                d={def.svgPath}
-                fill={deco.color === 'transparent' ? 'none' : deco.color}
-                stroke={deco.strokeColor === 'transparent' ? 'none' : deco.strokeColor}
-                strokeWidth={deco.strokeWidth * 3}
-                strokeDasharray={isDashed ? '5,3' : undefined}
-              />
+              {hasMultiPaths ? (
+                // 多路径自定义装饰
+                customDeco.customSvgPaths.map((p: { pathD: string; fillColor: string; strokeColor: string; strokeWidth: number; isClosed: boolean }, idx: number) => (
+                  <g key={idx}>
+                    {p.isClosed && p.fillColor !== 'transparent' && (
+                      <path
+                        d={p.pathD}
+                        fill={p.fillColor}
+                        stroke="none"
+                      />
+                    )}
+                    <path
+                      d={p.pathD}
+                      fill="none"
+                      stroke={p.strokeColor === 'transparent' ? 'none' : p.strokeColor}
+                      strokeWidth={Math.max(0.5, p.strokeWidth)}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                  </g>
+                ))
+              ) : isCustomDeco ? (
+                // 单路径自定义装饰（旧格式兼容）
+                <>
+                  {customDeco.customIsClosed && deco.color !== 'transparent' && (
+                    <path
+                      d={svgPath}
+                      fill={deco.color}
+                      stroke="none"
+                    />
+                  )}
+                  <path
+                    d={svgPath}
+                    fill="none"
+                    stroke={deco.strokeColor === 'transparent' ? 'none' : deco.strokeColor}
+                    strokeWidth={Math.max(0.5, deco.strokeWidth)}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                </>
+              ) : (
+                <path
+                  d={svgPath!}
+                  fill={deco.color === 'transparent' ? 'none' : deco.color}
+                  stroke={deco.strokeColor === 'transparent' ? 'none' : deco.strokeColor}
+                  strokeWidth={deco.strokeWidth * 3}
+                  strokeDasharray={isDashed ? '5,3' : undefined}
+                />
+              )}
             </svg>
           );
         })}
@@ -284,7 +340,8 @@ export default function FreeBlockCard({
   };
 
   // 计算块内容区域的背景色
-  const contentBgColor = blockStyle.backgroundColor || colorScheme.blockBackground;
+  // 自定义装饰块始终透明，不使用主题色
+  const contentBgColor = isCustomDecorationBlock ? 'transparent' : (blockStyle.backgroundColor || colorScheme.blockBackground);
 
   // 外部容器样式：包含外边距的定位区域
   const rotation = block.rotation || 0;
@@ -310,9 +367,9 @@ export default function FreeBlockCard({
     marginTop: margin.top || 0,
     overflow: 'hidden',
     backgroundColor: contentBgColor,
-    borderRadius: blockStyle.borderRadius ?? 6,
+    borderRadius: isCustomDecorationBlock ? 0 : (blockStyle.borderRadius ?? 6),
     opacity: blockStyle.opacity ?? 1,
-    border: blockStyle.borderWidth ? `${blockStyle.borderWidth}px ${blockStyle.borderStyle || 'solid'} ${blockStyle.borderColor || '#e5e7eb'}` : undefined,
+    border: isCustomDecorationBlock ? 'none' : (blockStyle.borderWidth ? `${blockStyle.borderWidth}px ${blockStyle.borderStyle || 'solid'} ${blockStyle.borderColor || '#e5e7eb'}` : undefined),
     ...(blockStyle.backgroundImage ? {
       backgroundImage: `url(${blockStyle.backgroundImage})`,
       backgroundSize: blockStyle.backgroundSize || 'cover',
@@ -430,7 +487,10 @@ export default function FreeBlockCard({
 
         {/* 块内容（含内边距） */}
         <div style={contentPaddingStyle}>
-          {isHeaderInfo ? (
+          {isCustomDecorationBlock ? (
+            // 自定义装饰块：不渲染字段内容，装饰 SVG 已在 renderDecorations 中渲染
+            null
+          ) : isHeaderInfo ? (
             <div className="free-block-header-info">
               {fields.find((f) => f.name === '头像') && (
                 <div

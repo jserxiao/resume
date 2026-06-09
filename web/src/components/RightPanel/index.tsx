@@ -24,9 +24,11 @@ import {
   BgColorsOutlined,
   RotateRightOutlined,
   DisconnectOutlined,
+  StarOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useResumeStore } from '@/store';
-import { FieldType, type BlockStyle, type BoxSides } from '@/types';
+import { FieldType, type BlockStyle, type BoxSides, type CustomDecorationDefinition } from '@/types';
 import { BLOCK_DEFAULT_MARGIN, BLOCK_DEFAULT_PADDING, CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, CANVAS_DEFAULT_PADDING, CANVAS_DEFAULT_BACKGROUND } from '@/utils/constants';
 import { uploadImage } from '@/utils/imageUpload';
 import RichTextField from './RichTextField';
@@ -35,10 +37,12 @@ import ColorSchemePanel from './ColorSchemePanel';
 import './index.less';
 
 export default function RightPanel() {
+  const navigate = useNavigate();
   const {
     resume,
     blockTemplates,
     editor,
+    customDecorations,
     updateBlockField,
     removeBlock,
     removeBlocks,
@@ -59,6 +63,7 @@ export default function RightPanel() {
     updateGroupPosition,
     selectGroup,
     saveAsCustomTemplate,
+    removeCustomDecoration,
     setCanvasConfig,
   } = useResumeStore();
 
@@ -108,6 +113,9 @@ export default function RightPanel() {
   const template = selectedBlock
     ? blockTemplates.find((t) => t.id === selectedBlock.templateId)
     : undefined;
+
+  // 是否为自定义装饰块
+  const isCustomDecorationBlock = selectedBlock?.templateId === 'custom-decoration';
 
   // 判断是否选中了分组（分组内的元素整体选中）
   const isGroupMode = !!selectedGroup;
@@ -418,6 +426,52 @@ export default function RightPanel() {
             >
               重置为默认画布
             </Button>
+
+            <Divider style={{ margin: '8px 0' }} />
+
+            {/* 自定义装饰元素 */}
+            <div className="right-panel-section-title"><StarOutlined /> 自定义装饰</div>
+            <Button
+              size="small"
+              icon={<StarOutlined />}
+              onClick={() => navigate('/decoration-editor')}
+              style={{ width: '100%' }}
+            >
+              创建自定义装饰
+            </Button>
+            {customDecorations.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                {customDecorations.map((d) => (
+                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                    <svg width="20" height="20" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
+                      {d.paths.map((p, pIdx) => (
+                        <path
+                          key={pIdx}
+                          d={p.anchors.map((a, i) => `${i === 0 ? 'M' : 'L'} ${a.x} ${a.y}`).join(' ') + (p.isClosed ? ' Z' : '')}
+                          fill={p.isClosed ? p.fillColor : 'none'}
+                          stroke={p.strokeColor}
+                          strokeWidth={3}
+                        />
+                      ))}
+                    </svg>
+                    <span style={{ flex: 1, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<FormOutlined />}
+                      onClick={() => navigate(`/decoration-editor?id=${d.id}`)}
+                    />
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => removeCustomDecoration(d.id)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="right-panel-content">
@@ -701,6 +755,194 @@ export default function RightPanel() {
             </div>
           </div>
         )
+      ) : isCustomDecorationBlock && selectedBlock ? (
+        // 自定义装饰块属性面板
+        <div className="right-panel-content">
+          <div className="right-panel-block-header">
+            <Input
+              variant="borderless"
+              value={selectedBlock.name}
+              onChange={(e) => renameBlock(selectedBlock.id, e.target.value)}
+              className="right-panel-block-name"
+              style={{ color: '#1a56db' }}
+            />
+            <div className="right-panel-block-actions">
+              <Tooltip title={selectedBlock.visible ? '隐藏块' : '显示块'}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={selectedBlock.visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                  onClick={() => toggleBlockVisibility(selectedBlock.id)}
+                />
+              </Tooltip>
+              <Tooltip title={selectedBlock.locked ? '解锁块' : '锁定块'}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={selectedBlock.locked ? <LockOutlined /> : <UnlockOutlined />}
+                  onClick={() => toggleBlockLock(selectedBlock.id)}
+                />
+              </Tooltip>
+              <Tooltip title="克隆块">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CopyOutlined />}
+                  onClick={() => cloneBlock(selectedBlock.id)}
+                />
+              </Tooltip>
+              <Popconfirm
+                title="确认删除该块？"
+                onConfirm={() => removeBlock(selectedBlock.id)}
+                okText="删除"
+                cancelText="取消"
+                okButtonProps={{ danger: true }}
+              >
+                <Tooltip title="删除块">
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                  />
+                </Tooltip>
+              </Popconfirm>
+            </div>
+          </div>
+
+          {/* 装饰类型标识 */}
+          <div className="right-panel-group-info" style={{ color: '#1a56db' }}>
+            <StarOutlined /> 自定义装饰
+          </div>
+
+          {/* 位置信息 */}
+          <div className="right-panel-position-compact">
+            <span>X: {Math.round(selectedBlock.x)} Y: {Math.round(selectedBlock.y)}</span>
+            <span>W: {Math.round(selectedBlock.width)} H: {Math.round(selectedBlock.height)}</span>
+          </div>
+
+          {/* 位置微调 */}
+          <div className="right-panel-section-title">位置微调</div>
+          <div className="right-panel-position-grid">
+            <div className="right-panel-field compact">
+              <label className="right-panel-label">X</label>
+              <InputNumber
+                value={Math.round(selectedBlock.x)}
+                onChange={(val) => val !== null && updateBlockPosition(selectedBlock.id, val, selectedBlock.y)}
+                size="small"
+                style={{ width: '100%' }}
+                step={1}
+              />
+            </div>
+            <div className="right-panel-field compact">
+              <label className="right-panel-label">Y</label>
+              <InputNumber
+                value={Math.round(selectedBlock.y)}
+                onChange={(val) => val !== null && updateBlockPosition(selectedBlock.id, selectedBlock.x, val)}
+                size="small"
+                style={{ width: '100%' }}
+                step={1}
+              />
+            </div>
+          </div>
+
+          {/* 尺寸 */}
+          <div className="right-panel-section-title">尺寸</div>
+          <div className="right-panel-position-grid">
+            <div className="right-panel-field compact">
+              <label className="right-panel-label">宽</label>
+              <InputNumber
+                value={Math.round(selectedBlock.width)}
+                onChange={(val) => val !== null && updateBlockSize(selectedBlock.id, val, selectedBlock.height)}
+                size="small"
+                style={{ width: '100%' }}
+                min={20}
+                step={1}
+              />
+            </div>
+            <div className="right-panel-field compact">
+              <label className="right-panel-label">高</label>
+              <InputNumber
+                value={Math.round(selectedBlock.height)}
+                onChange={(val) => val !== null && updateBlockSize(selectedBlock.id, selectedBlock.width, val)}
+                size="small"
+                style={{ width: '100%' }}
+                min={20}
+                step={1}
+              />
+            </div>
+          </div>
+
+          {/* 层级 */}
+          <div className="right-panel-field compact">
+            <label className="right-panel-label">层级</label>
+            <InputNumber
+              value={selectedBlock.zIndex}
+              onChange={(val) => val !== null && updateBlockZIndex(selectedBlock.id, val)}
+              size="small"
+              style={{ width: '100%' }}
+              min={0}
+              step={1}
+            />
+          </div>
+
+          {/* 旋转 */}
+          <div className="right-panel-section-title"><RotateRightOutlined /> 旋转</div>
+          <div className="right-panel-field">
+            <Slider
+              value={selectedBlock.rotation || 0}
+              onChange={(val) => updateBlockRotation(selectedBlock.id, val)}
+              min={-180}
+              max={180}
+              step={1}
+              marks={{ '-180': '-180°', '-90': '-90°', 0: '0°', 90: '90°', 180: '180°' }}
+            />
+          </div>
+          <div className="right-panel-field compact">
+            <label className="right-panel-label">角度</label>
+            <InputNumber
+              value={selectedBlock.rotation || 0}
+              onChange={(val) => updateBlockRotation(selectedBlock.id, val ?? 0)}
+              size="small"
+              style={{ width: '100%' }}
+              min={-360}
+              max={360}
+              step={1}
+              addonAfter="°"
+            />
+          </div>
+
+          <Divider style={{ margin: '8px 0' }} />
+
+          {/* 透明度 */}
+          <div className="right-panel-field">
+            <label className="right-panel-label">透明度</label>
+            <Slider
+              value={selectedBlock.style?.opacity ?? 1}
+              onChange={(val) => updateBlockStyle(selectedBlock.id, { opacity: val })}
+              min={0}
+              max={1}
+              step={0.05}
+            />
+          </div>
+
+          <Divider style={{ margin: '8px 0' }} />
+
+          {/* 编辑装饰按钮 */}
+          <Button
+            icon={<FormOutlined />}
+            onClick={() => {
+              const deco = (selectedBlock.decorations[0] as any);
+              if (deco?.decorationId) {
+                navigate(`/decoration-editor?id=${deco.decorationId}`);
+              }
+            }}
+            block
+            style={{ marginBottom: 6 }}
+          >
+            编辑装饰图形
+          </Button>
+        </div>
       ) : isGroupMode ? (
         // 选中分组的属性面板
         <div className="right-panel-content">
@@ -908,7 +1150,7 @@ export default function RightPanel() {
             </Popconfirm>
           </div>
         </div>
-      ) : !selectedBlock || !template ? (
+      ) : !selectedBlock ? (
         <div className="right-panel-content">
           <div className="right-panel-section-title">📐 画布信息</div>
           <div className="right-panel-position-compact">
@@ -1041,7 +1283,7 @@ export default function RightPanel() {
 
           {/* 字段编辑 */}
           <div className="right-panel-fields">
-            {[...template.fields]
+            {template ? [...template.fields]
               .sort((a, b) => a.order - b.order)
               .map((field) => {
                 const value = selectedBlock.fields[field.id] || '';
@@ -1190,7 +1432,7 @@ export default function RightPanel() {
                     )}
                   </div>
                 );
-              })}
+              }) : <div className="right-panel-empty-hint">该元素无可编辑字段</div>}
           </div>
         </div>
       )}

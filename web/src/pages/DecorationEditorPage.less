@@ -1,0 +1,360 @@
+.deco-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: #f5f7fa;
+  color: #1f2937;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  // ===== 顶部工具栏 =====
+  &-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+
+    .deco-editor-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .deco-editor-toolbar-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .deco-editor-toolbar-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+
+  // ===== 主体布局 =====
+  &-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  // ===== 舞台区域 =====
+  &-stage-wrapper {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    background: #eef1f5;
+  }
+
+  &-stage {
+    position: relative;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+    border: 1px solid #d1d5db;
+    cursor: crosshair;
+    isolation: isolate;
+  }
+
+  // ===== 网格 =====
+  &-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  // ===== 尺寸标注 =====
+  &-size-label {
+    position: absolute;
+    bottom: -22px;
+    right: 0;
+    font-size: 11px;
+    color: #9ca3af;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  // ===== SVG 路径绘制层 =====
+  &-svg-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  // ===== 辅助线 =====
+  &-guide-line {
+    position: absolute;
+    pointer-events: none;
+    z-index: 4;
+
+    &.horizontal {
+      height: 1px;
+      left: 0;
+      right: 0;
+      border-top: 1px dashed #f43f5e;
+    }
+
+    &.vertical {
+      width: 1px;
+      top: 0;
+      bottom: 0;
+      border-left: 1px dashed #f43f5e;
+    }
+  }
+
+  // ===== 距离标注 =====
+  &-distance {
+    position: absolute;
+    font-size: 10px;
+    color: #7c3aed;
+    background: rgba(124, 58, 237, 0.08);
+    padding: 1px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  // ===== 锚点 =====
+  &-anchor {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #1a56db;
+    border: 2px solid #fff;
+    transform: translate(-5px, -5px);
+    cursor: grab;
+    z-index: 6;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.2);
+    pointer-events: auto;
+
+    &:hover {
+      background: #2563eb;
+      transform: translate(-5px, -5px) scale(1.2);
+    }
+
+    &.first-anchor {
+      background: #f59e0b;
+      border-color: #fff;
+      cursor: pointer;
+
+      &:hover {
+        background: #d97706;
+      }
+    }
+
+    &.selected {
+      background: #f43f5e;
+      border-color: #fff;
+    }
+  }
+
+  // ===== 鼠标追踪线 =====
+  &-tracking-line {
+    stroke: #1a56db;
+    stroke-width: 1.5;
+    stroke-dasharray: 6 3;
+    fill: none;
+  }
+
+  // ===== 右侧面板 =====
+  &-panel {
+    width: 300px;
+    background: #ffffff;
+    border-left: 1px solid #e5e7eb;
+    overflow-y: auto;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+
+    &-section {
+      padding: 14px 16px;
+      border-bottom: 1px solid #f3f4f6;
+
+      &-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+      }
+    }
+  }
+
+  // ===== 配置项 =====
+  &-field {
+    margin-bottom: 10px;
+
+    &-label {
+      display: block;
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    &-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+
+  // ===== 路径列表 =====
+  &-path-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &-path-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border: 1px solid transparent;
+
+    &:hover {
+      background: #f9fafb;
+    }
+
+    &.active {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    &-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    &-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #1f2937;
+    }
+
+    &-info {
+      font-size: 11px;
+      color: #9ca3af;
+      flex: 1;
+      text-align: right;
+    }
+
+    &-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    &:hover &-actions {
+      opacity: 1;
+    }
+
+    &-btn {
+      font-size: 12px;
+      color: #9ca3af;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 3px;
+
+      &:hover {
+        color: #1a56db;
+        background: #eff6ff;
+      }
+
+      &--danger:hover {
+        color: #ef4444;
+        background: #fef2f2;
+      }
+    }
+  }
+
+  // ===== 锚点列表 =====
+  &-anchor-list {
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  &-anchor-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #374151;
+
+    &:hover {
+      background: #f9fafb;
+    }
+
+    &-coord {
+      font-family: 'Menlo', 'Monaco', monospace;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    &-delete {
+      opacity: 0;
+      cursor: pointer;
+      color: #9ca3af;
+      font-size: 11px;
+
+      &:hover {
+        color: #f43f5e;
+      }
+    }
+
+    &:hover &-delete {
+      opacity: 1;
+    }
+  }
+
+  // ===== 状态栏 =====
+  &-statusbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 4px 16px;
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    font-size: 11px;
+    color: #9ca3af;
+    flex-shrink: 0;
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+}
+
+// ===== antd 浅色覆盖 =====
+.deco-editor .ant-btn {
+  font-size: 12px;
+}
+
+.deco-editor .ant-input-number {
+  width: 100%;
+}

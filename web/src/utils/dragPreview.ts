@@ -1,4 +1,4 @@
-import type { BlockTemplate, ColorScheme } from '@/types';
+import type { BlockTemplate, ColorScheme, CustomDecorationDefinition } from '@/types';
 import { FieldType } from '@/types';
 import { getDefaultBlockWidth, getDefaultBlockHeight } from './constants';
 
@@ -305,6 +305,92 @@ export function createGroupDragPreview(
 
   document.body.appendChild(el);
   return el;
+}
+
+/**
+ * 创建自定义装饰元素的拖拽预览元素
+ */
+export function createCustomDecorationDragPreview(
+decoration: CustomDecorationDefinition,
+): HTMLElement {
+const allAnchors = decoration.paths.flatMap(p => p.anchors);
+if (allAnchors.length === 0) {
+// fallback: 空装饰
+const el = document.createElement('div');
+el.style.cssText = `
+position: fixed; top: -9999px; left: -9999px;
+width: 60px; height: 60px;
+border: 1.5px dashed #9ca3af; border-radius: 4px;
+pointer-events: none; opacity: 0.7;
+`;
+document.body.appendChild(el);
+return el;
+}
+
+// 计算边界框
+const minX = Math.min(...allAnchors.map(a => a.x));
+const minY = Math.min(...allAnchors.map(a => a.y));
+const maxX = Math.max(...allAnchors.map(a => a.x));
+const maxY = Math.max(...allAnchors.map(a => a.y));
+
+// 实际像素尺寸（与 store 中 addBlockFromCustomDecoration 一致）
+const w = Math.max(60, Math.round((maxX - minX) * 2));
+const h = Math.max(60, Math.round((maxY - minY) * 2));
+
+const firstPath = decoration.paths[0];
+
+const el = document.createElement('div');
+el.style.cssText = `
+position: fixed;
+top: -9999px;
+left: -9999px;
+width: ${w}px;
+height: ${h}px;
+pointer-events: none;
+opacity: 0.85;
+border: 1.5px solid ${firstPath?.strokeColor || '#1a56db'};
+border-radius: 2px;
+box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+`;
+
+// 创建内嵌 SVG
+const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+svgEl.setAttribute('width', String(w));
+svgEl.setAttribute('height', String(h));
+svgEl.setAttribute('viewBox', '0 0 100 100');
+svgEl.setAttribute('preserveAspectRatio', 'none');
+svgEl.style.cssText = 'position: absolute; inset: 0;';
+
+// 渲染每条路径
+for (const p of decoration.paths) {
+  if (p.anchors.length < 2) continue;
+  const pathD = p.anchors.map((a, i) => `${i === 0 ? 'M' : 'L'} ${a.x} ${a.y}`).join(' ') + (p.isClosed ? ' Z' : '');
+
+  // 填充路径
+  if (p.isClosed) {
+    const fillPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    fillPath.setAttribute('d', pathD);
+    fillPath.setAttribute('fill', p.fillColor);
+    fillPath.setAttribute('fill-opacity', '1');
+    fillPath.setAttribute('stroke', 'none');
+    svgEl.appendChild(fillPath);
+  }
+
+  // 描边路径
+  const strokePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  strokePath.setAttribute('d', pathD);
+  strokePath.setAttribute('fill', 'none');
+  strokePath.setAttribute('stroke', p.strokeColor);
+  strokePath.setAttribute('stroke-width', String(p.strokeWidth * 3));
+  strokePath.setAttribute('stroke-linejoin', 'round');
+  strokePath.setAttribute('stroke-linecap', 'round');
+  svgEl.appendChild(strokePath);
+}
+
+el.appendChild(svgEl);
+
+document.body.appendChild(el);
+return el;
 }
 
 /** 清理拖拽预览元素 */

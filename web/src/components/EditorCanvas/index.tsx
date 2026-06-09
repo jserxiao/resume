@@ -117,6 +117,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     setDragOverSlot(false);
     const templateId = e.dataTransfer.getData('templateId');
     const customTemplateId = e.dataTransfer.getData('customTemplateId');
+    const customDecorationId = e.dataTransfer.getData('customDecorationId');
     const groupId = e.dataTransfer.getData('groupId');
 
     if (!pageRef.current) return;
@@ -131,6 +132,28 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       const bw = getDefaultBlockWidth(template?.category || '');
       const bh = getDefaultBlockHeight(template?.name || '');
       addBlock(templateId, mouseX - bw / 2, mouseY - bh / 2);
+    } else if (customDecorationId) {
+      // 拖入自定义装饰元素
+      const { addBlockFromCustomDecoration, customDecorations } = useResumeStore.getState();
+      const decoration = customDecorations.find(d => d.id === customDecorationId);
+      if (decoration) {
+        const allAnchors = decoration.paths.flatMap(p => p.anchors);
+        if (allAnchors.length > 0) {
+          const minX = Math.min(...allAnchors.map(a => a.x));
+          const minY = Math.min(...allAnchors.map(a => a.y));
+          const maxX = Math.max(...allAnchors.map(a => a.x));
+          const maxY = Math.max(...allAnchors.map(a => a.y));
+          const rangeX = maxX - minX;
+          const rangeY = maxY - minY;
+          const aspectRatio = rangeX > 0 && rangeY > 0 ? rangeX / rangeY : 1;
+          const baseSize = Math.max(60, Math.round(Math.max(rangeX, rangeY) * 2));
+          const bw = Math.round(aspectRatio >= 1 ? baseSize : baseSize * aspectRatio);
+          const bh = Math.round(aspectRatio >= 1 ? baseSize / aspectRatio : baseSize);
+          addBlockFromCustomDecoration(customDecorationId, mouseX - bw / 2, mouseY - bh / 2);
+        } else {
+          addBlockFromCustomDecoration(customDecorationId, mouseX, mouseY);
+        }
+      }
     } else if (customTemplateId) {
       const { addBlockFromCustomTemplate, customElementTemplates } = useResumeStore.getState();
       const template = customElementTemplates.find(t => t.id === customTemplateId);

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input, Button } from 'antd';
+import { Input, Button, Modal } from 'antd';
 import { EditOutlined, ArrowRightOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import { presetColorSchemes } from '@/utils/presets';
+import { hasAutoSaveData, restoreFromLocalStorage, getAutoSaveTimestamp, clearLocalStorage } from '@/hooks/useAutoSave';
 import type { ColorScheme } from '@/types';
 import './index.less';
 
@@ -19,8 +20,20 @@ export default function HomePage() {
   const [resumeTitle, setResumeTitle] = useState('我的简历');
 
   const handleCreate = () => {
+    // 创建新简历时清除旧的自动保存数据
+    clearLocalStorage();
     initResume(resumeTitle, selectedColorScheme);
     navigate('/editor');
+  };
+
+  // 尝试恢复自动保存的简历
+  const handleRestore = () => {
+    const restored = restoreFromLocalStorage();
+    if (restored) {
+      navigate('/editor');
+    } else {
+      Modal.warning({ title: '恢复失败', content: '自动保存的数据已损坏或不存在。' });
+    }
   };
 
   return (
@@ -79,7 +92,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* 创建按钮 */}
+        {/* 创建/恢复按钮 */}
         <div className="layout-selector-actions">
           <Button
             type="primary"
@@ -92,6 +105,19 @@ export default function HomePage() {
           >
             开始编辑
           </Button>
+          {hasAutoSaveData() && (() => {
+            const ts = getAutoSaveTimestamp();
+            const timeStr = ts ? new Date(ts).toLocaleString() : '';
+            return (
+              <Button
+                size="large"
+                onClick={handleRestore}
+                style={{ marginTop: 8 }}
+              >
+                📂 恢复上次的简历{timeStr ? ` (${timeStr})` : ''}
+              </Button>
+            );
+          })()}
         </div>
       </div>
     </div>

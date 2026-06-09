@@ -5,10 +5,12 @@
 
   &-toolbar {
     display: flex;
+    align-items: center;
     gap: var(--gap-xs);
     padding: var(--gap-sm) var(--gap-md);
     background: var(--color-border-light);
     border-bottom: 1px solid var(--color-border);
+    flex-wrap: wrap;
   }
 
   &-editor {
@@ -20,6 +22,16 @@
       font-size: var(--font-size-13);
       line-height: 1.5;
       outline: none;
+
+      p { margin: 0; }
+      ul, ol { padding-left: 1.2em; margin: 0.2em 0; }
+      p.is-editor-empty:first-child::before {
+        content: attr(data-placeholder);
+        float: left;
+        color: var(--color-text-muted);
+        pointer-events: none;
+        height: 0;
+      }
     }
   }
 }
@@ -29,5 +41,40 @@
     background: var(--color-primary-light) !important;
     color: var(--color-primary) !important;
     border-color: var(--color-primary) !important;
+  }
+}
+
+// ===== 字号/字体下拉控件 =====
+.rtf-select {
+  min-width: 0 !important;
+
+  &.rtf-select-fontsize {
+    width: 72px !important;
+
+    .ant-select-selector {
+      padding: 0 4px !important;
+      font-size: var(--font-size-11) !important;
+      height: 24px !important;
+    }
+
+    .ant-select-selection-item {
+      line-height: 22px !important;
+      font-size: var(--font-size-11) !important;
+    }
+  }
+
+  &.rtf-select-fontfamily {
+    width: 88px !important;
+
+    .ant-select-selector {
+      padding: 0 4px !important;
+      font-size: var(--font-size-11) !important;
+      height: 24px !important;
+    }
+
+    .ant-select-selection-item {
+      line-height: 22px !important;
+      font-size: var(--font-size-11) !important;
+    }
   }
 }

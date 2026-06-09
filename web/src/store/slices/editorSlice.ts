@@ -1,0 +1,262 @@
+/**
+ * 编辑器状态 Slice
+ * 管理编辑器 UI 状态、选择操作、分组操作
+ */
+import { produce } from 'immer';
+import { v4 as uuid } from 'uuid';
+import type { EditorState, BlockGroup } from '../../types';
+
+// ========== 编辑器初始状态 ==========
+export const INITIAL_EDITOR: EditorState = {
+  selectedBlockId: null,
+  selectedBlockIds: [],
+  selectedGroupId: null,
+  isFullscreen: false,
+  theme: 'light',
+  leftPanelWidth: 280,
+  rightPanelWidth: 320,
+  autoSave: true,
+  autoSaveInterval: 30,
+  previewOpen: false,
+  showAlignGuides: true,
+  snapToGrid: true,
+  gridSize: 8,
+};
+
+// ========== Slice 类型 ==========
+export interface EditorSlice {
+  // 数据
+  editor: EditorState;
+
+  // 选择操作
+  selectBlock: (blockId: string | null) => void;
+  selectBlocks: (blockIds: string[]) => void;
+  addToSelection: (blockId: string) => void;
+  removeFromSelection: (blockId: string) => void;
+  clearSelection: () => void;
+
+  // 分组操作
+  createGroup: (name: string) => string;
+  addBlocksToGroup: (groupId: string, blockIds: string[]) => void;
+  removeGroup: (groupId: string) => void;
+  renameGroup: (groupId: string, name: string) => void;
+  updateGroupRotation: (groupId: string, rotation: number) => void;
+  updateGroupPosition: (groupId: string, dx: number, dy: number) => void;
+  selectGroup: (groupId: string | null) => void;
+  groupSelectedBlocks: () => string | null;
+
+  // 编辑器 UI 操作
+  toggleFullscreen: () => void;
+  setLeftPanelWidth: (width: number) => void;
+  setRightPanelWidth: (width: number) => void;
+  setEditorTheme: (theme: 'light' | 'dark' | 'system') => void;
+  setPreviewOpen: (open: boolean) => void;
+  setShowAlignGuides: (show: boolean) => void;
+  setSnapToGrid: (snap: boolean) => void;
+
+  // 选择器
+  getGroupBlocks: (groupId: string) => any[];
+}
+
+// ========== Slice 实现 ==========
+export const createEditorSlice = (set: any, get: any): EditorSlice => ({
+  editor: { ...INITIAL_EDITOR },
+
+  // ========== 选择操作 ==========
+  selectBlock: (blockId) =>
+    set(produce<EditorSlice>((state) => {
+      state.editor.selectedBlockId = blockId;
+      state.editor.selectedBlockIds = blockId ? [blockId] : [];
+      state.editor.selectedGroupId = null;
+    })),
+
+  selectBlocks: (blockIds) =>
+    set(produce<EditorSlice>((state) => {
+      state.editor.selectedBlockIds = blockIds;
+      state.editor.selectedBlockId = blockIds.length > 0 ? blockIds[0] : null;
+      state.editor.selectedGroupId = null;
+    })),
+
+  addToSelection: (blockId) =>
+    set(produce<EditorSlice>((state) => {
+      if (!state.editor.selectedBlockIds.includes(blockId)) {
+        state.editor.selectedBlockIds.push(blockId);
+      }
+      state.editor.selectedBlockId = blockId;
+    })),
+
+  removeFromSelection: (blockId) =>
+    set(produce<EditorSlice>((state) => {
+      state.editor.selectedBlockIds = state.editor.selectedBlockIds.filter((id) => id !== blockId);
+      if (state.editor.selectedBlockId === blockId) {
+        state.editor.selectedBlockId = state.editor.selectedBlockIds.length > 0 ? state.editor.selectedBlockIds[0] : null;
+      }
+    })),
+
+  clearSelection: () =>
+    set(produce<EditorSlice>((state) => {
+      state.editor.selectedBlockId = null;
+      state.editor.selectedBlockIds = [];
+      state.editor.selectedGroupId = null;
+    })),
+
+  // ========== 分组操作 ==========
+  createGroup: (name) => {
+    const groupId = uuid();
+    set(produce<EditorSlice & { resume: any }>((state) => {
+      if (!state.resume) return;
+      const group: BlockGroup = {
+        id: groupId,
+        name,
+        blockIds: [],
+        rotation: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      state.resume.groups.push(group);
+      state.resume.updatedAt = Date.now();
+    }));
+    return groupId;
+  },
+
+  addBlocksToGroup: (groupId, blockIds) =>
+    set(produce<EditorSlice & { resume: any }>((state) => {
+      if (!state.resume) return;
+      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      if (group) {
+        for (const id of blockIds) {
+          if (!group.blockIds.includes(id)) {
+            group.blockIds.push(id);
+          }
+          const block = state.resume.blocks.find((b: any) => b.id === id);
+          if (block) {
+            block.groupId = groupId;
+          }
+        }
+        group.updatedAt = Date.now();
+        state.resume.updatedAt = Date.now();
+      }
+    })),
+
+  removeGroup: (groupId) =>
+    set(produce<EditorSlice & { resume: any }>((state) => {
+      if (!state.resume) return;
+      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      if (group) {
+        for (const blockId of group.blockIds) {
+          const block = state.resume.blocks.find((b: any) => b.id === blockId);
+          if (block) {
+            block.groupId = undefined;
+          }
+        }
+      }
+      state.resume.groups = state.resume.groups.filter((g: BlockGroup) => g.id !== groupId);
+      state.resume.updatedAt = Date.now();
+    })),
+
+  renameGroup: (groupId, name) =>
+    set(produce<EditorSlice & { resume: any }>((state) => {
+      if (!state.resume) return;
+      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      if (group) {
+        group.name = name;
+        group.updatedAt = Date.now();
+        state.resume.updatedAt = Date.now();
+      }
+    })),
+
+  updateGroupRotation: (groupId, rotation) =>
+    set(produce<EditorSlice & { resume: any }>((state) => {
+      if (!state.resume) return;
+      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      if (group) {
+        group.rotation = rotation;
+        group.updatedAt = Date.now();
+        state.resume.updatedAt = Date.now();
+      }
+    })),
+
+  updateGroupPosition: (groupId, dx, dy) =>
+    set(produce<EditorSlice & { resume: any }>((state) => {
+      if (!state.resume) return;
+      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      if (group) {
+        for (const blockId of group.blockIds) {
+          const block = state.resume.blocks.find((b: any) => b.id === blockId);
+          if (block) {
+            block.x += dx;
+            block.y += dy;
+          }
+        }
+        state.resume.updatedAt = Date.now();
+      }
+    })),
+
+  selectGroup: (groupId) =>
+    set(produce<EditorSlice & { resume: any }>((state) => {
+      state.editor.selectedGroupId = groupId;
+      if (groupId) {
+        const group = state.resume?.groups.find((g: BlockGroup) => g.id === groupId);
+        if (group) {
+          state.editor.selectedBlockIds = [...group.blockIds];
+          state.editor.selectedBlockId = group.blockIds.length > 0 ? group.blockIds[0] : null;
+        }
+      }
+    })),
+
+  groupSelectedBlocks: () => {
+    const state = get();
+    if (!state.resume || state.editor.selectedBlockIds.length < 2) return null;
+    const groupId = state.createGroup(`分组 ${state.resume.groups.length + 1}`);
+    state.addBlocksToGroup(groupId, state.editor.selectedBlockIds);
+    set(produce<EditorSlice>((s) => {
+      s.editor.selectedGroupId = groupId;
+    }));
+    return groupId;
+  },
+
+  // ========== 编辑器 UI 操作 ==========
+  toggleFullscreen: () =>
+    set(produce<EditorSlice>((state) => {
+      state.editor.isFullscreen = !state.editor.isFullscreen;
+    })),
+
+  setLeftPanelWidth: (width) =>
+    set(produce<EditorSlice>((state) => {
+      state.editor.leftPanelWidth = width;
+    })),
+
+  setRightPanelWidth: (width) =>
+    set(produce<EditorSlice>((state) => {
+      state.editor.rightPanelWidth = width;
+    })),
+
+  setEditorTheme: (theme) =>
+    set(produce<EditorSlice>((state) => {
+      state.editor.theme = theme;
+    })),
+
+  setPreviewOpen: (open) =>
+    set(produce<EditorSlice>((state) => {
+      state.editor.previewOpen = open;
+    })),
+
+  setShowAlignGuides: (show) =>
+    set(produce<EditorSlice>((state) => {
+      state.editor.showAlignGuides = show;
+    })),
+
+  setSnapToGrid: (snap) =>
+    set(produce<EditorSlice>((state) => {
+      state.editor.snapToGrid = snap;
+    })),
+
+  // ========== 选择器 ==========
+  getGroupBlocks: (groupId) => {
+    const state = get();
+    if (!state.resume) return [];
+    const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+    if (!group) return [];
+    return state.resume.blocks.filter((b: any) => group.blockIds.includes(b.id));
+  },
+});

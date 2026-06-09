@@ -77,12 +77,16 @@ export default function FreeBlockCard({
   const isHeaderInfo = template?.name === '头部信息';
   const isBasicInfo = template?.name === '基本信息';
   const isSkills = template?.name === '技能';
+  const isBasicCategory = template?.category === '基础组件';
 
   // 装饰渲染已抽取到 DecorationSvgRenderer 组件
 
   // 计算块内容区域的背景色
-  // 自定义装饰块始终透明，不使用主题色
-  const contentBgColor = isCustomDecorationBlock ? 'transparent' : (blockStyle.backgroundColor || colorScheme.blockBackground);
+  // 自定义装饰块始终透明；基础组件默认透明（用户可手动设置覆盖）；组合组件使用主题色块背景
+  const defaultBgColor = isCustomDecorationBlock ? 'transparent'
+    : isBasicCategory ? 'transparent'
+    : colorScheme.blockBackground;
+  const contentBgColor = blockStyle.backgroundColor || defaultBgColor;
 
   // 外部容器样式：包含外边距的定位区域
   const rotation = block.rotation || 0;
@@ -108,9 +112,9 @@ export default function FreeBlockCard({
     marginTop: margin.top || 0,
     overflow: 'hidden',
     backgroundColor: contentBgColor,
-    borderRadius: isCustomDecorationBlock ? 0 : (blockStyle.borderRadius ?? 6),
+    borderRadius: (isCustomDecorationBlock || isBasicCategory) && blockStyle.borderRadius === undefined ? 0 : (blockStyle.borderRadius ?? 6),
     opacity: blockStyle.opacity ?? 1,
-    border: isCustomDecorationBlock ? 'none' : (blockStyle.borderWidth ? `${blockStyle.borderWidth}px ${blockStyle.borderStyle || 'solid'} ${blockStyle.borderColor || '#e5e7eb'}` : undefined),
+    border: (isCustomDecorationBlock || isBasicCategory) && !blockStyle.borderWidth ? 'none' : (blockStyle.borderWidth ? `${blockStyle.borderWidth}px ${blockStyle.borderStyle || 'solid'} ${blockStyle.borderColor || '#e5e7eb'}` : undefined),
     ...(blockStyle.backgroundImage ? {
       backgroundImage: `url(${blockStyle.backgroundImage})`,
       backgroundSize: blockStyle.backgroundSize || 'cover',
@@ -298,6 +302,18 @@ export default function FreeBlockCard({
                     <span className="free-block-skill-name">
                       {renderEditableField(field, value)}
                     </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : isBasicCategory ? (
+            /* 基础组件：直接渲染内容，不显示字段标签 */
+            <div className="free-block-basic-content">
+              {fields.map((field) => {
+                const value = block.fields[field.id];
+                return (
+                  <div key={field.id} className="free-block-basic-field">
+                    {renderEditableField(field, value)}
                   </div>
                 );
               })}

@@ -34,7 +34,7 @@ export interface BlockTemplate {
   id: string;
   name: string;
   fields: FieldDefinition[];
-  category: string;             // 分类标签，如 "教育类"、"经历类"
+  category: string;             // 分类标签，如 "基础组件"、"组合组件"
   isPreset: boolean;            // 是否是系统预设
   createdAt: number;
   updatedAt: number;

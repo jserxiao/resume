@@ -11,7 +11,12 @@ import { useResumeStore } from '@/store';
 import ExportMenu from '@/components/ExportMenu';
 import './index.less';
 
-export default function Toolbar() {
+interface ToolbarProps {
+  /** 手动保存回调（自动保存 Hook 提供） */
+  onSave?: () => void;
+}
+
+export default function Toolbar({ onSave }: ToolbarProps) {
   const navigate = useNavigate();
   const { resume, editor, markSaved, clearResume, setPreviewOpen, setShowAlignGuides, setSnapToGrid } = useResumeStore();
 
@@ -20,6 +25,13 @@ export default function Toolbar() {
   const handleBack = () => {
     clearResume();
     navigate('/');
+  };
+
+  const handleSave = () => {
+    // 先调用外部保存回调（localStorage 自动保存）
+    if (onSave) onSave();
+    // 再标记为已保存
+    markSaved();
   };
 
   const saveStatus = resume.lastSavedAt
@@ -76,7 +88,7 @@ export default function Toolbar() {
           </Button>
         </Tooltip>
         <Tooltip title="保存 (Ctrl+S)">
-          <Button type="text" icon={<SaveOutlined />} onClick={markSaved}>
+          <Button type="text" icon={<SaveOutlined />} onClick={handleSave}>
             保存
           </Button>
         </Tooltip>

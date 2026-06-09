@@ -2,11 +2,59 @@ import type { BlockTemplate, ColorScheme } from '../types';
 import { FieldType } from '../types';
 
 // ========== 预设块模板（ID 固定，确保 JSON 导入导出可恢复） ==========
+
+// ---- 基础组件（单字段基础元素） ----
 export const presetBlockTemplates: BlockTemplate[] = [
+  {
+    id: 'tpl-text',
+    name: '文本框',
+    category: '基础组件',
+    isPreset: true,
+    createdAt: 0,
+    updatedAt: 0,
+    fields: [
+      { id: 'text-content', name: '内容', type: FieldType.RichText, order: 0, defaultValue: '', required: true, placeholder: '输入文本内容' },
+    ],
+  },
+  {
+    id: 'tpl-link',
+    name: '链接',
+    category: '基础组件',
+    isPreset: true,
+    createdAt: 0,
+    updatedAt: 0,
+    fields: [
+      { id: 'link-url', name: '链接地址', type: FieldType.Link, order: 0, defaultValue: '', required: true, placeholder: '输入链接地址' },
+    ],
+  },
+  {
+    id: 'tpl-date',
+    name: '日期',
+    category: '基础组件',
+    isPreset: true,
+    createdAt: 0,
+    updatedAt: 0,
+    fields: [
+      { id: 'date-value', name: '日期', type: FieldType.Date, order: 0, defaultValue: '', required: true, placeholder: '选择日期' },
+    ],
+  },
+  {
+    id: 'tpl-rating',
+    name: '评分',
+    category: '基础组件',
+    isPreset: true,
+    createdAt: 0,
+    updatedAt: 0,
+    fields: [
+      { id: 'rating-value', name: '评分', type: FieldType.Rating, order: 0, defaultValue: '3', required: false, placeholder: '' },
+    ],
+  },
+
+  // ---- 组合组件（多字段组合的简历区块） ----
   {
     id: 'tpl-head',
     name: '头部信息',
-    category: '头部',
+    category: '组合组件',
     isPreset: true,
     createdAt: 0,
     updatedAt: 0,
@@ -24,7 +72,7 @@ export const presetBlockTemplates: BlockTemplate[] = [
   {
     id: 'tpl-basic',
     name: '基本信息',
-    category: '基础',
+    category: '组合组件',
     isPreset: true,
     createdAt: 0,
     updatedAt: 0,
@@ -40,7 +88,7 @@ export const presetBlockTemplates: BlockTemplate[] = [
   {
     id: 'tpl-work',
     name: '工作经历',
-    category: '经历',
+    category: '组合组件',
     isPreset: true,
     createdAt: 0,
     updatedAt: 0,
@@ -58,7 +106,7 @@ export const presetBlockTemplates: BlockTemplate[] = [
   {
     id: 'tpl-edu',
     name: '教育背景',
-    category: '教育',
+    category: '组合组件',
     isPreset: true,
     createdAt: 0,
     updatedAt: 0,
@@ -76,7 +124,7 @@ export const presetBlockTemplates: BlockTemplate[] = [
   {
     id: 'tpl-project',
     name: '项目经验',
-    category: '经历',
+    category: '组合组件',
     isPreset: true,
     createdAt: 0,
     updatedAt: 0,
@@ -93,7 +141,7 @@ export const presetBlockTemplates: BlockTemplate[] = [
   {
     id: 'tpl-skill',
     name: '技能',
-    category: '基础',
+    category: '组合组件',
     isPreset: true,
     createdAt: 0,
     updatedAt: 0,
@@ -105,7 +153,7 @@ export const presetBlockTemplates: BlockTemplate[] = [
   {
     id: 'tpl-summary',
     name: '自我总结',
-    category: '基础',
+    category: '组合组件',
     isPreset: true,
     createdAt: 0,
     updatedAt: 0,
@@ -116,7 +164,7 @@ export const presetBlockTemplates: BlockTemplate[] = [
   {
     id: 'tpl-cert',
     name: '证书',
-    category: '其他',
+    category: '组合组件',
     isPreset: true,
     createdAt: 0,
     updatedAt: 0,
@@ -131,7 +179,7 @@ export const presetBlockTemplates: BlockTemplate[] = [
   {
     id: 'tpl-lang',
     name: '语言',
-    category: '其他',
+    category: '组合组件',
     isPreset: true,
     createdAt: 0,
     updatedAt: 0,
@@ -144,7 +192,7 @@ export const presetBlockTemplates: BlockTemplate[] = [
   {
     id: 'tpl-hobby',
     name: '兴趣爱好',
-    category: '其他',
+    category: '组合组件',
     isPreset: true,
     createdAt: 0,
     updatedAt: 0,

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useResumeStore } from '@/store';
+import { saveToLocalStorage } from '@/hooks/useAutoSave';
 
 /**
  * 编辑器全局键盘快捷键 Hook
@@ -7,7 +8,7 @@ import { useResumeStore } from '@/store';
  * 支持的快捷键：
  * - Delete / Backspace: 删除选中的块（在非输入状态下）
  * - Escape: 取消选择
- * - Ctrl/⌘ + S: 保存
+ * - Ctrl/⌘ + S: 保存（localStorage 自动保存 + 标记已保存）
  * - Ctrl/⌘ + D: 克隆选中块
  */
 export function useKeyboardShortcuts() {
@@ -38,6 +39,8 @@ export function useKeyboardShortcuts() {
       // Ctrl+S 保存
       if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
+        // 同时保存到 localStorage 和标记已保存
+        saveToLocalStorage();
         const { markSaved } = useResumeStore.getState();
         markSaved();
       }

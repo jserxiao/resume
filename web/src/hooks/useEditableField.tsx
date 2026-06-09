@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Input, Select, Rate } from 'antd';
 import type { FieldDefinition, ColorScheme } from '@/types';
 import { FieldType } from '@/types';
+import InlineRichTextEditor from './InlineRichTextEditor';
 
 interface UseEditableFieldOptions {
   /** 是否为预览模式 */
@@ -20,7 +21,7 @@ interface UseEditableFieldOptions {
  * 可编辑字段 Hook
  *
  * 封装了字段的双击编辑、失焦退出编辑、以及不同字段类型的渲染逻辑。
- * 支持的编辑态字段：Text, TextArea, Select, Rating, Date, Link, TagList
+ * 支持的编辑态字段：Text, TextArea, Select, Rating, Date, Link, TagList, RichText
  * 支持的只读态字段：RichText, TagList, Rating, Image, Switch, Link, Text
  */
 export function useEditableField(options: UseEditableFieldOptions) {
@@ -54,6 +55,15 @@ export function useEditableField(options: UseEditableFieldOptions) {
     // ===== 编辑态 =====
     if (isEditing) {
       switch (field.type) {
+        case FieldType.RichText:
+          return (
+            <InlineRichTextEditor
+              value={value}
+              onChange={(v) => updateBlockField(blockId, field.id, v)}
+              onBlur={handleFieldBlur}
+              placeholder={field.placeholder}
+            />
+          );
         case FieldType.TextArea:
           return (
             <Input.TextArea

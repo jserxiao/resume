@@ -55,12 +55,29 @@ export default function LeftPanel() {
     t.category.toLowerCase().includes(searchText.toLowerCase())
   );
 
+  // 分类排序顺序
+  const CATEGORY_ORDER = ['基础组件', '组合组件'];
+  const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+    '基础组件': <AppstoreOutlined />,
+    '组合组件': <GroupOutlined />,
+  };
+
   // 按分类分组
   const groupedTemplates: Record<string, typeof blockTemplates> = {};
   filteredTemplates.forEach((t) => {
     const cat = t.category || '其他';
     if (!groupedTemplates[cat]) groupedTemplates[cat] = [];
     groupedTemplates[cat].push(t);
+  });
+
+  // 按预定义顺序排序分类
+  const sortedCategories = Object.keys(groupedTemplates).sort((a, b) => {
+    const ia = CATEGORY_ORDER.indexOf(a);
+    const ib = CATEGORY_ORDER.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
   });
 
 // 拖拽逻辑已抽取到 useDragPreview Hook
@@ -97,37 +114,40 @@ export default function LeftPanel() {
   };
 
   // 块模板折叠面板
-  const templateItems = Object.entries(groupedTemplates).map(([category, templates]) => ({
-    key: `tpl-${category}`,
-    label: (
-      <div className="left-panel-category-label">
-        <AppstoreOutlined />
-        <span>{category}</span>
-        <Tag className="left-panel-category-count">{templates.length}</Tag>
-      </div>
-    ),
-    children: (
-      <div className="left-panel-template-list">
-        {templates.map((template) => (
-          <div
-            key={template.id}
-            className="left-panel-template-item"
-            draggable
-            onDragStart={(e) => handleBlockDragStart(e, template.id)}
-            onDragEnd={handleDragEnd}
-          >
-            <HolderOutlined className="left-panel-template-drag-icon" />
-            <div className="left-panel-template-info">
-              <span className="left-panel-template-name">{template.name}</span>
-              <span className="left-panel-template-fields">
-                {template.fields.length} 字段
-              </span>
+  const templateItems = sortedCategories.map((category) => {
+    const templates = groupedTemplates[category];
+    return {
+      key: `tpl-${category}`,
+      label: (
+        <div className="left-panel-category-label">
+          {CATEGORY_ICONS[category] || <AppstoreOutlined />}
+          <span>{category}</span>
+          <Tag className="left-panel-category-count">{templates.length}</Tag>
+        </div>
+      ),
+      children: (
+        <div className="left-panel-template-list">
+          {templates.map((template) => (
+            <div
+              key={template.id}
+              className="left-panel-template-item"
+              draggable
+              onDragStart={(e) => handleBlockDragStart(e, template.id)}
+              onDragEnd={handleDragEnd}
+            >
+              <HolderOutlined className="left-panel-template-drag-icon" />
+              <div className="left-panel-template-info">
+                <span className="left-panel-template-name">{template.name}</span>
+                <span className="left-panel-template-fields">
+                  {template.fields.length} 字段
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-    ),
-  }));
+          ))}
+        </div>
+      ),
+    };
+  });
 
   // 自定义元素面板
   const customItems = customElementTemplates.length > 0 ? [{

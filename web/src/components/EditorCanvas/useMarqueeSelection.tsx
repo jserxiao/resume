@@ -8,6 +8,7 @@ interface MarqueeStart {
   startX: number;
   startY: number;
   isShiftKey: boolean;
+  hasMoved: boolean; // 是否已实际拖动（超过阈值）
 }
 
 /**
@@ -70,8 +71,7 @@ export function useMarqueeSelection(
       const rect = container.getBoundingClientRect();
       const startX = e.clientX - rect.left;
       const startY = e.clientY - rect.top;
-      marqueeStartRef.current = { startX, startY, isShiftKey: e.shiftKey };
-      setMarqueeRect({ x: startX, y: startY, width: 0, height: 0 });
+      marqueeStartRef.current = { startX, startY, isShiftKey: e.shiftKey, hasMoved: false };
     },
     [isPreview, containerRef, onClearSelection, onClearDistances],
   );
@@ -146,11 +146,24 @@ export function useMarqueeSelection(
       const currentX = e.clientX - rect.left;
       const currentY = e.clientY - rect.top;
       const { startX, startY } = marqueeStartRef.current;
+      const dx = Math.abs(currentX - startX);
+      const dy = Math.abs(currentY - startY);
+
+      // 只有拖动超过阈值才进入框选状态，避免点击时出现框选矩形
+      if (!marqueeStartRef.current.hasMoved) {
+        if (dx > 3 || dy > 3) {
+          marqueeStartRef.current.hasMoved = true;
+        } else {
+          // 还没开始实际拖动，返回 false 让其他逻辑正常处理
+          return true;
+        }
+      }
+
       const newRect: Rect = {
         x: Math.min(startX, currentX),
         y: Math.min(startY, currentY),
-        width: Math.abs(currentX - startX),
-        height: Math.abs(currentY - startY),
+        width: dx,
+        height: dy,
       };
       marqueeRectRef.current = newRect;
       setMarqueeRect(newRect);
@@ -162,6 +175,13 @@ export function useMarqueeSelection(
   /** 全局 mouseup 中的框选完成处理，返回 true 表示框选已完成 */
   const handleMarqueeMouseUp = useCallback((): boolean => {
     if (!marqueeStartRef.current) return false;
+    // 如果没有实际拖动，只是点击，直接清理框选状态
+    if (!marqueeStartRef.current.hasMoved) {
+      marqueeStartRef.current = null;
+      marqueeRectRef.current = null;
+      setMarqueeRect(null);
+      return true;
+    }
     finishMarquee();
     return true;
   }, [finishMarquee]);

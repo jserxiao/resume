@@ -9,8 +9,16 @@
 
   &.preview-mode {
     cursor: default;
-    border: none !important;
     box-shadow: none !important;
+
+    // 隐藏编辑器交互元素，保留用户设置的边框
+    .free-block-selection-border,
+    .free-block-group-border,
+    .free-block-toolbar,
+    .free-block-resize-handle,
+    .free-block-margin-area {
+      display: none !important;
+    }
   }
 
   &.hovered:not(.selected):not(.preview-mode) {
@@ -390,7 +398,6 @@
 // ===== 可编辑字段通用 =====
 .editable-field-placeholder {
   color: var(--color-text-muted);
-  font-style: italic;
   font-size: 11px;
   cursor: text;
 }

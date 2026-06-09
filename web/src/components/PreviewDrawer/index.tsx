@@ -20,8 +20,10 @@ export default function PreviewDrawer() {
       open={editor.previewOpen}
       onClose={() => setPreviewOpen(false)}
       styles={{
-        body: { padding: 0, overflow: 'auto', background: '#e5e7eb' },
+        body: { padding: 0, overflow: 'auto', background: '#e5e7eb', position: 'relative' },
+        wrapper: {},
       }}
+      zIndex={10000}
     >
       <div
         className="preview-drawer-container"

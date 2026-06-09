@@ -684,6 +684,21 @@ export default function RightPanel() {
                 />
               </div>
             </div>
+            <div className="right-panel-field compact">
+              <label className="right-panel-label">边框样式</label>
+              <Select
+                value={selectedBlock.style?.borderStyle || 'solid'}
+                onChange={(val) => updateBlockStyle(selectedBlock.id, { borderStyle: val })}
+                size="small"
+                style={{ width: '100%' }}
+                options={[
+                  { label: '实线', value: 'solid' },
+                  { label: '虚线', value: 'dashed' },
+                  { label: '点线', value: 'dotted' },
+                  { label: '双线', value: 'double' },
+                ]}
+              />
+            </div>
           </div>
         )
       ) : isGroupMode ? (

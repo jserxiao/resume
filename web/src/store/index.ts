@@ -667,14 +667,27 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
       const template = state.customElementTemplates.find((t) => t.id === templateId);
       if (!template) return;
 
+      // 自动创建分组，使自定义元素作为一个整体
+      const groupId = uuid();
+      const group: BlockGroup = {
+        id: groupId,
+        name: template.name,
+        blockIds: [],
+        rotation: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      state.resume.groups.push(group);
+
       for (const blockDef of template.blocks) {
         const fields: Record<string, string> = {};
         for (const [k, v] of Object.entries(blockDef.fields)) {
           fields[k] = v;
         }
 
+        const blockId = `${state.resume.id}-custom-${uuid().slice(0, 8)}`;
         const block: BlockInstance = {
-          id: `${state.resume.id}-custom-${uuid().slice(0, 8)}`,
+          id: blockId,
           templateId: blockDef.templateId,
           templateName: blockDef.templateName,
           name: blockDef.name,
@@ -688,10 +701,17 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
           width: blockDef.width,
           height: blockDef.height,
           zIndex: getNextZIndex(state.resume.blocks),
+          groupId,
         };
 
         state.resume.blocks.push(block);
+        group.blockIds.push(blockId);
       }
+
+      // 选中新创建的分组
+      state.editor.selectedGroupId = groupId;
+      state.editor.selectedBlockIds = [...group.blockIds];
+      state.editor.selectedBlockId = group.blockIds.length > 0 ? group.blockIds[0] : null;
 
       state.resume.updatedAt = Date.now();
     })),
@@ -699,24 +719,64 @@ export const useResumeStore = create<ResumeStore>((set, get) => ({
   removeBlock: (blockId) =>
     set(produce<ResumeStore>((state) => {
       if (!state.resume) return;
+      const block = state.resume.blocks.find((b) => b.id === blockId);
       state.resume.blocks = state.resume.blocks.filter((b) => b.id !== blockId);
       state.resume.updatedAt = Date.now();
       if (state.editor.selectedBlockId === blockId) {
         state.editor.selectedBlockId = null;
       }
       state.editor.selectedBlockIds = state.editor.selectedBlockIds.filter((id) => id !== blockId);
+
+      // 清理空分组（当分组内块被删除后可能变空）
+      if (block?.groupId) {
+        const group = state.resume.groups.find((g) => g.id === block.groupId);
+        if (group) {
+          group.blockIds = group.blockIds.filter((id) => id !== blockId);
+          // 如果分组为空，则自动删除该分组
+          if (group.blockIds.length === 0) {
+            state.resume.groups = state.resume.groups.filter((g) => g.id !== block.groupId);
+            if (state.editor.selectedGroupId === block.groupId) {
+              state.editor.selectedGroupId = null;
+            }
+          }
+        }
+      }
     })),
 
   removeBlocks: (blockIds) =>
     set(produce<ResumeStore>((state) => {
       if (!state.resume) return;
       const blockIdSet = new Set(blockIds);
+
+      // 先找出被删除块的分组信息
+      const affectedGroupIds = new Set<string>();
+      for (const bId of blockIds) {
+        const b = state.resume.blocks.find((bl) => bl.id === bId);
+        if (b?.groupId) {
+          affectedGroupIds.add(b.groupId);
+        }
+      }
+
       state.resume.blocks = state.resume.blocks.filter((b) => !blockIdSet.has(b.id));
       state.resume.updatedAt = Date.now();
       if (blockIdSet.has(state.editor.selectedBlockId || '')) {
         state.editor.selectedBlockId = null;
       }
       state.editor.selectedBlockIds = state.editor.selectedBlockIds.filter((id) => !blockIdSet.has(id));
+
+      // 清理受影响分组中的被删除块ID，删除空分组
+      for (const gId of affectedGroupIds) {
+        const group = state.resume.groups.find((g) => g.id === gId);
+        if (group) {
+          group.blockIds = group.blockIds.filter((id) => !blockIdSet.has(id));
+          if (group.blockIds.length === 0) {
+            state.resume.groups = state.resume.groups.filter((g) => g.id !== gId);
+            if (state.editor.selectedGroupId === gId) {
+              state.editor.selectedGroupId = null;
+            }
+          }
+        }
+      }
     })),
 
   cloneBlock: (blockId) =>

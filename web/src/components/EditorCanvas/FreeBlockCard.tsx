@@ -312,7 +312,7 @@ export default function FreeBlockCard({
     backgroundColor: contentBgColor,
     borderRadius: blockStyle.borderRadius ?? 6,
     opacity: blockStyle.opacity ?? 1,
-    border: blockStyle.borderWidth ? `${blockStyle.borderWidth}px solid ${blockStyle.borderColor || '#e5e7eb'}` : undefined,
+    border: blockStyle.borderWidth ? `${blockStyle.borderWidth}px ${blockStyle.borderStyle || 'solid'} ${blockStyle.borderColor || '#e5e7eb'}` : undefined,
     ...(blockStyle.backgroundImage ? {
       backgroundImage: `url(${blockStyle.backgroundImage})`,
       backgroundSize: blockStyle.backgroundSize || 'cover',

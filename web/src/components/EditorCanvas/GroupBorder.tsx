@@ -16,6 +16,9 @@ export default function GroupBorder({ group, blocks, isSelected, isPreview }: Gr
   const bounds = getGroupBounds(group, blocks);
   if (!bounds) return null;
 
+  // 预览模式下不渲染分组边框
+  if (isPreview) return null;
+
   const rotation = group.rotation || 0;
 
   return (
@@ -30,12 +33,10 @@ export default function GroupBorder({ group, blocks, isSelected, isPreview }: Gr
         transform: rotation ? `rotate(${rotation}deg)` : undefined,
         transformOrigin: `${bounds.width / 2 + 4}px ${bounds.height / 2 + 4}px`,
         pointerEvents: 'none',
-        zIndex: 9990,
+        zIndex: 10,
       }}
     >
-      {!isPreview && (
-        <span className="editor-canvas-group-label">{group.name}</span>
-      )}
+      <span className="editor-canvas-group-label">{group.name}</span>
     </div>
   );
 }

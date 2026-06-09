@@ -58,6 +58,7 @@ export interface BlockStyle {
   borderRadius?: number;          // 圆角(px)
   borderColor?: string;           // 边框颜色
   borderWidth?: number;           // 边框宽度(px)
+  borderStyle?: 'solid' | 'dashed' | 'dotted' | 'double'; // 边框样式
   opacity?: number;               // 透明度 0-1
 }
 

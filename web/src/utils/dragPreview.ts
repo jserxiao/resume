@@ -18,18 +18,18 @@ function renderFieldPlaceholder(field: { name: string; type: FieldType; placehol
     case FieldType.Rating:
       return `<span style="color:#f59e0b;font-size:12px">★★★☆☆</span>`;
     case FieldType.Date:
-      return `<span style="color:#9ca3af;font-style:italic;font-size:11px">${placeholder || '选择日期'}</span>`;
+      return `<span style="color:#9ca3af;font-size:11px">${placeholder || '选择日期'}</span>`;
     case FieldType.TextArea:
     case FieldType.RichText:
-      return `<span style="color:#9ca3af;font-style:italic;font-size:11px">${placeholder || name + '...'}</span>`;
+      return `<span style="color:#9ca3af;font-size:11px">${placeholder || name + '...'}</span>`;
     case FieldType.Select:
-      return `<span style="color:#9ca3af;font-style:italic;font-size:11px">${placeholder || '请选择'}</span>`;
+      return `<span style="color:#9ca3af;font-size:11px">${placeholder || '请选择'}</span>`;
     case FieldType.Link:
       return `<span style="color:#6366f1;text-decoration:underline;font-size:11px">${placeholder || '输入链接'}</span>`;
     case FieldType.Switch:
       return `<span style="font-size:11px">☐</span>`;
     default:
-      return `<span style="color:#9ca3af;font-style:italic;font-size:11px">${placeholder || name + '...'}</span>`;
+      return `<span style="color:#9ca3af;font-size:11px">${placeholder || name + '...'}</span>`;
   }
 }
 
@@ -135,7 +135,7 @@ function renderDefaultLayout(fields: BlockTemplate['fields']): string {
       }
       html += `<div style="display:flex;gap:6px;margin-bottom:2px;font-size:12px;line-height:1.5">
         <span style="color:#9ca3af;flex-shrink:0;min-width:48px">${field.name}</span>
-        <span style="color:#9ca3af;font-style:italic;font-size:11px">${field.placeholder || field.name + '...'}</span>
+        <span style="color:#9ca3af;font-size:11px">${field.placeholder || field.name + '...'}</span>
       </div>`;
     }
   }

@@ -6,6 +6,7 @@ import { saveToLocalStorage } from '@/hooks/useAutoSave';
  * 编辑器全局键盘快捷键 Hook
  *
  * 支持的快捷键：
+ * - Arrow Keys: 移动选中元素或分组（Shift 加速10px）
  * - Delete / Backspace: 删除选中的块（在非输入状态下）
  * - Escape: 取消选择
  * - Ctrl/⌘ + S: 保存（localStorage 自动保存 + 标记已保存）
@@ -16,13 +17,48 @@ export function useKeyboardShortcuts() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 确保不在输入框中
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+      // 方向键移动选中元素或分组
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !isInput) {
+        const hasSelection = editor.selectedBlockId || editor.selectedBlockIds.length > 0;
+        if (hasSelection) {
+          e.preventDefault();
+          const step = e.shiftKey ? 10 : 1;
+          let dx = 0;
+          let dy = 0;
+          if (e.key === 'ArrowUp') dy = -step;
+          if (e.key === 'ArrowDown') dy = step;
+          if (e.key === 'ArrowLeft') dx = -step;
+          if (e.key === 'ArrowRight') dx = step;
+
+          const state = useResumeStore.getState();
+          const { resume, updateBlockPosition, updateGroupPosition } = state;
+          if (!resume) return;
+
+          // 如果选中了分组，移动整个分组
+          if (editor.selectedGroupId) {
+            updateGroupPosition(editor.selectedGroupId, dx, dy);
+          } else {
+            // 移动选中的块（支持多选）
+            const blockIds = editor.selectedBlockIds.length > 0
+              ? editor.selectedBlockIds
+              : editor.selectedBlockId ? [editor.selectedBlockId] : [];
+            for (const blockId of blockIds) {
+              const block = resume.blocks.find((b) => b.id === blockId);
+              if (block) {
+                updateBlockPosition(blockId, block.x + dx, block.y + dy);
+              }
+            }
+          }
+        }
+      }
+
       // Delete/Backspace 删除选中块
       if ((e.key === 'Delete' || e.key === 'Backspace') && editor.selectedBlockId) {
-        // 确保不在输入框中
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-          return;
-        }
+        if (isInput) return;
         const { removeBlock, removeBlocks } = useResumeStore.getState();
         if (editor.selectedBlockIds.length > 1) {
           removeBlocks(editor.selectedBlockIds);
@@ -57,5 +93,5 @@ export function useKeyboardShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editor.selectedBlockId, editor.selectedBlockIds, clearSelection]);
+  }, [editor.selectedBlockId, editor.selectedBlockIds, editor.selectedGroupId, clearSelection]);
 }

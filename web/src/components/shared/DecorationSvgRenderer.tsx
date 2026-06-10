@@ -61,23 +61,32 @@ export default function DecorationSvgRenderer({
           >
             {hasMultiPaths ? (
               // 多路径自定义装饰
-              customDeco.customSvgPaths.map((p: { pathD: string; fillColor: string; strokeColor: string; strokeWidth: number; isClosed: boolean }, idx: number) => (
+              customDeco.customSvgPaths.map((p: { pathD: string; fillColor: string; strokeColor: string; strokeWidth: number; isClosed: boolean; clipRect?: { x: number; y: number; width: number; height: number } | null }, idx: number) => (
                 <g key={idx}>
-                  {p.isClosed && p.fillColor !== 'transparent' && (
+                  {p.clipRect && (
+                    <defs>
+                      <clipPath id={`deco-clip-${deco.id}-${idx}`}>
+                        <rect x={p.clipRect.x} y={p.clipRect.y} width={p.clipRect.width} height={p.clipRect.height} />
+                      </clipPath>
+                    </defs>
+                  )}
+                  <g clipPath={p.clipRect ? `url(#deco-clip-${deco.id}-${idx})` : undefined}>
+                    {p.isClosed && p.fillColor !== 'transparent' && (
+                      <path
+                        d={p.pathD}
+                        fill={p.fillColor}
+                        stroke="none"
+                      />
+                    )}
                     <path
                       d={p.pathD}
-                      fill={p.fillColor}
-                      stroke="none"
+                      fill="none"
+                      stroke={p.strokeColor === 'transparent' ? 'none' : p.strokeColor}
+                      strokeWidth={Math.max(0.5, p.strokeWidth)}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
                     />
-                  )}
-                  <path
-                    d={p.pathD}
-                    fill="none"
-                    stroke={p.strokeColor === 'transparent' ? 'none' : p.strokeColor}
-                    strokeWidth={Math.max(0.5, p.strokeWidth)}
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                  />
+                  </g>
                 </g>
               ))
             ) : isCustomDeco ? (

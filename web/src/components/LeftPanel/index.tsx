@@ -318,13 +318,30 @@ export default function LeftPanel() {
                 >
                   <svg width="22" height="22" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
                     {deco.paths.map((p, pIdx) => (
-                      <path
-                        key={pIdx}
-                        d={buildDecoPathD(p.anchors, p.isClosed)}
-                        fill={p.isClosed ? p.fillColor : 'none'}
-                        stroke={p.strokeColor}
-                        strokeWidth={3}
-                      />
+                      <g key={pIdx}>
+                        {p.clipRect && (
+                          <defs>
+                            <clipPath id={`lp-clip-${deco.id}-${pIdx}`}>
+                              <rect x={p.clipRect.x} y={p.clipRect.y} width={p.clipRect.width} height={p.clipRect.height} />
+                            </clipPath>
+                          </defs>
+                        )}
+                        <g clipPath={p.clipRect ? `url(#lp-clip-${deco.id}-${pIdx})` : undefined}>
+                          {p.isClosed && (
+                            <path
+                              d={buildDecoPathD(p.anchors, p.isClosed)}
+                              fill={p.fillColor}
+                              stroke="none"
+                            />
+                          )}
+                          <path
+                            d={buildDecoPathD(p.anchors, p.isClosed)}
+                            fill="none"
+                            stroke={p.strokeColor}
+                            strokeWidth={3}
+                          />
+                        </g>
+                      </g>
                     ))}
                   </svg>
                   <div className="left-panel-template-info">

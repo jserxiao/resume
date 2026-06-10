@@ -16,7 +16,7 @@ import { v4 as uuid } from 'uuid';
 import { useResumeStore } from '@/store';
 import type { CustomDecorationDefinition, DecorationPath } from '@/types';
 import { DECO_GRID_SIZE, DECO_SNAP_THRESHOLD, DECO_CLOSE_THRESHOLD, PATH_COLORS } from '@/utils/constants';
-import { getDecoPathBounds } from '@/utils/geometry';
+import { getDecoPathBounds, generateShapeAnchors, type ShapeType } from '@/utils/geometry';
 import ColorFieldInput from '@/components/shared/ColorFieldInput';
 import './DecorationEditorPage.less';
 
@@ -39,6 +39,8 @@ interface EditablePath {
   strokeColor: string;
   strokeWidth: number;
   visible: boolean;
+  /** 裁剪矩形（像素），仅显示该矩形范围内的图形 */
+  clipRect?: { x: number; y: number; width: number; height: number } | null;
 }
 
 /** 辅助线 */
@@ -103,6 +105,13 @@ export default function DecorationEditorPage() {
   /** 标记刚结束拖拽（锚点或控制柄），用于阻止紧随的 click 创建新锚点 */
   const justDraggedRef = useRef(false);
 
+  // ===== 形状工具 =====
+  const [activeShape, setActiveShape] = useState<ShapeType>('select');
+  // 选区裁剪
+  const [selectionRect, setSelectionRect] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
+
   // ===== 曲线模式 =====
   // 曲线模式已移除，始终使用曲线模式（无 handleOut 的锚点之间自动用直线 L 连接）
 
@@ -162,6 +171,13 @@ export default function DecorationEditorPage() {
           // strokeWidth 已保存为 viewBox 比例值，还原为像素值
           strokeWidth: (p.strokeWidth / 100) * sw,
           visible: true,
+          // 裁剪矩形还原为像素值
+          clipRect: p.clipRect ? {
+            x: (p.clipRect.x / 100) * sw,
+            y: (p.clipRect.y / 100) * sh,
+            width: (p.clipRect.width / 100) * sw,
+            height: (p.clipRect.height / 100) * sh,
+          } : undefined,
         }));
 
         if (editPaths.length === 0) editPaths.push(createEmptyPath());
@@ -282,6 +298,48 @@ export default function DecorationEditorPage() {
     });
   }, []);
 
+  // ===== 切换形状工具 =====
+  const handleShapeSelect = useCallback((shape: ShapeType) => {
+    setActiveShape(shape);
+    setSelectedAnchorIdx(null);
+  }, []);
+
+  // ===== 裁剪：保留选区范围内的图形 =====
+  const handleCrop = useCallback(() => {
+    if (!selectionRect) {
+      message.warning('请先拖拽拉出选区');
+      return;
+    }
+    const rx = Math.min(selectionRect.startX, selectionRect.endX);
+    const ry = Math.min(selectionRect.startY, selectionRect.endY);
+    const rw = Math.abs(selectionRect.endX - selectionRect.startX);
+    const rh = Math.abs(selectionRect.endY - selectionRect.startY);
+
+    const newPaths = paths.map(p => {
+      if (!p.visible || p.anchors.length === 0) return p;
+
+      // 用路径的包围盒做粗略判断是否与选区有交集
+      const bounds = getDecoPathBounds(p.anchors, p.isClosed);
+      if (!bounds) return { ...p, anchors: [], isClosed: false };
+
+      // 没有交集 → 清空
+      if (bounds.maxX < rx || bounds.minX > rx + rw || bounds.maxY < ry || bounds.minY > ry + rh) {
+        return { ...p, anchors: [], isClosed: false, clipRect: undefined };
+      }
+
+      // 有交集 → 设置裁剪矩形，保留原始锚点不变
+      return {
+        ...p,
+        clipRect: { x: rx, y: ry, width: rw, height: rh },
+      };
+    });
+
+    setPaths(newPaths);
+    setSelectionRect(null);
+    pushHistory(newPaths);
+    message.success('裁剪完成');
+  }, [selectionRect, paths, pushHistory]);
+
   // ===== 点击首个锚点闭合路径 =====
   const handleClosePath = useCallback(
     (e: React.MouseEvent) => {
@@ -336,7 +394,7 @@ export default function DecorationEditorPage() {
     [activePath, activePathIdx, pushHistory, paths],
   );
 
-  // ===== 舞台点击：添加锚点 =====
+  // ===== 舞台点击：添加锚点 / 放置形状 / 选区裁剪确认 =====
   const handleStageClick = useCallback(
     (e: React.MouseEvent) => {
       // 如果刚刚结束拖拽（锚点或控制柄），不创建新锚点
@@ -344,12 +402,50 @@ export default function DecorationEditorPage() {
         justDraggedRef.current = false;
         return;
       }
-      if (activePath.isClosed) return;
-      if (draggingIdx !== null) return;
-      if (draggingHandle !== null) return;
 
       const pos = getStagePos(e);
       if (!pos) return;
+
+      // ===== 选区裁剪模式：已有选区时，点击清除选区 =====
+      if (activeShape === 'select' && selectionRect) {
+        setSelectionRect(null);
+        return;
+      }
+
+      // ===== 形状工具：点击放置形状 =====
+      if (activeShape !== 'select') {
+        const baseSize = Math.min(stageWidth, stageHeight) * 0.4;
+        let shapeW = baseSize;
+        let shapeH = baseSize;
+        // 椭圆比圆形更扁，宽高比约 3:2
+        if (activeShape === 'ellipse') {
+          shapeW = baseSize * 1.4;
+          shapeH = baseSize * 0.8;
+        }
+        const sx = pos.x - shapeW / 2;
+        const sy = pos.y - shapeH / 2;
+        const anchors = generateShapeAnchors(activeShape, sx, sy, shapeW, shapeH);
+        if (anchors.length === 0) return;
+
+        const newAnchors: AnchorPixel[] = anchors.map(a => ({
+          x: a.x,
+          y: a.y,
+          handleOut: a.handleOut ? { x: a.handleOut.x, y: a.handleOut.y } : undefined,
+          handleIn: a.handleIn ? { x: a.handleIn.x, y: a.handleIn.y } : undefined,
+        }));
+
+        const newPaths = [...paths];
+        newPaths[activePathIdx] = { ...newPaths[activePathIdx], anchors: newAnchors, isClosed: true };
+        setPaths(newPaths);
+        pushHistory(newPaths);
+        // 放置后切回选择模式
+        setActiveShape('select');
+        return;
+      }
+
+      if (activePath.isClosed) return;
+      if (draggingIdx !== null) return;
+      if (draggingHandle !== null) return;
 
       // 检查是否靠近第一个锚点（闭合路径）
       if (activePath.anchors.length >= 3) {
@@ -440,7 +536,7 @@ export default function DecorationEditorPage() {
       setPaths(newPaths);
       pushHistory(newPaths);
     },
-    [activePath, activePathIdx, paths, draggingIdx, draggingHandle, getStagePos, pushHistory, updatePath],
+    [activePath, activePathIdx, paths, draggingIdx, draggingHandle, getStagePos, pushHistory, updatePath, activeShape, selectionRect],
   );
 
   // ===== 舞台右键：删除最后一个锚点 =====
@@ -474,6 +570,26 @@ export default function DecorationEditorPage() {
 
       setMousePos(pos);
       setIsMouseOnStage(true);
+
+      // ===== 选区裁剪拖拽 =====
+      if (activeShape === 'select' && selectionStartRef.current && !draggingIdx && !draggingHandle) {
+        const start = selectionStartRef.current;
+        const dx = pos.x - start.x;
+        const dy = pos.y - start.y;
+        // 鼠标移动超过 5px 时启动选区
+        if (isSelecting || Math.sqrt(dx * dx + dy * dy) > 5) {
+          if (!isSelecting) {
+            setIsSelecting(true);
+          }
+          setSelectionRect({
+            startX: start.x,
+            startY: start.y,
+            endX: pos.x,
+            endY: pos.y,
+          });
+          return;
+        }
+      }
 
       if (!activePath.isClosed && activePath.anchors.length > 0) {
         setGuideLines(computeGuides(pos.x, pos.y));
@@ -528,7 +644,7 @@ export default function DecorationEditorPage() {
         });
       }
     },
-    [getStagePos, activePath, activePathIdx, computeGuides, computeDistances, draggingIdx, draggingHandle],
+    [getStagePos, activePath, activePathIdx, computeGuides, computeDistances, draggingIdx, draggingHandle, isSelecting, activeShape],
   );
 
   const handleStageMouseLeave = useCallback(() => {
@@ -536,7 +652,27 @@ export default function DecorationEditorPage() {
     setMousePos(null);
     setGuideLines([]);
     setDistances([]);
-  }, []);
+    // 取消选区
+    if (isSelecting) {
+      setIsSelecting(false);
+      selectionStartRef.current = null;
+    }
+  }, [isSelecting]);
+
+  // ===== 舞台鼠标按下：记录起点（供选区裁剪用） =====
+  const handleStageMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      // 仅在选择模式下且不在拖拽锚点/控制柄时
+      if (activeShape === 'select' && !draggingIdx && !draggingHandle) {
+        const pos = getStagePos(e);
+        if (pos) {
+          // 只记录起点，不立即启动选区（等待 mousemove 判断是否为拖拽）
+          selectionStartRef.current = { x: pos.x, y: pos.y };
+        }
+      }
+    },
+    [activeShape, draggingIdx, draggingHandle, getStagePos],
+  );
 
   // ===== 锚点拖拽 =====
   const handleAnchorMouseDown = useCallback(
@@ -593,16 +729,38 @@ export default function DecorationEditorPage() {
         setDraggingHandle(null);
         justDraggedRef.current = true;
       }
+      // ===== 选区裁剪完成 =====
+      if (isSelecting) {
+        setIsSelecting(false);
+        selectionStartRef.current = null;
+        // 选区太小则取消
+        if (selectionRect) {
+          const rx1 = Math.min(selectionRect.startX, selectionRect.endX);
+          const ry1 = Math.min(selectionRect.startY, selectionRect.endY);
+          const rx2 = Math.max(selectionRect.startX, selectionRect.endX);
+          const ry2 = Math.max(selectionRect.startY, selectionRect.endY);
+          if (rx2 - rx1 < 5 || ry2 - ry1 < 5) {
+            setSelectionRect(null);
+          } else {
+            // 选区有效，标记 justDraggedRef 防止 click 创建锚点
+            justDraggedRef.current = true;
+          }
+        }
+      }
+      // 清除 mousedown 中记录的起点（无论是否启动了选区）
+      selectionStartRef.current = null;
     };
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [draggingIdx, draggingHandle, paths, pushHistory]);
+  }, [draggingIdx, draggingHandle, paths, pushHistory, isSelecting, selectionRect]);
 
   // ===== 键盘事件 =====
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setSelectedAnchorIdx(null);
+        setSelectionRect(null);
+        setActiveShape('select');
       }
       if ((e.key === 'z' && (e.ctrlKey || e.metaKey))) {
         e.preventDefault();
@@ -728,6 +886,13 @@ export default function DecorationEditorPage() {
       strokeColor: p.strokeColor,
       // 将像素线宽转为 viewBox 0-100 空间的比例值
       strokeWidth: (p.strokeWidth / cropW) * 100,
+      // 裁剪矩形：像素转 0-100 百分比
+      clipRect: p.clipRect ? {
+        x: ((p.clipRect.x - minX) / cropW) * 100,
+        y: ((p.clipRect.y - minY) / cropH) * 100,
+        width: (p.clipRect.width / cropW) * 100,
+        height: (p.clipRect.height / cropH) * 100,
+      } : undefined,
     }));
 
     const decoration: CustomDecorationDefinition = {
@@ -832,25 +997,35 @@ export default function DecorationEditorPage() {
 
       return (
         <svg key={path.id} className="deco-editor-svg-layer" width={stageWidth} height={stageHeight}>
-          {/* 填充区域 */}
-          {path.isClosed && path.anchors.length >= 3 && (
+          {/* 裁剪定义 */}
+          {path.clipRect && (
+            <defs>
+              <clipPath id={`clip-${path.id}`}>
+                <rect x={path.clipRect.x} y={path.clipRect.y} width={path.clipRect.width} height={path.clipRect.height} />
+              </clipPath>
+            </defs>
+          )}
+          <g clipPath={path.clipRect ? `url(#clip-${path.id})` : undefined}>
+            {/* 填充区域 */}
+            {path.isClosed && path.anchors.length >= 3 && (
+              <path
+                d={pathD}
+                fill={path.fillColor}
+                stroke="none"
+              />
+            )}
+            {/* 线条 */}
             <path
               d={pathD}
-              fill={path.fillColor}
-              stroke="none"
+              fill="none"
+              stroke={path.strokeColor}
+              strokeWidth={path.strokeWidth}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              opacity={isActive ? 1 : 0.5}
             />
-          )}
-          {/* 线条 */}
-          <path
-            d={pathD}
-            fill="none"
-            stroke={path.strokeColor}
-            strokeWidth={path.strokeWidth}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            opacity={isActive ? 1 : 0.5}
-          />
-          {/* 追踪线 */}
+          </g>
+          {/* 追踪线（不受裁剪影响） */}
           {trackingPathD && (
             <path d={trackingPathD} className="deco-editor-tracking-line" />
           )}
@@ -1053,15 +1228,119 @@ export default function DecorationEditorPage() {
 
       {/* ===== 主体 ===== */}
       <div className="deco-editor-body">
+        {/* ===== 左侧形状工具栏 ===== */}
+        <div className="deco-editor-shapes">
+          <Tooltip title="选区裁剪（默认）" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${activeShape === 'select' ? 'active' : ''}`}
+              onClick={() => handleShapeSelect('select')}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><rect x="3" y="3" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2"/></svg>
+            </button>
+          </Tooltip>
+          <div className="deco-editor-shapes-divider" />
+          <Tooltip title="裁剪选区" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${selectionRect ? 'crop-active' : ''}`}
+              onClick={handleCrop}
+              disabled={!selectionRect}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><circle cx="7" cy="13" r="3.5" fill="none" stroke="currentColor" strokeWidth="1.3"/><circle cx="14" cy="13" r="3.5" fill="none" stroke="currentColor" strokeWidth="1.3"/><line x1="9.5" y1="10.5" x2="16" y2="2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><line x1="16" y1="2" x2="18" y2="3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+            </button>
+          </Tooltip>
+          <div className="deco-editor-shapes-divider" />
+          <Tooltip title="矩形" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${activeShape === 'rectangle' ? 'active' : ''}`}
+              onClick={() => handleShapeSelect('rectangle')}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><rect x="2" y="4" width="16" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" rx="0.5"/></svg>
+            </button>
+          </Tooltip>
+          <Tooltip title="圆角矩形" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${activeShape === 'rounded-rect' ? 'active' : ''}`}
+              onClick={() => handleShapeSelect('rounded-rect')}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><rect x="2" y="4" width="16" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" rx="3"/></svg>
+            </button>
+          </Tooltip>
+          <Tooltip title="圆形" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${activeShape === 'circle' ? 'active' : ''}`}
+              onClick={() => handleShapeSelect('circle')}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/></svg>
+            </button>
+          </Tooltip>
+          <Tooltip title="椭圆" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${activeShape === 'ellipse' ? 'active' : ''}`}
+              onClick={() => handleShapeSelect('ellipse')}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><ellipse cx="10" cy="10" rx="8" ry="5" fill="none" stroke="currentColor" strokeWidth="1.5"/></svg>
+            </button>
+          </Tooltip>
+          <Tooltip title="三角形" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${activeShape === 'triangle' ? 'active' : ''}`}
+              onClick={() => handleShapeSelect('triangle')}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><polygon points="10,2 18,17 2,17" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+            </button>
+          </Tooltip>
+          <Tooltip title="菱形" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${activeShape === 'diamond' ? 'active' : ''}`}
+              onClick={() => handleShapeSelect('diamond')}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><polygon points="10,1 19,10 10,19 1,10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+            </button>
+          </Tooltip>
+          <Tooltip title="六边形" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${activeShape === 'hexagon' ? 'active' : ''}`}
+              onClick={() => handleShapeSelect('hexagon')}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+            </button>
+          </Tooltip>
+          <Tooltip title="五角星" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${activeShape === 'star' ? 'active' : ''}`}
+              onClick={() => handleShapeSelect('star')}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><polygon points="10,1 12.5,7.5 19,7.5 13.8,11.8 15.9,18.5 10,14.3 4.1,18.5 6.2,11.8 1,7.5 7.5,7.5" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+            </button>
+          </Tooltip>
+          <Tooltip title="心形" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${activeShape === 'heart' ? 'active' : ''}`}
+              onClick={() => handleShapeSelect('heart')}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><path d="M10,17 C5,12 1,8 4,4 C7,1 10,4 10,4 C10,4 13,1 16,4 C19,8 15,12 10,17Z" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
+            </button>
+          </Tooltip>
+          <Tooltip title="箭头" placement="right">
+            <button
+              className={`deco-editor-shape-btn ${activeShape === 'arrow-right' ? 'active' : ''}`}
+              onClick={() => handleShapeSelect('arrow-right')}
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16"><polygon points="12,2 19,10 12,18 12,13 1,13 1,7 12,7" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
+            </button>
+          </Tooltip>
+        </div>
+
         {/* ===== 舞台 ===== */}
         <div className="deco-editor-stage-wrapper">
           <div style={{ position: 'relative' }}>
             <div
               ref={stageRef}
               className="deco-editor-stage"
-              style={{ width: stageWidth, height: stageHeight }}
+              style={{ width: stageWidth, height: stageHeight, cursor: activeShape !== 'select' ? 'crosshair' : isSelecting ? 'crosshair' : 'crosshair' }}
               onClick={handleStageClick}
               onContextMenu={handleStageContextMenu}
+              onMouseDown={handleStageMouseDown}
               onMouseMove={handleStageMouseMove}
               onMouseLeave={handleStageMouseLeave}
             >
@@ -1069,6 +1348,19 @@ export default function DecorationEditorPage() {
               {renderPaths()}
               {renderGuideLines()}
               {renderDistances()}
+              {/* 选区裁剪矩形 */}
+              {selectionRect && (() => {
+                const rx1 = Math.min(selectionRect.startX, selectionRect.endX);
+                const ry1 = Math.min(selectionRect.startY, selectionRect.endY);
+                const rx2 = Math.max(selectionRect.startX, selectionRect.endX);
+                const ry2 = Math.max(selectionRect.startY, selectionRect.endY);
+                return (
+                  <div
+                    className="deco-editor-selection-rect"
+                    style={{ left: rx1, top: ry1, width: rx2 - rx1, height: ry2 - ry1 }}
+                  />
+                );
+              })()}
               {renderAnchors()}
               {renderHandles()}
               {renderCursor()}
@@ -1291,7 +1583,9 @@ export default function DecorationEditorPage() {
               💡 Ctrl+Z 撤销，Delete 删除选中锚点<br />
               💡 拖拽 🟠 橙色控制柄调整出方向曲线<br />
               💡 拖拽 🟣 紫色控制柄调整入方向曲线<br />
-              💡 将控制柄拖回锚点位置可变为直线连接
+              💡 将控制柄拖回锚点位置可变为直线连接<br />
+              💡 左侧工具栏可选择预设形状<br />
+              💡 选择模式下拖拽舞台可拉出选区裁剪
             </div>
           </div>
         </div>
@@ -1305,9 +1599,14 @@ export default function DecorationEditorPage() {
         <div className="status-item">
           当前: 路径 {activePathIdx + 1} · {activePath?.anchors.length || 0} 锚点 · {activePath?.isClosed ? '已闭合' : '绘制中'}
         </div>
-        <div className="status-item" style={{ color: '#a855f7' }}>
-          曲线模式
+        <div className="status-item" style={{ color: activeShape !== 'select' ? '#f59e0b' : '#a855f7' }}>
+          {activeShape === 'select' ? '选区裁剪' : `形状: ${activeShape}`}
         </div>
+        {selectionRect && (
+          <div className="status-item" style={{ color: '#3b82f6' }}>
+            选区: {Math.abs(Math.round(selectionRect.endX - selectionRect.startX))}×{Math.abs(Math.round(selectionRect.endY - selectionRect.startY))}px
+          </div>
+        )}
         {isMouseOnStage && mousePos && (
           <div className="status-item">
             鼠标: ({Math.round(mousePos.x)}, {Math.round(mousePos.y)})

@@ -45,6 +45,75 @@
     overflow: hidden;
   }
 
+  // ===== 左侧形状工具栏 =====
+  &-shapes {
+    width: 44px;
+    background: var(--color-bg-white);
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+    gap: 2px;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  &-shapes-divider {
+    width: 24px;
+    height: 1px;
+    background: var(--color-border-light);
+    margin: 4px 0;
+  }
+
+  &-shape-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: all var(--transition-fast);
+
+    &:hover {
+      background: var(--color-bg-hover);
+      color: var(--color-text);
+    }
+
+    &.active {
+      background: var(--color-bg-selected);
+      color: var(--color-primary);
+    }
+
+    &.crop-active {
+      background: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.35;
+
+      &:hover {
+        background: transparent;
+        color: var(--color-text-muted);
+      }
+    }
+  }
+
+  // ===== 选区裁剪矩形 =====
+  &-selection-rect {
+    position: absolute;
+    border: 1.5px dashed #3b82f6;
+    background: rgba(59, 130, 246, 0.08);
+    pointer-events: none;
+    z-index: 8;
+  }
+
   // ===== 舞台区域 =====
   &-stage-wrapper {
     flex: 1;

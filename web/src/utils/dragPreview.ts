@@ -363,9 +363,33 @@ svgEl.setAttribute('preserveAspectRatio', 'none');
 svgEl.style.cssText = 'position: absolute; inset: 0;';
 
 // 渲染每条路径
-for (const p of decoration.paths) {
+for (let pIdx = 0; pIdx < decoration.paths.length; pIdx++) {
+  const p = decoration.paths[pIdx];
   if (p.anchors.length < 2) continue;
   const pathD = buildDecoPathD(p.anchors, p.isClosed);
+
+  let groupEl: SVGGElement | null = null;
+
+  // 如果有裁剪矩形，创建 clipPath 和 group
+  if (p.clipRect) {
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const clipPathEl = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+    clipPathEl.setAttribute('id', `drag-clip-${pIdx}`);
+    const clipRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    clipRect.setAttribute('x', String(p.clipRect.x));
+    clipRect.setAttribute('y', String(p.clipRect.y));
+    clipRect.setAttribute('width', String(p.clipRect.width));
+    clipRect.setAttribute('height', String(p.clipRect.height));
+    clipPathEl.appendChild(clipRect);
+    defs.appendChild(clipPathEl);
+    svgEl.appendChild(defs);
+
+    groupEl = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    groupEl.setAttribute('clip-path', `url(#drag-clip-${pIdx})`);
+    svgEl.appendChild(groupEl);
+  }
+
+  const parent = groupEl || svgEl;
 
   // 填充路径
   if (p.isClosed) {
@@ -374,7 +398,7 @@ for (const p of decoration.paths) {
     fillPath.setAttribute('fill', p.fillColor);
     fillPath.setAttribute('fill-opacity', '1');
     fillPath.setAttribute('stroke', 'none');
-    svgEl.appendChild(fillPath);
+    parent.appendChild(fillPath);
   }
 
   // 描边路径
@@ -385,7 +409,7 @@ for (const p of decoration.paths) {
   strokePath.setAttribute('stroke-width', String(p.strokeWidth * 3));
   strokePath.setAttribute('stroke-linejoin', 'round');
   strokePath.setAttribute('stroke-linecap', 'round');
-  svgEl.appendChild(strokePath);
+  parent.appendChild(strokePath);
 }
 
 el.appendChild(svgEl);

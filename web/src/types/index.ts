@@ -285,6 +285,8 @@ export interface DecorationPath {
   strokeColor: string;
   /** 描边宽度 */
   strokeWidth: number;
+  /** 裁剪矩形（0-100 百分比），仅显示该矩形范围内的图形 */
+  clipRect?: { x: number; y: number; width: number; height: number } | null;
 }
 
 export interface CustomDecorationDefinition {

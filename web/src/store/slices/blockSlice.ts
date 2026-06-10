@@ -190,6 +190,7 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
         strokeColor: p.strokeColor,
         strokeWidth: Math.max(0.5, p.strokeWidth),
         isClosed: p.isClosed,
+        clipRect: p.clipRect,
       }));
 
       const blockId = `${state.resume.id}-cdeco-${uuid().slice(0, 8)}`;

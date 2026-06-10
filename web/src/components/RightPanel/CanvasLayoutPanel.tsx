@@ -162,13 +162,30 @@ function CanvasCustomDecorationSection() {
             <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
               <svg width="20" height="20" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
                 {d.paths.map((p, pIdx) => (
-                  <path
-                    key={pIdx}
-                    d={buildDecoPathD(p.anchors, p.isClosed)}
-                    fill={p.isClosed ? p.fillColor : 'none'}
-                    stroke={p.strokeColor}
-                    strokeWidth={3}
-                  />
+                  <g key={pIdx}>
+                    {p.clipRect && (
+                      <defs>
+                        <clipPath id={`thumb-clip-${d.id}-${pIdx}`}>
+                          <rect x={p.clipRect.x} y={p.clipRect.y} width={p.clipRect.width} height={p.clipRect.height} />
+                        </clipPath>
+                      </defs>
+                    )}
+                    <g clipPath={p.clipRect ? `url(#thumb-clip-${d.id}-${pIdx})` : undefined}>
+                      {p.isClosed && (
+                        <path
+                          d={buildDecoPathD(p.anchors, p.isClosed)}
+                          fill={p.fillColor}
+                          stroke="none"
+                        />
+                      )}
+                      <path
+                        d={buildDecoPathD(p.anchors, p.isClosed)}
+                        fill="none"
+                        stroke={p.strokeColor}
+                        strokeWidth={3}
+                      />
+                    </g>
+                  </g>
                 ))}
               </svg>
               <span style={{ flex: 1, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>

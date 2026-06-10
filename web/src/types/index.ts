@@ -262,11 +262,21 @@ export interface DecorationElement {
 }
 
 // ========== 自定义装饰元素定义（用户通过锚点绘制的装饰图形） ==========
+/** 装饰锚点，坐标为 0-100 的百分比，可选包含控制柄用于曲线 */
+export interface DecorationAnchor {
+  x: number;
+  y: number;
+  /** 控制柄（可选），用于控制该锚点到下一个锚点之间的曲线弯曲 */
+  handleOut?: { x: number; y: number } | null;
+  /** 控制柄（可选），用于控制上一个锚点到该锚点之间的曲线弯曲 */
+  handleIn?: { x: number; y: number } | null;
+}
+
 /** 自定义装饰的一条路径 */
 export interface DecorationPath {
   id: string;
   /** 锚点列表，坐标为 0-100 的百分比 */
-  anchors: { x: number; y: number }[];
+  anchors: DecorationAnchor[];
   /** 路径是否已闭合 */
   isClosed: boolean;
   /** 填充色 */

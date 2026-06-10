@@ -16,13 +16,18 @@ import { v4 as uuid } from 'uuid';
 import { useResumeStore } from '@/store';
 import type { CustomDecorationDefinition, DecorationPath } from '@/types';
 import { DECO_GRID_SIZE, DECO_SNAP_THRESHOLD, DECO_CLOSE_THRESHOLD, PATH_COLORS } from '@/utils/constants';
+import { getDecoPathBounds } from '@/utils/geometry';
 import ColorFieldInput from '@/components/shared/ColorFieldInput';
 import './DecorationEditorPage.less';
 
-/** 锚点坐标（像素） */
+/** 锚点坐标（像素），可选包含控制柄 */
 interface AnchorPixel {
   x: number;
   y: number;
+  /** 出控制柄：控制当前锚点到下一个锚点之间的曲线弯曲 */
+  handleOut?: { x: number; y: number } | null;
+  /** 入控制柄：控制上一个锚点到当前锚点之间的曲线弯曲 */
+  handleIn?: { x: number; y: number } | null;
 }
 
 /** 编辑态路径 */
@@ -92,7 +97,14 @@ export default function DecorationEditorPage() {
 
   // ===== 拖拽状态 =====
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  /** 拖拽控制柄: 'out-i' 表示第i个锚点的handleOut, 'in-i' 表示handleIn */
+  const [draggingHandle, setDraggingHandle] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  /** 标记刚结束拖拽（锚点或控制柄），用于阻止紧随的 click 创建新锚点 */
+  const justDraggedRef = useRef(false);
+
+  // ===== 曲线模式 =====
+  // 曲线模式已移除，始终使用曲线模式（无 handleOut 的锚点之间自动用直线 L 连接）
 
   // ===== 历史（撤销） =====
   const [history, setHistory] = useState<EditablePath[][]>([[createEmptyPath()]]);
@@ -109,7 +121,14 @@ export default function DecorationEditorPage() {
   const pushHistory = useCallback((newPaths: EditablePath[]) => {
     setHistory((prev) => {
       const newHistory = prev.slice(0, historyIdxRef.current + 1);
-      newHistory.push(newPaths.map(p => ({ ...p, anchors: p.anchors.map(a => ({ ...a })) })));
+      newHistory.push(newPaths.map(p => ({
+        ...p,
+        anchors: p.anchors.map(a => ({
+          ...a,
+          handleOut: a.handleOut ? { ...a.handleOut } : a.handleOut,
+          handleIn: a.handleIn ? { ...a.handleIn } : a.handleIn,
+        })),
+      })));
       historyIdxRef.current = newHistory.length - 1;
       return newHistory;
     });
@@ -134,6 +153,8 @@ export default function DecorationEditorPage() {
           anchors: p.anchors.map(a => ({
             x: (a.x / 100) * sw,
             y: (a.y / 100) * sh,
+            handleOut: a.handleOut ? { x: (a.handleOut.x / 100) * sw, y: (a.handleOut.y / 100) * sh } : undefined,
+            handleIn: a.handleIn ? { x: (a.handleIn.x / 100) * sw, y: (a.handleIn.y / 100) * sh } : undefined,
           })),
           isClosed: p.isClosed,
           fillColor: p.fillColor,
@@ -157,7 +178,14 @@ export default function DecorationEditorPage() {
       historyIdxRef.current -= 1;
       const prevPaths = history[historyIdxRef.current];
       if (prevPaths) {
-        setPaths(prevPaths.map(p => ({ ...p, anchors: p.anchors.map(a => ({ ...a })) })));
+        setPaths(prevPaths.map(p => ({
+          ...p,
+          anchors: p.anchors.map(a => ({
+            ...a,
+            handleOut: a.handleOut ? { ...a.handleOut } : a.handleOut,
+            handleIn: a.handleIn ? { ...a.handleIn } : a.handleIn,
+          })),
+        })));
       }
     }
   }, [history]);
@@ -254,11 +282,71 @@ export default function DecorationEditorPage() {
     });
   }, []);
 
+  // ===== 点击首个锚点闭合路径 =====
+  const handleClosePath = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (activePath.isClosed) return;
+      if (activePath.anchors.length < 3) return;
+
+      // 闭合时，为最后一个锚点→首锚点的线段自动生成控制柄
+      const newAnchors = [...activePath.anchors];
+      const last = newAnchors[newAnchors.length - 1];
+      const first = newAnchors[0];
+
+      // 如果最后一个锚点没有 handleOut，自动生成
+      if (!last.handleOut) {
+        const dx = first.x - last.x;
+        const dy = first.y - last.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const handleLen = dist * 0.3;
+        if (dist > 0) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          newAnchors[newAnchors.length - 1] = {
+            ...last,
+            handleOut: { x: last.x + nx * handleLen, y: last.y + ny * handleLen },
+          };
+        }
+      }
+
+      // 如果首锚点没有 handleIn，自动生成
+      const updatedFirst = newAnchors[0];
+      if (!updatedFirst.handleIn) {
+        const dx = first.x - last.x;
+        const dy = first.y - last.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const handleLen = dist * 0.3;
+        if (dist > 0) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          newAnchors[0] = {
+            ...updatedFirst,
+            handleIn: { x: first.x - nx * handleLen, y: first.y - ny * handleLen },
+          };
+        }
+      }
+
+      const newPaths = [...paths];
+      newPaths[activePathIdx] = { ...newPaths[activePathIdx], anchors: newAnchors, isClosed: true };
+      setPaths(newPaths);
+      pushHistory(newPaths);
+    },
+    [activePath, activePathIdx, pushHistory, paths],
+  );
+
   // ===== 舞台点击：添加锚点 =====
   const handleStageClick = useCallback(
     (e: React.MouseEvent) => {
+      // 如果刚刚结束拖拽（锚点或控制柄），不创建新锚点
+      if (justDraggedRef.current) {
+        justDraggedRef.current = false;
+        return;
+      }
       if (activePath.isClosed) return;
       if (draggingIdx !== null) return;
+      if (draggingHandle !== null) return;
 
       const pos = getStagePos(e);
       if (!pos) return;
@@ -269,18 +357,113 @@ export default function DecorationEditorPage() {
         const dx = pos.x - first.x;
         const dy = pos.y - first.y;
         if (Math.sqrt(dx * dx + dy * dy) < DECO_CLOSE_THRESHOLD) {
-          updatePath(activePathIdx, { isClosed: true });
+          // 闭合时自动为最后一个锚点和首锚点生成控制柄
+          const newAnchors = [...activePath.anchors];
+          const last = newAnchors[newAnchors.length - 1];
+          const firstA = newAnchors[0];
+
+          if (!last.handleOut) {
+            const ddx = firstA.x - last.x;
+            const ddy = firstA.y - last.y;
+            const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+            const handleLen = dist * 0.3;
+            if (dist > 0) {
+              const nx = ddx / dist;
+              const ny = ddy / dist;
+              newAnchors[newAnchors.length - 1] = {
+                ...last,
+                handleOut: { x: last.x + nx * handleLen, y: last.y + ny * handleLen },
+              };
+            }
+          }
+
+          const updatedFirst = newAnchors[0];
+          if (!updatedFirst.handleIn) {
+            const ddx = firstA.x - last.x;
+            const ddy = firstA.y - last.y;
+            const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+            const handleLen = dist * 0.3;
+            if (dist > 0) {
+              const nx = ddx / dist;
+              const ny = ddy / dist;
+              newAnchors[0] = {
+                ...updatedFirst,
+                handleIn: { x: firstA.x - nx * handleLen, y: firstA.y - ny * handleLen },
+              };
+            }
+          }
+
+          const newPaths = [...paths];
+          newPaths[activePathIdx] = { ...newPaths[activePathIdx], anchors: newAnchors, isClosed: true };
+          setPaths(newPaths);
+          pushHistory(newPaths);
           return;
         }
       }
 
-      const newAnchors = [...activePath.anchors, pos];
+      const newAnchor: AnchorPixel = { x: pos.x, y: pos.y };
+
+      // 始终自动为新锚点和上一个锚点生成控制柄
+      if (activePath.anchors.length > 0) {
+        const last = activePath.anchors[activePath.anchors.length - 1];
+        // 为上一个锚点生成 handleOut（方向指向新锚点）
+        const dx = pos.x - last.x;
+        const dy = pos.y - last.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const handleLen = dist * 0.3;
+        if (dist > 0) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          // 更新上一个锚点的 handleOut（仅在上一个锚点还没有 handleOut 时才自动生成）
+          const prevAnchors = [...activePath.anchors];
+          const prevLast = prevAnchors[prevAnchors.length - 1];
+          if (!prevLast.handleOut) {
+            prevAnchors[prevAnchors.length - 1] = {
+              ...prevLast,
+              handleOut: { x: last.x + nx * handleLen, y: last.y + ny * handleLen },
+            };
+          }
+          // 为新锚点生成 handleIn
+          newAnchor.handleIn = { x: pos.x - nx * handleLen, y: pos.y - ny * handleLen };
+          const newAnchors = [...prevAnchors, newAnchor];
+          const newPaths = [...paths];
+          newPaths[activePathIdx] = { ...newPaths[activePathIdx], anchors: newAnchors };
+          setPaths(newPaths);
+          pushHistory(newPaths);
+          return;
+        }
+      }
+
+      const newAnchors = [...activePath.anchors, newAnchor];
       const newPaths = [...paths];
       newPaths[activePathIdx] = { ...newPaths[activePathIdx], anchors: newAnchors };
       setPaths(newPaths);
       pushHistory(newPaths);
     },
-    [activePath, activePathIdx, paths, draggingIdx, getStagePos, pushHistory, updatePath],
+    [activePath, activePathIdx, paths, draggingIdx, draggingHandle, getStagePos, pushHistory, updatePath],
+  );
+
+  // ===== 舞台右键：删除最后一个锚点 =====
+  const handleStageContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (activePath.isClosed) return;
+      if (activePath.anchors.length === 0) return;
+
+      // 删除最后一个锚点
+      const newAnchors = activePath.anchors.slice(0, -1);
+      // 如果删除了锚点，还需要清理倒数第二个锚点的 handleOut（因为它的出方向曲线不再有意义）
+      if (newAnchors.length > 0) {
+        const lastIdx = newAnchors.length - 1;
+        newAnchors[lastIdx] = { ...newAnchors[lastIdx], handleOut: undefined };
+      }
+      const newPaths = [...paths];
+      newPaths[activePathIdx] = { ...newPaths[activePathIdx], anchors: newAnchors, isClosed: false };
+      setPaths(newPaths);
+      setSelectedAnchorIdx(null);
+      pushHistory(newPaths);
+    },
+    [activePath, activePathIdx, paths, pushHistory],
   );
 
   // ===== 鼠标移动 =====
@@ -297,19 +480,55 @@ export default function DecorationEditorPage() {
         setDistances(computeDistances(pos.x, pos.y));
       }
 
+      // 拖拽控制柄
+      if (draggingHandle !== null) {
+        const match = draggingHandle.match(/^(in|out)-(\d+)$/);
+        if (match) {
+          const handleType = match[1] as 'in' | 'out';
+          const anchorIdx = parseInt(match[2], 10);
+          setPaths(prev => {
+            const newPaths = [...prev];
+            const path = { ...newPaths[activePathIdx] };
+            const newAnchors = [...path.anchors];
+            const anchor = { ...newAnchors[anchorIdx] };
+            if (handleType === 'out') {
+              anchor.handleOut = { x: pos.x, y: pos.y };
+            } else {
+              anchor.handleIn = { x: pos.x, y: pos.y };
+            }
+            newAnchors[anchorIdx] = anchor;
+            path.anchors = newAnchors;
+            newPaths[activePathIdx] = path;
+            return newPaths;
+          });
+        }
+        return;
+      }
+
       if (draggingIdx !== null) {
         setPaths(prev => {
           const newPaths = [...prev];
           const path = { ...newPaths[activePathIdx] };
           const newAnchors = [...path.anchors];
-          newAnchors[draggingIdx] = pos;
+          const oldAnchor = newAnchors[draggingIdx];
+          const dx = pos.x - oldAnchor.x;
+          const dy = pos.y - oldAnchor.y;
+          const newAnchor: AnchorPixel = { ...oldAnchor, x: pos.x, y: pos.y };
+          // 同步移动控制柄
+          if (newAnchor.handleOut) {
+            newAnchor.handleOut = { x: newAnchor.handleOut.x + dx, y: newAnchor.handleOut.y + dy };
+          }
+          if (newAnchor.handleIn) {
+            newAnchor.handleIn = { x: newAnchor.handleIn.x + dx, y: newAnchor.handleIn.y + dy };
+          }
+          newAnchors[draggingIdx] = newAnchor;
           path.anchors = newAnchors;
           newPaths[activePathIdx] = path;
           return newPaths;
         });
       }
     },
-    [getStagePos, activePath, activePathIdx, computeGuides, computeDistances, draggingIdx],
+    [getStagePos, activePath, activePathIdx, computeGuides, computeDistances, draggingIdx, draggingHandle],
   );
 
   const handleStageMouseLeave = useCallback(() => {
@@ -335,11 +554,49 @@ export default function DecorationEditorPage() {
       if (draggingIdx !== null) {
         pushHistory(paths);
         setDraggingIdx(null);
+        justDraggedRef.current = true;
+      }
+      if (draggingHandle !== null) {
+        // 如果控制柄被拖到锚点附近（距离 < 3px），自动移除控制柄（变为直线连接）
+        const match = draggingHandle.match(/^(in|out)-(\d+)$/);
+        if (match) {
+          const handleType = match[1] as 'in' | 'out';
+          const anchorIdx = parseInt(match[2], 10);
+          const anchor = paths[activePathIdx]?.anchors[anchorIdx];
+          if (anchor) {
+            const handle = handleType === 'out' ? anchor.handleOut : anchor.handleIn;
+            if (handle) {
+              const dx = handle.x - anchor.x;
+              const dy = handle.y - anchor.y;
+              if (Math.sqrt(dx * dx + dy * dy) < 3) {
+                // 移除控制柄
+                setPaths(prev => {
+                  const newPaths = [...prev];
+                  const path = { ...newPaths[activePathIdx] };
+                  const newAnchors = [...path.anchors];
+                  const newAnchor = { ...newAnchors[anchorIdx] };
+                  if (handleType === 'out') {
+                    newAnchor.handleOut = undefined;
+                  } else {
+                    newAnchor.handleIn = undefined;
+                  }
+                  newAnchors[anchorIdx] = newAnchor;
+                  path.anchors = newAnchors;
+                  newPaths[activePathIdx] = path;
+                  return newPaths;
+                });
+              }
+            }
+          }
+        }
+        pushHistory(paths);
+        setDraggingHandle(null);
+        justDraggedRef.current = true;
       }
     };
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [draggingIdx, paths, pushHistory]);
+  }, [draggingIdx, draggingHandle, paths, pushHistory]);
 
   // ===== 键盘事件 =====
   useEffect(() => {
@@ -425,7 +682,7 @@ export default function DecorationEditorPage() {
     setSelectedAnchorIdx(null);
     setGuideLines([]);
     setDistances([]);
-    setHistory(empty.map(p => ({ ...p, anchors: [] })));
+    setHistory([empty.map(p => ({ ...p, anchors: [] }))]);
     historyIdxRef.current = 0;
   }, []);
 
@@ -438,12 +695,15 @@ export default function DecorationEditorPage() {
       return;
     }
 
-    // ===== 自动裁剪：计算所有锚点的边界框，加 strokeWidth 的半宽 padding =====
-    const allAnchors = nonEmptyPaths.flatMap(p => p.anchors);
-    const minAx = Math.min(...allAnchors.map(a => a.x));
-    const minAy = Math.min(...allAnchors.map(a => a.y));
-    const maxAx = Math.max(...allAnchors.map(a => a.x));
-    const maxAy = Math.max(...allAnchors.map(a => a.y));
+    // ===== 自动裁剪：基于贝塞尔曲线实际采样点计算边界框 =====
+    // 使用采样点而非控制柄坐标，避免控制柄远离曲线导致大片空白
+    const pathBounds = nonEmptyPaths.map(p => getDecoPathBounds(p.anchors, p.isClosed)).filter(Boolean) as { minX: number; minY: number; maxX: number; maxY: number }[];
+    if (pathBounds.length === 0) return;
+
+    const minAx = Math.min(...pathBounds.map(b => b.minX));
+    const minAy = Math.min(...pathBounds.map(b => b.minY));
+    const maxAx = Math.max(...pathBounds.map(b => b.maxX));
+    const maxAy = Math.max(...pathBounds.map(b => b.maxY));
 
     // 最大描边半宽作为 padding
     const maxHalfStroke = Math.max(...nonEmptyPaths.map(p => p.strokeWidth / 2));
@@ -460,6 +720,8 @@ export default function DecorationEditorPage() {
       anchors: p.anchors.map(a => ({
         x: ((a.x - minX) / cropW) * 100,
         y: ((a.y - minY) / cropH) * 100,
+        handleOut: a.handleOut ? { x: ((a.handleOut.x - minX) / cropW) * 100, y: ((a.handleOut.y - minY) / cropH) * 100 } : undefined,
+        handleIn: a.handleIn ? { x: ((a.handleIn.x - minX) / cropW) * 100, y: ((a.handleIn.y - minY) / cropH) * 100 } : undefined,
       })),
       isClosed: p.isClosed,
       fillColor: p.fillColor,
@@ -511,23 +773,59 @@ export default function DecorationEditorPage() {
       if (!path.visible || path.anchors.length === 0) return null;
       const isActive = pathIdx === activePathIdx;
 
+      // 构建 SVG path d 属性，支持二次贝塞尔曲线
       let pathD = `M ${path.anchors[0].x} ${path.anchors[0].y}`;
       for (let i = 1; i < path.anchors.length; i++) {
-        pathD += ` L ${path.anchors[i].x} ${path.anchors[i].y}`;
+        const prev = path.anchors[i - 1];
+        const curr = path.anchors[i];
+        // 优先使用 handleOut，其次 handleIn，都没有则直线
+        const control = prev.handleOut || curr.handleIn;
+        if (control) {
+          pathD += ` Q ${control.x} ${control.y} ${curr.x} ${curr.y}`;
+        } else {
+          pathD += ` L ${curr.x} ${curr.y}`;
+        }
+      }
+
+      // 闭合路径时，检查最后一个锚点到第一个锚点的曲线
+      if (path.isClosed && path.anchors.length >= 3) {
+        const last = path.anchors[path.anchors.length - 1];
+        const first = path.anchors[0];
+        const control = last.handleOut || first.handleIn;
+        if (control) {
+          pathD += ` Q ${control.x} ${control.y} ${first.x} ${first.y}`;
+        } else {
+          pathD += ` L ${first.x} ${first.y}`;
+        }
+        pathD += ' Z';
       }
 
       // 追踪线（仅当前活跃路径）
       let trackingPathD = '';
       if (isActive && !path.isClosed && isMouseOnStage && mousePos && path.anchors.length > 0) {
         const last = path.anchors[path.anchors.length - 1];
-        trackingPathD = `M ${last.x} ${last.y} L ${mousePos.x} ${mousePos.y}`;
+        const first = path.anchors[0];
 
-        if (path.anchors.length >= 2) {
-          const first = path.anchors[0];
+        // 检查是否靠近首锚点（准备闭合）
+        const isNearClose = path.anchors.length >= 3 && (() => {
           const dx = mousePos.x - first.x;
           const dy = mousePos.y - first.y;
-          if (Math.sqrt(dx * dx + dy * dy) < DECO_CLOSE_THRESHOLD) {
-            trackingPathD += ` M ${mousePos.x} ${mousePos.y} L ${first.x} ${first.y}`;
+          return Math.sqrt(dx * dx + dy * dy) < DECO_CLOSE_THRESHOLD;
+        })();
+
+        if (isNearClose) {
+          // 靠近首锚点时，显示从最后一个锚点到首锚点的闭合预览线
+          if (last.handleOut) {
+            trackingPathD = `M ${last.x} ${last.y} Q ${last.handleOut.x} ${last.handleOut.y} ${first.x} ${first.y}`;
+          } else {
+            trackingPathD = `M ${last.x} ${last.y} L ${first.x} ${first.y}`;
+          }
+        } else {
+          // 正常追踪线：从最后一个锚点到鼠标位置
+          if (last.handleOut) {
+            trackingPathD = `M ${last.x} ${last.y} Q ${last.handleOut.x} ${last.handleOut.y} ${mousePos.x} ${mousePos.y}`;
+          } else {
+            trackingPathD = `M ${last.x} ${last.y} L ${mousePos.x} ${mousePos.y}`;
           }
         }
       }
@@ -537,14 +835,14 @@ export default function DecorationEditorPage() {
           {/* 填充区域 */}
           {path.isClosed && path.anchors.length >= 3 && (
             <path
-              d={`${pathD} Z`}
+              d={pathD}
               fill={path.fillColor}
               stroke="none"
             />
           )}
           {/* 线条 */}
           <path
-            d={path.isClosed ? `${pathD} Z` : pathD}
+            d={pathD}
             fill="none"
             stroke={path.strokeColor}
             strokeWidth={path.strokeWidth}
@@ -594,8 +892,88 @@ export default function DecorationEditorPage() {
         className={`deco-editor-anchor ${i === 0 ? 'first-anchor' : ''} ${selectedAnchorIdx === i ? 'selected' : ''}`}
         style={{ left: a.x, top: a.y }}
         onMouseDown={(e) => handleAnchorMouseDown(i, e)}
+        onClick={(e) => {
+          // 点击首个锚点（⭐）且满足闭合条件时，闭合路径
+          if (i === 0 && !activePath.isClosed && activePath.anchors.length >= 3) {
+            handleClosePath(e);
+          } else {
+            e.stopPropagation();
+          }
+        }}
       />
     ));
+  };
+
+  // ===== 渲染控制柄（仅活跃路径） =====
+  const renderHandles = () => {
+    if (!activePath || !activePath.visible) return null;
+    const handles: React.ReactNode[] = [];
+
+    activePath.anchors.forEach((a, i) => {
+      // handleOut: 从锚点出发，控制到下一个锚点的曲线
+      if (a.handleOut) {
+        handles.push(
+          // 连接线
+          <svg
+            key={`line-out-${i}`}
+            className="deco-editor-svg-layer"
+            width={stageWidth}
+            height={stageHeight}
+            style={{ pointerEvents: 'none' }}
+          >
+            <line
+              x1={a.x} y1={a.y}
+              x2={a.handleOut.x} y2={a.handleOut.y}
+              stroke="#f59e0b" strokeWidth={1} strokeDasharray="3 3"
+            />
+          </svg>,
+          // 控制柄圆点
+          <div
+            key={`handle-out-${i}`}
+            className="deco-editor-handle deco-editor-handle--out"
+            style={{ left: a.handleOut.x, top: a.handleOut.y }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              setDraggingHandle(`out-${i}`);
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />,
+        );
+      }
+
+      // handleIn: 指向锚点，控制从上一个锚点到该锚点的曲线
+      if (a.handleIn) {
+        handles.push(
+          // 连接线
+          <svg
+            key={`line-in-${i}`}
+            className="deco-editor-svg-layer"
+            width={stageWidth}
+            height={stageHeight}
+            style={{ pointerEvents: 'none' }}
+          >
+            <line
+              x1={a.x} y1={a.y}
+              x2={a.handleIn.x} y2={a.handleIn.y}
+              stroke="#a855f7" strokeWidth={1} strokeDasharray="3 3"
+            />
+          </svg>,
+          // 控制柄圆点
+          <div
+            key={`handle-in-${i}`}
+            className="deco-editor-handle deco-editor-handle--in"
+            style={{ left: a.handleIn.x, top: a.handleIn.y }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              setDraggingHandle(`in-${i}`);
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />,
+        );
+      }
+    });
+
+    return handles;
   };
 
   // ===== 鼠标位置指示器 =====
@@ -683,6 +1061,7 @@ export default function DecorationEditorPage() {
               className="deco-editor-stage"
               style={{ width: stageWidth, height: stageHeight }}
               onClick={handleStageClick}
+              onContextMenu={handleStageContextMenu}
               onMouseMove={handleStageMouseMove}
               onMouseLeave={handleStageMouseLeave}
             >
@@ -691,6 +1070,7 @@ export default function DecorationEditorPage() {
               {renderGuideLines()}
               {renderDistances()}
               {renderAnchors()}
+              {renderHandles()}
               {renderCursor()}
             </div>
             <div className="deco-editor-size-label">
@@ -754,6 +1134,14 @@ export default function DecorationEditorPage() {
                   {preset.label}
                 </Button>
               ))}
+            </div>
+          </div>
+
+          {/* 绘制说明 */}
+          <div className="deco-editor-panel-section">
+            <div className="deco-editor-panel-section-title">绘制说明</div>
+            <div style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.5 }}>
+              点击舞台添加锚点，自动生成控制柄可调整弯曲程度。拖拽控制柄至锚点位置即可变为直线连接。
             </div>
           </div>
 
@@ -855,7 +1243,7 @@ export default function DecorationEditorPage() {
               )}
             </div>
             {!activePath?.isClosed && activePath && activePath.anchors.length >= 3 && (
-              <Button size="small" onClick={() => updatePath(activePathIdx, { isClosed: true })} block style={{ marginTop: 6 }}>
+              <Button size="small" onClick={(e) => handleClosePath(e as any)} block style={{ marginTop: 6 }}>
                 闭合路径
               </Button>
             )}
@@ -896,10 +1284,14 @@ export default function DecorationEditorPage() {
           {/* 提示 */}
           <div className="deco-editor-panel-section" style={{ borderBottom: 'none' }}>
             <div style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.6 }}>
-              💡 点击舞台添加锚点<br />
+              💡 点击舞台添加锚点（自动生成控制柄）<br />
               💡 拖拽锚点可调整位置<br />
-              💡 点击首个锚点（⭐）闭合路径<br />
-              💡 Ctrl+Z 撤销，Delete 删除选中锚点
+              💡 右键点击舞台可删除最后一个锚点<br />
+              💡 点击首个锚点（⭐）或靠近首点点击可闭合路径<br />
+              💡 Ctrl+Z 撤销，Delete 删除选中锚点<br />
+              💡 拖拽 🟠 橙色控制柄调整出方向曲线<br />
+              💡 拖拽 🟣 紫色控制柄调整入方向曲线<br />
+              💡 将控制柄拖回锚点位置可变为直线连接
             </div>
           </div>
         </div>
@@ -912,6 +1304,9 @@ export default function DecorationEditorPage() {
         </div>
         <div className="status-item">
           当前: 路径 {activePathIdx + 1} · {activePath?.anchors.length || 0} 锚点 · {activePath?.isClosed ? '已闭合' : '绘制中'}
+        </div>
+        <div className="status-item" style={{ color: '#a855f7' }}>
+          曲线模式
         </div>
         {isMouseOnStage && mousePos && (
           <div className="status-item">

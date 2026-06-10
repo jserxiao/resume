@@ -14,6 +14,7 @@ import {
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import { useDragPreview } from '@/hooks/useDragPreview';
+import { buildDecoPathD } from '@/utils/geometry';
 import LayerPanel from './LayerPanel';
 import './index.less';
 
@@ -319,9 +320,9 @@ export default function LeftPanel() {
                     {deco.paths.map((p, pIdx) => (
                       <path
                         key={pIdx}
-                        d={p.anchors.map((a, i) => `${i === 0 ? 'M' : 'L'} ${a.x} ${a.y}`).join(' ') + (p.isClosed ? ' Z' : '')}
-fill={p.isClosed ? p.fillColor : 'none'}
-stroke={p.strokeColor}
+                        d={buildDecoPathD(p.anchors, p.isClosed)}
+                        fill={p.isClosed ? p.fillColor : 'none'}
+                        stroke={p.strokeColor}
                         strokeWidth={3}
                       />
                     ))}

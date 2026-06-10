@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useResumeStore, calculateAlignGuides } from '@/store';
 import { GRID_SIZE, RESIZE_MIN_WIDTH, RESIZE_MIN_HEIGHT, getDefaultBlockWidth, getDefaultBlockHeight } from '@/utils/constants';
+import { getDecoPathBounds } from '@/utils/geometry';
 import { useDistanceIndicators } from './useDistanceIndicators';
 import { useAlignGuides } from './useAlignGuides';
 import { useMarqueeSelection } from './useMarqueeSelection';
@@ -139,10 +140,12 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       if (decoration) {
         const allAnchors = decoration.paths.flatMap(p => p.anchors);
         if (allAnchors.length > 0) {
-          const minX = Math.min(...allAnchors.map(a => a.x));
-          const minY = Math.min(...allAnchors.map(a => a.y));
-          const maxX = Math.max(...allAnchors.map(a => a.x));
-          const maxY = Math.max(...allAnchors.map(a => a.y));
+          // 基于贝塞尔曲线实际采样点计算边界框，避免控制柄远离曲线导致大片空白
+          const pathBounds = decoration.paths.map(p => getDecoPathBounds(p.anchors, p.isClosed)).filter(Boolean) as { minX: number; minY: number; maxX: number; maxY: number }[];
+          const minX = Math.min(...pathBounds.map(b => b.minX));
+          const minY = Math.min(...pathBounds.map(b => b.minY));
+          const maxX = Math.max(...pathBounds.map(b => b.maxX));
+          const maxY = Math.max(...pathBounds.map(b => b.maxY));
           const rangeX = maxX - minX;
           const rangeY = maxY - minY;
           const aspectRatio = rangeX > 0 && rangeY > 0 ? rangeX / rangeY : 1;

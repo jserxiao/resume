@@ -1,6 +1,7 @@
 import type { BlockTemplate, ColorScheme, CustomDecorationDefinition } from '@/types';
 import { FieldType } from '@/types';
 import { getDefaultBlockWidth, getDefaultBlockHeight } from './constants';
+import { buildDecoPathD } from './geometry';
 
 /**
  * 创建拖拽预览 DOM 元素，样式与 FreeBlockCard 一致
@@ -364,7 +365,7 @@ svgEl.style.cssText = 'position: absolute; inset: 0;';
 // 渲染每条路径
 for (const p of decoration.paths) {
   if (p.anchors.length < 2) continue;
-  const pathD = p.anchors.map((a, i) => `${i === 0 ? 'M' : 'L'} ${a.x} ${a.y}`).join(' ') + (p.isClosed ? ' Z' : '');
+  const pathD = buildDecoPathD(p.anchors, p.isClosed);
 
   // 填充路径
   if (p.isClosed) {

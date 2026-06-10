@@ -3,6 +3,7 @@ import { BgColorsOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import type { Resume } from '@/types';
 import { CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, CANVAS_DEFAULT_PADDING, CANVAS_DEFAULT_BACKGROUND } from '@/utils/constants';
+import { buildDecoPathD } from '@/utils/geometry';
 import ColorFieldInput from '@/components/shared/ColorFieldInput';
 import ImageUploadField from '@/components/shared/ImageUploadField';
 
@@ -163,7 +164,7 @@ function CanvasCustomDecorationSection() {
                 {d.paths.map((p, pIdx) => (
                   <path
                     key={pIdx}
-                    d={p.anchors.map((a, i) => `${i === 0 ? 'M' : 'L'} ${a.x} ${a.y}`).join(' ') + (p.isClosed ? ' Z' : '')}
+                    d={buildDecoPathD(p.anchors, p.isClosed)}
                     fill={p.isClosed ? p.fillColor : 'none'}
                     stroke={p.strokeColor}
                     strokeWidth={3}

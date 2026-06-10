@@ -14,6 +14,7 @@ import type {
 } from '../../types';
 import { getNextZIndex } from '../../utils/block';
 import { getDefaultBlockWidth, getDefaultBlockHeight } from '../../utils/constants';
+import { buildDecoPathD, getDecoPathBounds } from '../../utils/geometry';
 import { presetBlockTemplates } from '../../utils/presets';
 
 // ========== Slice 类型 ==========
@@ -169,10 +170,12 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
       if (!decoration) return;
 
       const allAnchors = decoration.paths.flatMap((p) => p.anchors);
-      const minX = allAnchors.length > 0 ? Math.min(...allAnchors.map((a) => a.x)) : 0;
-      const minY = allAnchors.length > 0 ? Math.min(...allAnchors.map((a) => a.y)) : 0;
-      const maxX = allAnchors.length > 0 ? Math.max(...allAnchors.map((a) => a.x)) : 100;
-      const maxY = allAnchors.length > 0 ? Math.max(...allAnchors.map((a) => a.y)) : 100;
+      // 基于贝塞尔曲线实际采样点计算边界框，避免控制柄远离曲线导致大片空白
+      const pathBounds = decoration.paths.map((p) => getDecoPathBounds(p.anchors, p.isClosed)).filter(Boolean) as { minX: number; minY: number; maxX: number; maxY: number }[];
+      const minX = pathBounds.length > 0 ? Math.min(...pathBounds.map((b) => b.minX)) : 0;
+      const minY = pathBounds.length > 0 ? Math.min(...pathBounds.map((b) => b.minY)) : 0;
+      const maxX = pathBounds.length > 0 ? Math.max(...pathBounds.map((b) => b.maxX)) : 100;
+      const maxY = pathBounds.length > 0 ? Math.max(...pathBounds.map((b) => b.maxY)) : 100;
 
       const rangeX = maxX - minX;
       const rangeY = maxY - minY;
@@ -182,7 +185,7 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
       const defaultHeight = Math.round(aspectRatio >= 1 ? baseSize / aspectRatio : baseSize);
 
       const svgPaths = decoration.paths.map((p) => ({
-        pathD: p.anchors.map((a, i) => `${i === 0 ? 'M' : 'L'} ${a.x} ${a.y}`).join(' ') + (p.isClosed ? ' Z' : ''),
+        pathD: buildDecoPathD(p.anchors, p.isClosed),
         fillColor: p.fillColor,
         strokeColor: p.strokeColor,
         strokeWidth: Math.max(0.5, p.strokeWidth),

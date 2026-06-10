@@ -98,7 +98,7 @@ export function restoreFromLocalStorage(): boolean {
       useResumeStore.setState(produce(state => {
         // 合并预设模板和自定义模板
         state.blockTemplates = [
-          ...state.blockTemplates.filter(t => t.isPreset),
+          ...state.blockTemplates.filter((t: { isPreset: boolean }) => t.isPreset),
           ...data.customBlockTemplates,
         ];
       }));

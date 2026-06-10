@@ -1,5 +1,5 @@
 import { useRef, useCallback } from 'react';
-import type { ColorScheme } from '@/types';
+import type { BlockTemplate, CustomElementTemplate, BlockGroup, BlockInstance, CustomDecorationDefinition, ColorScheme } from '@/types';
 import {
   createBlockDragPreview,
   createCustomElementDragPreview,
@@ -8,48 +8,19 @@ import {
   cleanupDragPreview,
 } from '@/utils/dragPreview';
 
-interface BlockTemplateLike {
-  id: string;
-  [key: string]: unknown;
-}
-
-interface CustomElementTemplateLike {
-  id: string;
-  [key: string]: unknown;
-}
-
-interface GroupLike {
-  id: string;
-  blockIds: string[];
-  [key: string]: unknown;
-}
-
-interface BlockLike {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-interface CustomDecorationLike {
-  id: string;
-  [key: string]: unknown;
-}
-
 interface UseDragPreviewOptions {
   /** 块模板列表，用于通过 templateId 查找模板 */
-  blockTemplates: BlockTemplateLike[];
+  blockTemplates: BlockTemplate[];
   /** 自定义元素模板列表 */
-  customElementTemplates: CustomElementTemplateLike[];
+  customElementTemplates: CustomElementTemplate[];
   /** 自定义装饰列表 */
-  customDecorations: CustomDecorationLike[];
+  customDecorations: CustomDecorationDefinition[];
   /** 当前简历块列表（用于分组拖拽预览） */
-  blocks: BlockLike[];
+  blocks: BlockInstance[];
   /** 分组列表 */
-  groups: GroupLike[];
+  groups: BlockGroup[];
   /** 当前配色方案 */
-  colorScheme: ColorScheme;
+  colorScheme?: ColorScheme;
 }
 
 /**
@@ -79,9 +50,9 @@ export function useDragPreview(options: UseDragPreviewOptions) {
       e.dataTransfer.effectAllowed = 'copy';
 
       const template = blockTemplates.find((t) => t.id === templateId);
-      if (template) {
+      if (template && colorScheme) {
         cleanupPrevPreview();
-        const previewEl = createBlockDragPreview(template as any, colorScheme);
+        const previewEl = createBlockDragPreview(template, colorScheme);
         dragPreviewRef.current = previewEl;
         e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
       }
@@ -96,9 +67,9 @@ export function useDragPreview(options: UseDragPreviewOptions) {
       e.dataTransfer.effectAllowed = 'copy';
 
       const template = customElementTemplates.find((t) => t.id === templateId);
-      if (template) {
+      if (template && colorScheme) {
         cleanupPrevPreview();
-        const previewEl = createCustomElementDragPreview(template as any, colorScheme);
+        const previewEl = createCustomElementDragPreview(template, colorScheme);
         dragPreviewRef.current = previewEl;
         e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
       }
@@ -113,9 +84,9 @@ export function useDragPreview(options: UseDragPreviewOptions) {
       e.dataTransfer.effectAllowed = 'copy';
 
       const group = groups.find((g) => g.id === groupId);
-      if (group) {
+      if (group && colorScheme) {
         cleanupPrevPreview();
-        const previewEl = createGroupDragPreview(group as any, blocks as any, colorScheme);
+        const previewEl = createGroupDragPreview(group, blocks, colorScheme);
         dragPreviewRef.current = previewEl;
         e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
       }
@@ -132,7 +103,7 @@ export function useDragPreview(options: UseDragPreviewOptions) {
       const decoration = customDecorations.find((d) => d.id === decorationId);
       if (decoration) {
         cleanupPrevPreview();
-        const previewEl = createCustomDecorationDragPreview(decoration as any);
+        const previewEl = createCustomDecorationDragPreview(decoration);
         dragPreviewRef.current = previewEl;
         e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
       }

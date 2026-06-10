@@ -4,6 +4,8 @@ import { GRID_SIZE, RESIZE_MIN_WIDTH, RESIZE_MIN_HEIGHT, getDefaultBlockWidth, g
 import { getDecoPathBounds } from '@/utils/geometry';
 import { useDistanceIndicators } from './useDistanceIndicators';
 import { useAlignGuides } from './useAlignGuides';
+import DistanceIndicators from './DistanceIndicators';
+import AlignGuideOverlay from './AlignGuideOverlay';
 import { useMarqueeSelection } from './useMarqueeSelection';
 import FreeBlockCard from './FreeBlockCard';
 import GroupBorder from './GroupBorder';
@@ -45,8 +47,8 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
   const blockDragStartedRef = useRef(false);
 
   // 使用封装的 hooks
-  const { refreshDistances, clearDistances, renderDistances } = useDistanceIndicators(isPreview);
-  const { updateAlignGuides, clearAlignGuides, renderAlignGuides } = useAlignGuides(isPreview);
+  const { refreshDistances, clearDistances, distances, activeBlockPos } = useDistanceIndicators(isPreview);
+  const { updateAlignGuides, clearAlignGuides, alignGuides } = useAlignGuides(isPreview);
   const marquee = useMarqueeSelection(
     isPreview,
     pageRef,
@@ -440,8 +442,8 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
           isPreview={isPreview}
           showDropHint={dragOverSlot}
           showEmpty={visibleBlocks.length === 0}
-          alignGuides={renderAlignGuides()}
-          distances={renderDistances()}
+          alignGuides={<AlignGuideOverlay isPreview={isPreview} alignGuides={alignGuides} />}
+          distances={<DistanceIndicators isPreview={isPreview} activeBlockPos={activeBlockPos} distances={distances} />}
           marquee={marquee.renderMarquee()}
         />
 

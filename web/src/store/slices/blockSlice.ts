@@ -510,7 +510,7 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
   saveAsCustomTemplate: (name, blockIds) =>
     set(produce<BlockSlice & { resume: any }>((state) => {
       if (!state.resume) return;
-      const blocks = state.resume.blocks.filter((b: BlockInstance) => blockIds.includes(b.id));
+      const blocks: BlockInstance[] = state.resume.blocks.filter((b: BlockInstance) => blockIds.includes(b.id));
       if (blocks.length === 0) return;
 
       const minX = Math.min(...blocks.map((b) => b.x));

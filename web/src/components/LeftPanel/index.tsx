@@ -42,7 +42,7 @@ export default function LeftPanel() {
     customDecorations,
     blocks: resume?.blocks || [],
     groups: resume?.groups || [],
-    colorScheme: resume?.colorScheme as any,
+    colorScheme: resume?.colorScheme,
   });
 
   if (!resume) return null;

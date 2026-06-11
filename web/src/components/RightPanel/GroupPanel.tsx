@@ -2,6 +2,7 @@ import { Input, InputNumber, Slider, Divider, Button } from 'antd';
 import { GroupOutlined, RotateRightOutlined, DisconnectOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import type { BlockGroup } from '@/types';
+import { GROUP_COLOR } from '@/utils/constants';
 import { getGroupBounds as getGroupBoundsUtil } from '@/utils/geometry';
 
 interface GroupPanelProps {
@@ -92,13 +93,13 @@ export default function GroupPanel({ group, isLayoutTab = false }: GroupPanelPro
   return (
     <div className="right-panel-content">
       <div className="right-panel-group-header">
-        <GroupOutlined style={{ color: '#f59e0b', fontSize: 16 }} />
+        <GroupOutlined style={{ color: GROUP_COLOR, fontSize: 16 }} />
         <Input
           variant="borderless"
           value={group.name}
           onChange={(e) => renameGroup(group.id, e.target.value)}
           className="right-panel-block-name"
-          style={{ color: '#f59e0b' }}
+          style={{ color: GROUP_COLOR }}
         />
       </div>
 

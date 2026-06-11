@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Input, Segmented, ColorPicker, Select, message } from 'antd';
 import { DeleteOutlined, SaveOutlined, ThunderboltOutlined, BgColorsOutlined, CloseOutlined, CameraOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
+import { DEFAULT_PRIMARY_COLOR, DEFAULT_BORDER_COLOR } from '@/utils/constants';
 import { presetColorSchemes } from '@/utils/presets';
 import { generateColorScheme, generateBatchSchemes, getContrastRatio } from '@/utils/color';
 import { uploadImage } from '@/utils/imageUpload';
@@ -11,7 +12,7 @@ import './ColorSchemePanel.less';
 export default function ColorSchemePanel() {
   const { resume, setColorScheme, setCanvasConfig, customColorSchemes, addCustomColorScheme, removeCustomColorScheme } = useResumeStore();
   const [mode, setMode] = useState<'preset' | 'generate' | 'custom'>('preset');
-  const [primaryColor, setPrimaryColor] = useState('#1a56db');
+  const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY_COLOR);
   const [generatedSchemes, setGeneratedSchemes] = useState<ColorScheme[]>([]);
 
   if (!resume) return null;
@@ -245,7 +246,7 @@ export default function ColorSchemePanel() {
                 <img
                   src={resume.canvas.backgroundImage}
                   alt="画布背景"
-                  style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: '1px solid #e5e7eb' }}
+                  style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${DEFAULT_BORDER_COLOR}` }}
                 />
                 <Button
                   type="text"

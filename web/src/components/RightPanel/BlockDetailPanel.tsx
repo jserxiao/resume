@@ -25,7 +25,7 @@ import { uploadImage } from '@/utils/imageUpload';
 import ColorFieldInput from '@/components/shared/ColorFieldInput';
 import SidesInput from '@/components/shared/SidesInput';
 import ImageUploadField from '@/components/shared/ImageUploadField';
-import { BLOCK_DEFAULT_MARGIN, BLOCK_DEFAULT_PADDING } from '@/utils/constants';
+import { BLOCK_DEFAULT_MARGIN, BLOCK_DEFAULT_PADDING, DEFAULT_PRIMARY_COLOR, COMPLETE_COLOR, TEXT_SECONDARY_COLOR, TEXT_HINT_COLOR, DEFAULT_BORDER_COLOR, BLOCK_DEFAULT_BORDER_RADIUS } from '@/utils/constants';
 import AntdIconPicker from '@/components/shared/AntdIconPicker';
 import { renderIconByName } from '@/utils/iconMap';
 
@@ -95,7 +95,7 @@ export default function BlockDetailPanel({
         <label className="right-panel-label">图标</label>
         {(() => {
           const iconName = block.fields['icon-name'] || 'StarOutlined';
-          const iconColor = block.fields['icon-color'] || resume?.colorScheme?.primary || '#1a56db';
+          const iconColor = block.fields['icon-color'] || resume?.colorScheme?.primary || DEFAULT_PRIMARY_COLOR;
           return (
             <div
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: isLocked ? 'default' : 'pointer' }}
@@ -117,7 +117,7 @@ export default function BlockDetailPanel({
               }}
             >
               {renderIconByName(iconName, { style: { fontSize: 20, color: iconColor } })}
-              <span style={{ fontSize: 12, color: '#666' }}>{iconName}</span>
+              <span style={{ fontSize: 12, color: TEXT_SECONDARY_COLOR }}>{iconName}</span>
             </div>
           );
         })()}
@@ -128,12 +128,12 @@ export default function BlockDetailPanel({
         <label className="right-panel-label">颜色</label>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <ColorPicker
-            value={block.fields['icon-color'] || resume?.colorScheme?.primary || '#1a56db'}
+            value={block.fields['icon-color'] || resume?.colorScheme?.primary || DEFAULT_PRIMARY_COLOR}
             onChange={(_, hex) => updateBlockField(block.id, 'icon-color', hex)}
             size="small"
           />
           <Input
-            value={block.fields['icon-color'] || resume?.colorScheme?.primary || '#1a56db'}
+            value={block.fields['icon-color'] || resume?.colorScheme?.primary || DEFAULT_PRIMARY_COLOR}
             onChange={(e) => updateBlockField(block.id, 'icon-color', e.target.value)}
             maxLength={7}
             style={{ width: 90, fontSize: 12 }}
@@ -184,7 +184,7 @@ export default function BlockDetailPanel({
               percent={percent}
               size="small"
               format={() => `${filled}/${total} 已填写`}
-              strokeColor={percent === 100 ? '#22c55e' : undefined}
+              strokeColor={percent === 100 ? COMPLETE_COLOR : undefined}
             />
           );
         })()}
@@ -383,7 +383,7 @@ export default function BlockDetailPanel({
           <div className="right-panel-field compact">
             <label className="right-panel-label">圆角</label>
             <InputNumber
-              value={block.style?.borderRadius ?? 6}
+              value={block.style?.borderRadius ?? BLOCK_DEFAULT_BORDER_RADIUS}
               onChange={(val) => updateBlockStyle(block.id, { borderRadius: val ?? 0 })}
               size="small"
               style={{ width: '100%' }}
@@ -408,7 +408,7 @@ export default function BlockDetailPanel({
             <div className="right-panel-field compact" style={{ flex: 1 }}>
               <label className="right-panel-label">边框色</label>
               <ColorPicker
-                value={block.style?.borderColor || '#e5e7eb'}
+                value={block.style?.borderColor || DEFAULT_BORDER_COLOR}
                 onChange={(_, hex) => updateBlockStyle(block.id, { borderColor: hex })}
                 size="small"
               />
@@ -514,7 +514,7 @@ export default function BlockDetailPanel({
         activeKey={activeKeys}
         onChange={(keys) => setActiveKeys(keys as CollapseKey[])}
         ghost
-        expandIcon={({ isActive }) => <RightOutlined rotate={isActive ? 90 : 0} style={{ fontSize: 10, color: '#999' }} />}
+        expandIcon={({ isActive }) => <RightOutlined rotate={isActive ? 90 : 0} style={{ fontSize: 10, color: TEXT_HINT_COLOR }} />}
         items={collapseItems}
       />
     </div>
@@ -641,7 +641,7 @@ function renderFieldEditor(
               onChange={(e) => updateBlockField(blockId, field.id, e.target.checked ? 'true' : 'false')}
               disabled={isLocked}
             />
-            <span style={{ fontSize: 12, color: '#666' }}>{value === 'true' ? '是' : '否'}</span>
+            <span style={{ fontSize: 12, color: TEXT_SECONDARY_COLOR }}>{value === 'true' ? '是' : '否'}</span>
           </label>
         </div>
       );

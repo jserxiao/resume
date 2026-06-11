@@ -1,6 +1,7 @@
 import { Input, InputNumber, Slider, Divider, Button, App, ColorPicker } from 'antd';
 import { useResumeStore } from '@/store';
 import type { BlockInstance } from '@/types';
+import { DEFAULT_PRIMARY_COLOR, TEXT_SECONDARY_COLOR } from '@/utils/constants';
 import AntdIconPicker from '@/components/shared/AntdIconPicker';
 import { renderIconByName } from '@/utils/iconMap';
 
@@ -31,7 +32,7 @@ export default function IconBlockPropertiesPanel({ block }: IconBlockPropertiesP
   const isLocked = block.locked;
   const iconName = block.fields['icon-name'] || 'StarOutlined';
   // 图标颜色：优先用 block.fields['icon-color']，否则跟随配色方案主色
-  const iconColor = block.fields['icon-color'] || resume?.colorScheme?.primary || '#1a56db';
+  const iconColor = block.fields['icon-color'] || resume?.colorScheme?.primary || DEFAULT_PRIMARY_COLOR;
 
   return (
     <div className="right-panel-content">
@@ -125,7 +126,7 @@ export default function IconBlockPropertiesPanel({ block }: IconBlockPropertiesP
           }}
         >
           {renderIconByName(iconName, { style: { fontSize: 20, color: iconColor } })}
-          <span style={{ fontSize: 12, color: '#666' }}>{iconName}</span>
+          <span style={{ fontSize: 12, color: TEXT_SECONDARY_COLOR }}>{iconName}</span>
         </div>
       </div>
 

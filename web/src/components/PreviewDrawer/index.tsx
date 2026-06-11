@@ -1,5 +1,6 @@
 import { Drawer } from 'antd';
 import { useResumeStore } from '@/store';
+import { PREVIEW_BG_COLOR } from '@/utils/constants';
 import EditorCanvas from '@/components/EditorCanvas';
 import './index.less';
 
@@ -20,7 +21,7 @@ export default function PreviewDrawer() {
       open={editor.previewOpen}
       onClose={() => setPreviewOpen(false)}
       styles={{
-        body: { padding: 0, overflow: 'auto', background: '#e5e7eb', position: 'relative' },
+        body: { padding: 0, overflow: 'auto', background: PREVIEW_BG_COLOR, position: 'relative' },
         wrapper: {},
       }}
       zIndex={10000}

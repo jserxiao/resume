@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import { Button, Tooltip, Empty, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import {
@@ -20,21 +20,11 @@ import {
   ScissorOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
+import { useLayerItems } from './useLayerItems';
+import { useLayerDrag } from './useLayerDrag';
+import { useLayerContextMenu, useCreateGroupFromBlocks } from './useLayerContextMenu.tsx';
+import type { LayerItem } from './useLayerItems';
 import './index.less';
-
-/** 图层项（统一的数据结构） */
-interface LayerItem {
-  type: 'group' | 'block';
-  id: string;
-  name: string;
-  zIndex: number;
-  visible: boolean;
-  locked: boolean;
-  /** 分组内的子图层 */
-  children?: LayerItem[];
-  /** 所属分组ID */
-  groupId?: string;
-}
 
 interface LayerDrawerProps {
   collapsed: boolean;
@@ -53,126 +43,46 @@ interface LayerDrawerProps {
  * - 支持拖拽图层到分组自动加入分组
  */
 export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
-  const {
-    resume,
-    editor,
-    selectBlock,
-    selectBlocks,
-    addToSelection,
-    clearSelection,
-    selectGroup,
-    toggleBlockVisibility,
-    toggleBlockLock,
-    moveBlockZIndex,
-    createGroup,
-    addBlocksToGroup,
-    removeBlocksFromGroup,
-    removeGroup,
-  } = useResumeStore();
+  const resume = useResumeStore((s) => s.resume);
+  const editor = useResumeStore((s) => s.editor);
+  const selectBlock = useResumeStore((s) => s.selectBlock);
+  const selectBlocks = useResumeStore((s) => s.selectBlocks);
+  const addToSelection = useResumeStore((s) => s.addToSelection);
+  const clearSelection = useResumeStore((s) => s.clearSelection);
+  const selectGroup = useResumeStore((s) => s.selectGroup);
+  const toggleBlockVisibility = useResumeStore((s) => s.toggleBlockVisibility);
+  const toggleBlockLock = useResumeStore((s) => s.toggleBlockLock);
+  const moveBlockZIndex = useResumeStore((s) => s.moveBlockZIndex);
+  const removeGroup = useResumeStore((s) => s.removeGroup);
+  const removeBlocksFromGroup = useResumeStore((s) => s.removeBlocksFromGroup);
 
-  // 记录哪些分组是展开的
-  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
-
-  // 拖拽状态
-  const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
-  const dragItemRef = useRef<LayerItem | null>(null);
-
-  if (!resume) return null;
+  // 使用提取的 hooks
+  const { layers, isGroupExpanded, toggleGroupExpand, isSelected } = useLayerItems();
+  const drag = useLayerDrag();
+  const contextMenu = useLayerContextMenu();
+  const createGroupFromBlocks = useCreateGroupFromBlocks();
 
   const selectedGroupId = editor.selectedGroupId;
   const selectedBlockIds = editor.selectedBlockIds;
 
-  /** 获取舞台图层列表（始终显示完整图层树） */
-  const getStageLayerItems = (): LayerItem[] => {
-    const ungroupedBlocks = resume.blocks.filter((b) => !b.groupId);
-    const groups = resume.groups;
-    const items: LayerItem[] = [];
-
-    for (const group of groups) {
-      const groupBlocks = resume.blocks.filter((b) => group.blockIds.includes(b.id));
-      const maxZ = groupBlocks.length > 0 ? Math.max(...groupBlocks.map((b) => b.zIndex)) : 0;
-      const allVisible = groupBlocks.length > 0 && groupBlocks.every((b) => b.visible);
-      const anyLocked = groupBlocks.some((b) => b.locked);
-
-      const children: LayerItem[] = groupBlocks
-        .map((b) => ({
-          type: 'block' as const,
-          id: b.id,
-          name: b.name,
-          zIndex: b.zIndex,
-          visible: b.visible,
-          locked: b.locked,
-          groupId: group.id,
-        }))
-        .sort((a, b) => b.zIndex - a.zIndex);
-
-      items.push({
-        type: 'group',
-        id: group.id,
-        name: group.name,
-        zIndex: maxZ,
-        visible: allVisible,
-        locked: anyLocked,
-        children,
-      });
-    }
-
-    for (const block of ungroupedBlocks) {
-      items.push({
-        type: 'block',
-        id: block.id,
-        name: block.name,
-        zIndex: block.zIndex,
-        visible: block.visible,
-        locked: block.locked,
-      });
-    }
-
-    return items.sort((a, b) => b.zIndex - a.zIndex);
-  };
-
-  const layers = getStageLayerItems();
-
-  // 选中分组时自动展开
-  const isGroupExpanded = (groupId: string) => {
-    return expandedGroupIds.has(groupId) || selectedGroupId === groupId;
-  };
-
-  const toggleGroupExpand = (e: React.MouseEvent, groupId: string) => {
-    e.stopPropagation();
-    setExpandedGroupIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupId)) {
-        next.delete(groupId);
-      } else {
-        next.add(groupId);
-      }
-      return next;
-    });
-  };
+  if (!resume) return null;
 
   /** 点击图层项 - 支持 Shift 多选 */
   const handleLayerClick = (e: React.MouseEvent, item: LayerItem) => {
     if (item.type === 'group') {
-      // 分组不支持多选，直接选中
       selectGroup(item.id);
       return;
     }
 
     if (e.shiftKey) {
-      // Shift + 点击：追加/取消选择
       if (selectedBlockIds.includes(item.id)) {
-        // 已选中则移除
         const newIds = selectedBlockIds.filter((id) => id !== item.id);
         selectBlocks(newIds);
       } else {
-        // 未选中则追加
         addToSelection(item.id);
       }
     } else {
-      // 普通点击
       if (selectedBlockIds.length > 1 && selectedBlockIds.includes(item.id)) {
-        // 已多选且点击的是已选中的项，不做变更
         return;
       }
       selectBlock(item.id);
@@ -218,230 +128,11 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
     moveBlockZIndex(blockId, direction);
   };
 
-  const isSelected = (item: LayerItem) => {
-    if (item.type === 'group') {
-      return editor.selectedGroupId === item.id;
-    }
-    return editor.selectedBlockIds.includes(item.id);
+  /** 点击空白区域取消选中 */
+  const handleContentClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.layer-drawer-item')) return;
+    clearSelection();
   };
-
-  // ========== 拖拽逻辑 ==========
-
-  const handleDragStart = (e: React.DragEvent, item: LayerItem) => {
-    dragItemRef.current = item;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', item.id);
-    // 添加拖拽样式
-    (e.currentTarget as HTMLElement).classList.add('dragging');
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    dragItemRef.current = null;
-    setDragOverGroupId(null);
-    setDragOverEmpty(false);
-    (e.currentTarget as HTMLElement).classList.remove('dragging');
-    // 清除所有拖拽高亮
-    document.querySelectorAll('.layer-drawer-item--drag-over').forEach((el) => {
-      el.classList.remove('layer-drawer-item--drag-over');
-    });
-    document.querySelectorAll('.layer-drawer-content--drag-over').forEach((el) => {
-      el.classList.remove('layer-drawer-content--drag-over');
-    });
-  };
-
-  const handleDragOverGroup = (e: React.DragEvent, groupId: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverGroupId(groupId);
-    setDragOverEmpty(false);
-  };
-
-  const handleDragLeaveGroup = (e: React.DragEvent, groupId: string) => {
-    // 只有真正离开分组区域时才清除高亮
-    const relatedTarget = e.relatedTarget as HTMLElement | null;
-    const currentTarget = e.currentTarget as HTMLElement;
-    if (relatedTarget && currentTarget.contains(relatedTarget)) {
-      return;
-    }
-    setDragOverGroupId((prev) => (prev === groupId ? null : prev));
-  };
-
-  const handleDropOnGroup = (e: React.DragEvent, groupId: string) => {
-    e.preventDefault();
-    setDragOverGroupId(null);
-
-    const dragItem = dragItemRef.current;
-    if (!dragItem) return;
-
-    // 不能拖拽分组到分组
-    if (dragItem.type === 'group') return;
-    // 不能拖拽自己到自己所在的分组
-    if (dragItem.groupId === groupId) return;
-
-    // 如果块已在其他分组中，先从原分组移除
-    if (dragItem.groupId) {
-      removeBlocksFromGroup(dragItem.groupId, [dragItem.id]);
-    }
-
-    // 加入目标分组
-    addBlocksToGroup(groupId, [dragItem.id]);
-  };
-
-  // 拖拽到空白区域 = 从分组中移出
-  const [dragOverEmpty, setDragOverEmpty] = useState(false);
-
-  const handleDragOverEmpty = (e: React.DragEvent) => {
-    // 只有拖拽了分组内的块才处理
-    const dragItem = dragItemRef.current;
-    if (!dragItem || dragItem.type === 'group' || !dragItem.groupId) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverEmpty(true);
-    setDragOverGroupId(null);
-  };
-
-  const handleDragLeaveEmpty = (e: React.DragEvent) => {
-    const relatedTarget = e.relatedTarget as HTMLElement | null;
-    const currentTarget = e.currentTarget as HTMLElement;
-    if (relatedTarget && currentTarget.contains(relatedTarget)) {
-      return;
-    }
-    setDragOverEmpty(false);
-  };
-
-  const handleDropOnEmpty = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOverEmpty(false);
-
-    const dragItem = dragItemRef.current;
-    if (!dragItem || dragItem.type === 'group' || !dragItem.groupId) return;
-
-    // 从分组中移出
-    removeBlocksFromGroup(dragItem.groupId, [dragItem.id]);
-    // 选中该块
-    selectBlock(dragItem.id);
-  };
-
-  // ========== 右键菜单 ==========
-
-  /** 获取块图层的右键菜单 */
-  const getBlockContextMenu = useCallback((item: LayerItem): MenuProps['items'] => {
-    const items: NonNullable<MenuProps['items']> = [];
-
-    // 如果当前有多个块选中，且当前项也在选中列表中，则可以对选中项进行分组
-    if (selectedBlockIds.length >= 2 && selectedBlockIds.includes(item.id)) {
-      items.push({
-        key: 'group',
-        label: `创建分组（${selectedBlockIds.length} 个元素）`,
-        icon: <GroupOutlined />,
-        onClick: () => {
-          // 先将属于其他分组的块移出原分组
-          const blockGroupMap = new Map<string, string[]>();
-          for (const id of selectedBlockIds) {
-            const block = resume.blocks.find((b) => b.id === id);
-            if (block?.groupId) {
-              const list = blockGroupMap.get(block.groupId) || [];
-              list.push(id);
-              blockGroupMap.set(block.groupId, list);
-            }
-          }
-          for (const [gId, bIds] of blockGroupMap) {
-            removeBlocksFromGroup(gId, bIds);
-          }
-          const groupId = createGroup(`分组 ${resume.groups.length + 1}`);
-          addBlocksToGroup(groupId, selectedBlockIds);
-          selectGroup(groupId);
-        },
-      });
-    }
-
-    // 如果块属于某个分组，提供取消分组选项
-    if (item.groupId) {
-      items.push({
-        key: 'ungroup-self',
-        label: '从分组中移出',
-        icon: <ScissorOutlined />,
-        onClick: () => {
-          removeBlocksFromGroup(item.groupId!, [item.id]);
-        },
-      });
-    }
-
-    // 层级调整
-    items.push({ type: 'divider' });
-    items.push({
-      key: 'up',
-      label: '上移一层',
-      icon: <ArrowUpOutlined />,
-      onClick: () => moveBlockZIndex(item.id, 'up'),
-    });
-    items.push({
-      key: 'down',
-      label: '下移一层',
-      icon: <ArrowDownOutlined />,
-      onClick: () => moveBlockZIndex(item.id, 'down'),
-    });
-    items.push({
-      key: 'top',
-      label: '置顶',
-      icon: <VerticalAlignTopOutlined />,
-      onClick: () => moveBlockZIndex(item.id, 'top'),
-    });
-    items.push({
-      key: 'bottom',
-      label: '置底',
-      icon: <VerticalAlignBottomOutlined />,
-      onClick: () => moveBlockZIndex(item.id, 'bottom'),
-    });
-
-    return items;
-  }, [selectedBlockIds, resume, createGroup, addBlocksToGroup, selectGroup, removeBlocksFromGroup, moveBlockZIndex]);
-
-  /** 获取分组的右键菜单 */
-  const getGroupContextMenu = useCallback((item: LayerItem): MenuProps['items'] => {
-    return [
-      {
-        key: 'ungroup',
-        label: '取消分组',
-        icon: <ScissorOutlined />,
-        onClick: () => {
-          removeGroup(item.id);
-        },
-      },
-    ];
-  }, [removeGroup]);
-
-  /** 获取空白区域的右键菜单 */
-  const getEmptyAreaContextMenu = useCallback((): MenuProps['items'] => {
-    if (selectedBlockIds.length >= 2) {
-      return [
-        {
-          key: 'group',
-          label: `创建分组（${selectedBlockIds.length} 个元素）`,
-          icon: <GroupOutlined />,
-          onClick: () => {
-            // 先将属于其他分组的块移出原分组
-            const blockGroupMap = new Map<string, string[]>();
-            for (const id of selectedBlockIds) {
-              const block = resume.blocks.find((b) => b.id === id);
-              if (block?.groupId) {
-                const list = blockGroupMap.get(block.groupId) || [];
-                list.push(id);
-                blockGroupMap.set(block.groupId, list);
-              }
-            }
-            for (const [gId, bIds] of blockGroupMap) {
-              removeBlocksFromGroup(gId, bIds);
-            }
-            const groupId = createGroup(`分组 ${resume.groups.length + 1}`);
-            addBlocksToGroup(groupId, selectedBlockIds);
-            selectGroup(groupId);
-          },
-        },
-      ];
-    }
-    return [];
-  }, [selectedBlockIds, resume, createGroup, addBlocksToGroup, selectGroup, removeBlocksFromGroup]);
 
   /** 获取图层项的下拉菜单（MoreOutlined 按钮） */
   const getLayerMenuItems = (item: LayerItem): MenuProps['items'] => [
@@ -471,26 +162,19 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
     },
   ];
 
-  /** 点击空白区域取消选中 */
-  const handleContentClick = (e: React.MouseEvent) => {
-    // 只在点击列表空白区域时取消选中
-    if ((e.target as HTMLElement).closest('.layer-drawer-item')) return;
-    clearSelection();
-  };
-
   /** 渲染子图层项（分组内的块） */
   const renderChildItem = (item: LayerItem) => (
     <Dropdown
       key={item.id}
-      menu={{ items: getBlockContextMenu(item) }}
+      menu={{ items: contextMenu.getBlockContextMenu(item) }}
       trigger={['contextMenu']}
     >
       <div
         className={`layer-drawer-item layer-drawer-item--child ${isSelected(item) ? 'selected' : ''} ${!item.visible ? 'hidden-layer' : ''}`}
         onClick={(e) => handleLayerClick(e, item)}
         draggable
-        onDragStart={(e) => handleDragStart(e, item)}
-        onDragEnd={handleDragEnd}
+        onDragStart={(e) => drag.handleDragStart(e, item)}
+        onDragEnd={drag.handleDragEnd}
       >
         <span className="layer-drawer-item-name">{item.name}</span>
         <span className="layer-drawer-item-zindex">z:{item.zIndex}</span>
@@ -519,14 +203,10 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
   );
 
   // ========== 标题栏按钮逻辑 ==========
-  // 选中分组 → 显示「取消分组」按钮
-  // 选中多个块 → 显示「创建分组」按钮
-  // 选中分组内的单个块 → 显示「从分组中移出」按钮
   const renderHeaderActions = () => {
     const actions = [];
 
     if (selectedGroupId) {
-      // 选中了分组 → 取消分组按钮
       actions.push(
         <Tooltip title="取消分组" key="ungroup">
           <Button
@@ -534,14 +214,11 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
             size="small"
             className="layer-drawer-header-btn"
             icon={<ScissorOutlined />}
-            onClick={() => {
-              removeGroup(selectedGroupId);
-            }}
+            onClick={() => removeGroup(selectedGroupId)}
           />
         </Tooltip>
       );
     } else if (selectedBlockIds.length >= 2) {
-      // 多个块选中 → 创建分组按钮
       actions.push(
         <Tooltip title={`创建分组（${selectedBlockIds.length} 个元素）`} key="group">
           <Button
@@ -549,33 +226,14 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
             size="small"
             className="layer-drawer-header-btn"
             icon={<GroupOutlined />}
-            onClick={() => {
-              // 先将属于其他分组的块移出原分组
-              const blockGroupMap = new Map<string, string[]>();
-              for (const id of selectedBlockIds) {
-                const block = resume.blocks.find((b) => b.id === id);
-                if (block?.groupId) {
-                  const list = blockGroupMap.get(block.groupId) || [];
-                  list.push(id);
-                  blockGroupMap.set(block.groupId, list);
-                }
-              }
-              for (const [gId, bIds] of blockGroupMap) {
-                removeBlocksFromGroup(gId, bIds);
-              }
-              const groupId = createGroup(`分组 ${resume.groups.length + 1}`);
-              addBlocksToGroup(groupId, selectedBlockIds);
-              selectGroup(groupId);
-            }}
+            onClick={() => createGroupFromBlocks(selectedBlockIds)}
           />
         </Tooltip>
       );
     } else if (selectedBlockIds.length === 1) {
-      // 选中单个块 - 检查是否在分组内
       const blockId = selectedBlockIds[0];
       const block = resume.blocks.find((b) => b.id === blockId);
       if (block?.groupId) {
-        // 在分组内 → 显示「从分组中移出」按钮
         actions.push(
           <Tooltip title="从分组中移出" key="remove-from-group">
             <Button
@@ -583,19 +241,13 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
               size="small"
               className="layer-drawer-header-btn"
               icon={<ScissorOutlined />}
-              onClick={() => {
-                removeBlocksFromGroup(block.groupId!, [blockId]);
-              }}
+              onClick={() => removeBlocksFromGroup(block.groupId!, [blockId])}
             />
           </Tooltip>
         );
-      } else {
-        // 独立块 → 可以创建分组（只有1个时没意义，但也显示方便后续多选）
-        // 不显示任何分组按钮
       }
     }
 
-    // 收起按钮
     actions.push(
       <Tooltip title="收起" key="collapse">
         <Button
@@ -613,7 +265,6 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
 
   return (
     <div className={`layer-drawer ${collapsed ? 'layer-drawer--collapsed' : ''}`}>
-      {/* 收起状态：只显示切换按钮 */}
       {collapsed && (
         <Tooltip title="展开图层面板" placement="right">
           <div className="layer-drawer-toggle-btn" onClick={onToggle}>
@@ -623,10 +274,8 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
         </Tooltip>
       )}
 
-      {/* 展开状态：完整图层面板 */}
       {!collapsed && (
         <>
-          {/* 标题栏 */}
           <div className="layer-drawer-header">
             <div className="layer-drawer-header-left">
               <ProfileOutlined className="layer-drawer-header-icon" />
@@ -644,15 +293,16 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
             </div>
           </div>
 
-          {/* 图层面板内容 */}
           <Dropdown
-            menu={{ items: getEmptyAreaContextMenu() }}
+            menu={{ items: contextMenu.getEmptyAreaContextMenu() }}
             trigger={['contextMenu']}
           >
-            <div className={`layer-drawer-content ${dragOverEmpty ? 'layer-drawer-content--drag-over' : ''}`} onClick={handleContentClick}
-              onDragOver={handleDragOverEmpty}
-              onDragLeave={handleDragLeaveEmpty}
-              onDrop={handleDropOnEmpty}
+            <div
+              className={`layer-drawer-content ${drag.dragOverEmpty ? 'layer-drawer-content--drag-over' : ''}`}
+              onClick={handleContentClick}
+              onDragOver={drag.handleDragOverEmpty}
+              onDragLeave={drag.handleDragLeaveEmpty}
+              onDrop={drag.handleDropOnEmpty}
             >
               {layers.length === 0 ? (
                 <Empty
@@ -668,19 +318,17 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
                       return (
                         <Dropdown
                           key={item.id}
-                          menu={{ items: getGroupContextMenu(item) }}
+                          menu={{ items: contextMenu.getGroupContextMenu(item) }}
                           trigger={['contextMenu']}
                         >
                           <div className="layer-drawer-group-wrapper">
-                            {/* 分组行 */}
                             <div
-                              className={`layer-drawer-item ${isSelected(item) ? 'selected' : ''} ${!item.visible ? 'hidden-layer' : ''} group-layer ${dragOverGroupId === item.id ? 'layer-drawer-item--drag-over' : ''}`}
+                              className={`layer-drawer-item ${isSelected(item) ? 'selected' : ''} ${!item.visible ? 'hidden-layer' : ''} group-layer ${drag.dragOverGroupId === item.id ? 'layer-drawer-item--drag-over' : ''}`}
                               onClick={() => selectGroup(item.id)}
-                              onDragOver={(e) => handleDragOverGroup(e, item.id)}
-                              onDragLeave={(e) => handleDragLeaveGroup(e, item.id)}
-                              onDrop={(e) => handleDropOnGroup(e, item.id)}
+                              onDragOver={(e) => drag.handleDragOverGroup(e, item.id)}
+                              onDragLeave={(e) => drag.handleDragLeaveGroup(e, item.id)}
+                              onDrop={(e) => drag.handleDropOnGroup(e, item.id)}
                             >
-                              {/* 展开/折叠箭头 */}
                               <span
                                 className="layer-drawer-group-expand"
                                 onClick={(e) => toggleGroupExpand(e, item.id)}
@@ -689,7 +337,6 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
                               </span>
                               <GroupOutlined className="layer-drawer-group-icon" />
                               <span className="layer-drawer-item-name">{item.name}</span>
-                              {/* 分组不显示 z-index */}
                               <div className="layer-drawer-item-actions" onClick={(e) => e.stopPropagation()}>
                                 <Tooltip title={item.visible ? '隐藏' : '显示'}>
                                   <Button
@@ -711,7 +358,6 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
                                 </Tooltip>
                               </div>
                             </div>
-                            {/* 分组子图层 */}
                             {expanded && item.children && (
                               <div className="layer-drawer-group-children">
                                 {item.children.map((child) => renderChildItem(child))}
@@ -722,19 +368,18 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
                       );
                     }
 
-                    // 普通块图层
                     return (
                       <Dropdown
                         key={item.id}
-                        menu={{ items: getBlockContextMenu(item) }}
+                        menu={{ items: contextMenu.getBlockContextMenu(item) }}
                         trigger={['contextMenu']}
                       >
                         <div
                           className={`layer-drawer-item ${isSelected(item) ? 'selected' : ''} ${!item.visible ? 'hidden-layer' : ''}`}
                           onClick={(e) => handleLayerClick(e, item)}
                           draggable
-                          onDragStart={(e) => handleDragStart(e, item)}
-                          onDragEnd={handleDragEnd}
+                          onDragStart={(e) => drag.handleDragStart(e, item)}
+                          onDragEnd={drag.handleDragEnd}
                         >
                           <span className="layer-drawer-item-name">{item.name}</span>
                           <span className="layer-drawer-item-zindex">z:{item.zIndex}</span>

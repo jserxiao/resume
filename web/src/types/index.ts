@@ -245,6 +245,16 @@ export interface DecorationDefinition {
   isPreset: boolean;
 }
 
+/** 自定义装饰的 SVG 路径数据 */
+export interface CustomSvgPathData {
+  pathD: string;
+  fillColor: string;
+  strokeColor: string;
+  strokeWidth: number;
+  isClosed: boolean;
+  clipRect?: { x: number; y: number; width: number; height: number } | null;
+}
+
 /** 装饰元素实例 — 放置在块中的具体装饰 */
 export interface DecorationElement {
   id: string;                     // 实例唯一ID
@@ -259,6 +269,10 @@ export interface DecorationElement {
   strokeWidth: number;            // 描边宽度
   opacity: number;                // 透明度 0-1
   zIndex: number;                 // 层级
+  // ---- 自定义装饰扩展字段（可选） ----
+  customSvgPaths?: CustomSvgPathData[];  // 多路径自定义装饰（新格式）
+  customSvgPath?: string;               // 单路径自定义装饰（旧格式兼容）
+  customIsClosed?: boolean;              // 旧格式自定义装饰是否闭合
 }
 
 // ========== 自定义装饰元素定义（用户通过锚点绘制的装饰图形） ==========

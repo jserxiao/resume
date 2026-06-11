@@ -139,7 +139,7 @@
     min-height: 0;
 
     &--drag-over {
-      background: rgba(59, 130, 246, 0.06);
+      background: var(--color-primary-bg);
       outline: 2px dashed var(--color-primary-light);
       outline-offset: -2px;
     }
@@ -185,17 +185,17 @@
     }
 
     &.group-layer {
-      background: rgba(245, 158, 11, 0.03);
+      background: var(--color-warning-bg);
 
       &.selected {
-        background: rgba(245, 158, 11, 0.08);
+        background: var(--color-warning-bg-hover);
         border-left-color: var(--color-warning);
       }
     }
 
     // 拖拽目标高亮
     &--drag-over {
-      background: rgba(245, 158, 11, 0.12) !important;
+      background: var(--color-warning-bg-selected) !important;
       outline: 2px dashed var(--color-warning);
       outline-offset: -2px;
     }

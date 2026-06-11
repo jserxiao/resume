@@ -2,7 +2,7 @@ import { InputNumber, Slider, Divider, Select, ColorPicker } from 'antd';
 import { RotateRightOutlined, BorderOutlined, BgColorsOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import type { BlockInstance } from '@/types';
-import { BLOCK_DEFAULT_MARGIN, BLOCK_DEFAULT_PADDING } from '@/utils/constants';
+import { BLOCK_DEFAULT_MARGIN, BLOCK_DEFAULT_PADDING, DEFAULT_BORDER_COLOR, BLOCK_DEFAULT_BORDER_RADIUS } from '@/utils/constants';
 import ColorFieldInput from '@/components/shared/ColorFieldInput';
 import SidesInput from '@/components/shared/SidesInput';
 import ImageUploadField from '@/components/shared/ImageUploadField';
@@ -185,7 +185,7 @@ export default function BlockLayoutPanel({ block, isIconBlock }: BlockLayoutPane
           <div className="right-panel-field compact">
             <label className="right-panel-label">圆角</label>
             <InputNumber
-              value={block.style?.borderRadius ?? 6}
+              value={block.style?.borderRadius ?? BLOCK_DEFAULT_BORDER_RADIUS}}
               onChange={(val) => updateBlockStyle(block.id, { borderRadius: val ?? 0 })}
               size="small"
               style={{ width: '100%' }}
@@ -210,7 +210,7 @@ export default function BlockLayoutPanel({ block, isIconBlock }: BlockLayoutPane
             <div className="right-panel-field compact" style={{ flex: 1 }}>
               <label className="right-panel-label">边框色</label>
               <ColorPicker
-                value={block.style?.borderColor || '#e5e7eb'}
+                value={block.style?.borderColor || DEFAULT_BORDER_COLOR}
                 onChange={(_, hex) => updateBlockStyle(block.id, { borderColor: hex })}
                 size="small"
               />

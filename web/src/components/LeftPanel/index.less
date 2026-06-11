@@ -97,28 +97,6 @@
     flex-shrink: 0;
   }
 
-  // ===== 多选操作区 =====
-  &-multi-select-actions {
-    padding: var(--gap-base) var(--gap-lg);
-    background: var(--color-primary-bg);
-    border-bottom: 1px solid var(--color-border-light);
-    display: flex;
-    flex-direction: column;
-    gap: var(--gap-md);
-    flex-shrink: 0;
-  }
-
-  &-selected-count {
-    font-size: var(--font-size-12);
-    color: var(--color-primary);
-    font-weight: 500;
-  }
-
-  &-action-buttons {
-    display: flex;
-    gap: var(--gap-md);
-  }
-
   // ===== 模板列表 =====
   &-templates {
     flex: 1;
@@ -313,8 +291,8 @@
       background: var(--color-distance-light);
 
       &:hover {
-        background: rgba(139, 92, 246, 0.08);
-        border-color: rgba(139, 92, 246, 0.2);
+        background: var(--color-distance-light);
+        border-color: var(--color-distance-light);
       }
     }
 

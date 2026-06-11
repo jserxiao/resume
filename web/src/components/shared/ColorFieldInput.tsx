@@ -1,4 +1,5 @@
 import { Input, ColorPicker } from 'antd';
+import { DEFAULT_PRIMARY_COLOR } from '@/utils/constants';
 
 interface ColorFieldInputProps {
   /** 当前颜色值 */
@@ -32,7 +33,7 @@ export default function ColorFieldInput({
   return (
     <div className={rowClassName} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <ColorPicker
-        value={value || '#1a56db'}
+        value={value || DEFAULT_PRIMARY_COLOR}
         onChange={(_, hex) => onChange(hex)}
         size="small"
         allowClear={allowClear}

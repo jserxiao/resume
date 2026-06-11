@@ -9,9 +9,6 @@ import './index.less';
 export default function RightPanel() {
   const navigate = useNavigate();
 
-  // 暴露 navigate 给 CanvasLayoutPanel 使用（避免在子组件中重复 useNavigate）
-  (window as any).__navigate = navigate;
-
   const {
     resume,
     blockTemplates,
@@ -54,7 +51,7 @@ export default function RightPanel() {
         <MultiSelectPanel selectedBlockIds={selectedBlockIds} selectedBlocks={selectedBlocks} />
       ) : !selectedBlock ? (
         /* 无选中 - 画布设置 */
-        <CanvasLayoutPanel resume={resume} />
+        <CanvasLayoutPanel resume={resume} navigate={navigate} />
       ) : (
         /* 单选模式 - 统一详情面板 */
         <BlockDetailPanel

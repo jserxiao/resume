@@ -8,6 +8,7 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
+import { TEXT_HINT_COLOR } from '@/utils/constants';
 import { exportToPDF, exportToImage, exportToJSON } from '@/utils/export';
 
 export default function ExportMenu() {
@@ -52,7 +53,7 @@ export default function ExportMenu() {
       label: (
         <div>
           <div style={{ fontWeight: 500 }}>导出 PDF</div>
-          <div style={{ fontSize: 11, color: '#999' }}>精确排版，适合投递</div>
+          <div style={{ fontSize: 11, color: TEXT_HINT_COLOR }}>精确排版，适合投递</div>
         </div>
       ),
       onClick: () => handleExport('pdf'),
@@ -63,7 +64,7 @@ export default function ExportMenu() {
       label: (
         <div>
           <div style={{ fontWeight: 500 }}>导出图片</div>
-          <div style={{ fontSize: 11, color: '#999' }}>PNG 格式，适合分享</div>
+          <div style={{ fontSize: 11, color: TEXT_HINT_COLOR }}>PNG 格式，适合分享</div>
         </div>
       ),
       onClick: () => handleExport('png'),
@@ -74,7 +75,7 @@ export default function ExportMenu() {
       label: (
         <div>
           <div style={{ fontWeight: 500 }}>导出 JSON</div>
-          <div style={{ fontSize: 11, color: '#999' }}>结构化数据，可再次导入</div>
+          <div style={{ fontSize: 11, color: TEXT_HINT_COLOR }}>结构化数据，可再次导入</div>
         </div>
       ),
       onClick: () => handleExport('json'),

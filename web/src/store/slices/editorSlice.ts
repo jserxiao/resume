@@ -4,7 +4,8 @@
  */
 import { produce } from 'immer';
 import { v4 as uuid } from 'uuid';
-import type { EditorState, BlockGroup } from '../../types';
+import type { EditorState, BlockGroup, BlockInstance } from '../../types';
+import type { StoreSet, StoreGet, ResumeStoreInternal } from '../types';
 
 // ========== 编辑器初始状态 ==========
 export const INITIAL_EDITOR: EditorState = {
@@ -56,30 +57,30 @@ export interface EditorSlice {
   setSnapToGrid: (snap: boolean) => void;
 
   // 选择器
-  getGroupBlocks: (groupId: string) => any[];
+  getGroupBlocks: (groupId: string) => BlockInstance[];
 }
 
 // ========== Slice 实现 ==========
-export const createEditorSlice = (set: any, get: any): EditorSlice => ({
+export const createEditorSlice = (set: StoreSet, get: StoreGet): EditorSlice => ({
   editor: { ...INITIAL_EDITOR },
 
   // ========== 选择操作 ==========
   selectBlock: (blockId) =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.selectedBlockId = blockId;
       state.editor.selectedBlockIds = blockId ? [blockId] : [];
       state.editor.selectedGroupId = null;
     })),
 
   selectBlocks: (blockIds) =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.selectedBlockIds = blockIds;
       state.editor.selectedBlockId = blockIds.length > 0 ? blockIds[0] : null;
       state.editor.selectedGroupId = null;
     })),
 
   addToSelection: (blockId) =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.editor.selectedBlockIds.includes(blockId)) {
         state.editor.selectedBlockIds.push(blockId);
       }
@@ -87,7 +88,7 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
     })),
 
   removeFromSelection: (blockId) =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.selectedBlockIds = state.editor.selectedBlockIds.filter((id) => id !== blockId);
       if (state.editor.selectedBlockId === blockId) {
         state.editor.selectedBlockId = state.editor.selectedBlockIds.length > 0 ? state.editor.selectedBlockIds[0] : null;
@@ -95,7 +96,7 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
     })),
 
   clearSelection: () =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.selectedBlockId = null;
       state.editor.selectedBlockIds = [];
       state.editor.selectedGroupId = null;
@@ -104,7 +105,7 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
   // ========== 分组操作 ==========
   createGroup: (name) => {
     const groupId = uuid();
-    set(produce<EditorSlice & { resume: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
       const group: BlockGroup = {
         id: groupId,
@@ -121,15 +122,15 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
   },
 
   addBlocksToGroup: (groupId, blockIds) =>
-    set(produce<EditorSlice & { resume: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
-      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      const group = state.resume.groups.find((g) => g.id === groupId);
       if (group) {
         for (const id of blockIds) {
           if (!group.blockIds.includes(id)) {
             group.blockIds.push(id);
           }
-          const block = state.resume.blocks.find((b: any) => b.id === id);
+          const block = state.resume.blocks.find((b) => b.id === id);
           if (block) {
             block.groupId = groupId;
           }
@@ -140,20 +141,20 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
     })),
 
   removeBlocksFromGroup: (groupId, blockIds) =>
-    set(produce<EditorSlice & { resume: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
-      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      const group = state.resume.groups.find((g) => g.id === groupId);
       if (!group) return;
       for (const id of blockIds) {
-        group.blockIds = group.blockIds.filter((bid: string) => bid !== id);
-        const block = state.resume.blocks.find((b: any) => b.id === id);
+        group.blockIds = group.blockIds.filter((bid) => bid !== id);
+        const block = state.resume.blocks.find((b) => b.id === id);
         if (block) {
           block.groupId = undefined;
         }
       }
       // 如果分组为空则自动删除
       if (group.blockIds.length === 0) {
-        state.resume.groups = state.resume.groups.filter((g: BlockGroup) => g.id !== groupId);
+        state.resume.groups = state.resume.groups.filter((g) => g.id !== groupId);
         // 清除分组选中状态
         if (state.editor.selectedGroupId === groupId) {
           state.editor.selectedGroupId = null;
@@ -163,7 +164,7 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
       if (state.editor.selectedGroupId === groupId) {
         // 仍选中分组，但更新 selectedBlockIds（移除已移出的块）
         state.editor.selectedBlockIds = state.editor.selectedBlockIds.filter(
-          (id: string) => !blockIds.includes(id)
+          (id) => !blockIds.includes(id)
         );
         if (state.editor.selectedBlockIds.length === 0) {
           state.editor.selectedBlockId = null;
@@ -176,18 +177,18 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
     })),
 
   removeGroup: (groupId) =>
-    set(produce<EditorSlice & { resume: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
-      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      const group = state.resume.groups.find((g) => g.id === groupId);
       if (group) {
         for (const blockId of group.blockIds) {
-          const block = state.resume.blocks.find((b: any) => b.id === blockId);
+          const block = state.resume.blocks.find((b) => b.id === blockId);
           if (block) {
             block.groupId = undefined;
           }
         }
       }
-      state.resume.groups = state.resume.groups.filter((g: BlockGroup) => g.id !== groupId);
+      state.resume.groups = state.resume.groups.filter((g) => g.id !== groupId);
       // 清除分组选中状态，将选中切换为原分组内的块
       if (state.editor.selectedGroupId === groupId) {
         state.editor.selectedGroupId = null;
@@ -203,9 +204,9 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
     })),
 
   renameGroup: (groupId, name) =>
-    set(produce<EditorSlice & { resume: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
-      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      const group = state.resume.groups.find((g) => g.id === groupId);
       if (group) {
         group.name = name;
         group.updatedAt = Date.now();
@@ -214,9 +215,9 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
     })),
 
   updateGroupRotation: (groupId, rotation) =>
-    set(produce<EditorSlice & { resume: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
-      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      const group = state.resume.groups.find((g) => g.id === groupId);
       if (group) {
         group.rotation = rotation;
         group.updatedAt = Date.now();
@@ -225,12 +226,12 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
     })),
 
   updateGroupPosition: (groupId, dx, dy) =>
-    set(produce<EditorSlice & { resume: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
-      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      const group = state.resume.groups.find((g) => g.id === groupId);
       if (group) {
         for (const blockId of group.blockIds) {
-          const block = state.resume.blocks.find((b: any) => b.id === blockId);
+          const block = state.resume.blocks.find((b) => b.id === blockId);
           if (block) {
             block.x += dx;
             block.y += dy;
@@ -241,10 +242,10 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
     })),
 
   selectGroup: (groupId) =>
-    set(produce<EditorSlice & { resume: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.selectedGroupId = groupId;
       if (groupId) {
-        const group = state.resume?.groups.find((g: BlockGroup) => g.id === groupId);
+        const group = state.resume?.groups.find((g) => g.id === groupId);
         if (group) {
           state.editor.selectedBlockIds = [...group.blockIds];
           state.editor.selectedBlockId = group.blockIds.length > 0 ? group.blockIds[0] : null;
@@ -257,7 +258,7 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
     if (!state.resume || state.editor.selectedBlockIds.length < 2) return null;
     const groupId = state.createGroup(`分组 ${state.resume.groups.length + 1}`);
     state.addBlocksToGroup(groupId, state.editor.selectedBlockIds);
-    set(produce<EditorSlice>((s) => {
+    set(produce<ResumeStoreInternal>((s) => {
       s.editor.selectedGroupId = groupId;
     }));
     return groupId;
@@ -265,37 +266,37 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
 
   // ========== 编辑器 UI 操作 ==========
   toggleFullscreen: () =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.isFullscreen = !state.editor.isFullscreen;
     })),
 
   setLeftPanelWidth: (width) =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.leftPanelWidth = width;
     })),
 
   setRightPanelWidth: (width) =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.rightPanelWidth = width;
     })),
 
   setEditorTheme: (theme) =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.theme = theme;
     })),
 
   setPreviewOpen: (open) =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.previewOpen = open;
     })),
 
   setShowAlignGuides: (show) =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.showAlignGuides = show;
     })),
 
   setSnapToGrid: (snap) =>
-    set(produce<EditorSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.editor.snapToGrid = snap;
     })),
 
@@ -303,8 +304,8 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
   getGroupBlocks: (groupId) => {
     const state = get();
     if (!state.resume) return [];
-    const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+    const group = state.resume.groups.find((g) => g.id === groupId);
     if (!group) return [];
-    return state.resume.blocks.filter((b: any) => group.blockIds.includes(b.id));
+    return state.resume.blocks.filter((b) => group.blockIds.includes(b.id));
   },
 });

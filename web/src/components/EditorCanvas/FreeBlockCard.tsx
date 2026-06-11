@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { CameraOutlined } from '@ant-design/icons';
-import type { BlockInstance, BlockTemplate, ColorScheme } from '@/types';
+import type { BlockInstance, BlockTemplate, ColorScheme, FieldDefinition } from '@/types';
 import { FieldType } from '@/types';
-import { MARGIN_INDICATOR_COLOR, MARGIN_INDICATOR_BORDER_COLOR } from '@/utils/constants';
+import { MARGIN_INDICATOR_COLOR, MARGIN_INDICATOR_BORDER_COLOR, DEFAULT_BORDER_COLOR, BLOCK_DEFAULT_BORDER_RADIUS } from '@/utils/constants';
 import { uploadImage } from '@/utils/imageUpload';
 import { useResumeStore } from '@/store';
-import { useEditableField } from '@/hooks/useEditableField.tsx';
+import { useEditableField } from '@/hooks/useEditableField';
 import DecorationSvgRenderer from '@/components/shared/DecorationSvgRenderer';
 import { renderIconByName } from '@/utils/iconMap';
 import './FreeBlockCard.less';
@@ -26,6 +26,23 @@ interface FreeBlockCardProps {
   onMouseLeave: () => void;
 }
 
+// ===== 字段名称 → 渲染角色分类 =====
+const TITLE_NAMES = new Set(['公司名', '学校', '项目名', '名称']);
+const TIME_NAMES = new Set(['开始时间', '结束时间', '时间']);
+const SUBTITLE_NAMES = new Set(['职位', '学位', '专业', '角色']);
+const HEADER_EXCLUDE_NAMES = new Set(['头像', '姓名', '职位', '一句话简介']);
+
+/**
+ * 构建字段名到字段定义的映射，避免重复的 fields.find() 调用
+ */
+function buildFieldByName(fields: FieldDefinition[]): Map<string, FieldDefinition> {
+  const map = new Map<string, FieldDefinition>();
+  for (const f of fields) {
+    map.set(f.name, f);
+  }
+  return map;
+}
+
 export default function FreeBlockCard({
   block,
   template,
@@ -43,7 +60,7 @@ export default function FreeBlockCard({
 }: FreeBlockCardProps) {
   const isPreview = mode === 'preview';
   const [isHovered, setIsHovered] = useState(false);
-  const { removeBlock, cloneBlock, updateBlockField } = useResumeStore();
+  const { updateBlockField } = useResumeStore();
   const cardRef = useRef<HTMLDivElement>(null);
 
   // 可编辑字段 Hook
@@ -63,6 +80,8 @@ export default function FreeBlockCard({
   if (!template && !isCustomDecorationBlock && !isIconBlock) return null;
 
   const fields = template ? [...template.fields].sort((a, b) => a.order - b.order) : [];
+  const fieldByName = useMemo(() => buildFieldByName(fields), [fields]);
+  const blockFields = block.fields;
   const blockStyle = block.style || {};
   const margin = blockStyle.margin || { top: 0, right: 0, bottom: 0, left: 0 };
   const padding = blockStyle.padding || { top: 0, right: 0, bottom: 0, left: 0 };
@@ -84,24 +103,24 @@ export default function FreeBlockCard({
   // 装饰渲染已抽取到 DecorationSvgRenderer 组件
 
   // 计算块内容区域的背景色
-  // 自定义装饰块始终透明；基础组件默认透明（用户可手动设置覆盖）；组合组件使用主题色块背景
-  const defaultBgColor = isCustomDecorationBlock || isIconBlock ? 'transparent'
-    : isBasicCategory ? 'transparent'
-    : colorScheme.blockBackground;
+  const isTransparentBg = isCustomDecorationBlock || isIconBlock || isBasicCategory;
+  const defaultBgColor = isTransparentBg ? 'transparent' : colorScheme.blockBackground;
   const contentBgColor = blockStyle.backgroundColor || defaultBgColor;
 
   // 外部容器样式：包含外边距的定位区域
   const rotation = block.rotation || 0;
+  const totalWidth = block.width + (margin.left || 0) + (margin.right || 0);
+  const totalHeight = block.height + (margin.top || 0) + (margin.bottom || 0);
   const outerStyle: React.CSSProperties = {
     position: 'absolute',
     left: block.x - (margin.left || 0),
     top: block.y - (margin.top || 0),
-    width: block.width + (margin.left || 0) + (margin.right || 0),
-    height: block.height + (margin.top || 0) + (margin.bottom || 0),
+    width: totalWidth,
+    height: totalHeight,
     zIndex: block.zIndex,
     ...(rotation ? {
       transform: `rotate(${rotation}deg)`,
-      transformOrigin: `${(block.width + (margin.left || 0) + (margin.right || 0)) / 2}px ${(block.height + (margin.top || 0) + (margin.bottom || 0)) / 2}px`,
+      transformOrigin: `${totalWidth / 2}px ${totalHeight / 2}px`,
     } : {}),
   };
 
@@ -114,9 +133,9 @@ export default function FreeBlockCard({
     marginTop: margin.top || 0,
     overflow: 'hidden',
     backgroundColor: contentBgColor,
-    borderRadius: (isCustomDecorationBlock || isIconBlock || isBasicCategory) && blockStyle.borderRadius === undefined ? 0 : (blockStyle.borderRadius ?? 6),
+    borderRadius: isTransparentBg && blockStyle.borderRadius === undefined ? 0 : (blockStyle.borderRadius ?? BLOCK_DEFAULT_BORDER_RADIUS),
     opacity: blockStyle.opacity ?? 1,
-    border: (isCustomDecorationBlock || isIconBlock || isBasicCategory) && !blockStyle.borderWidth ? 'none' : (blockStyle.borderWidth ? `${blockStyle.borderWidth}px ${blockStyle.borderStyle || 'solid'} ${blockStyle.borderColor || '#e5e7eb'}` : undefined),
+    border: isTransparentBg && !blockStyle.borderWidth ? 'none' : (blockStyle.borderWidth ? `${blockStyle.borderWidth}px ${blockStyle.borderStyle || 'solid'} ${blockStyle.borderColor || DEFAULT_BORDER_COLOR}` : undefined),
     ...(blockStyle.backgroundImage ? {
       backgroundImage: `url(${blockStyle.backgroundImage})`,
       backgroundSize: blockStyle.backgroundSize || 'cover',
@@ -131,6 +150,226 @@ export default function FreeBlockCard({
     height: '100%',
     overflow: 'hidden',
     position: 'relative',
+  };
+
+  // ===== 辅助渲染函数 =====
+
+  /** 按字段名查找并渲染可编辑字段 */
+  const renderFieldByName = (name: string): React.ReactNode => {
+    const field = fieldByName.get(name);
+    if (!field) return null;
+    return renderEditableField(field, blockFields[field.id]);
+  };
+
+  /** 按字段名获取值 */
+  const getFieldValue = (name: string): string | undefined => {
+    const field = fieldByName.get(name);
+    return field ? blockFields[field.id] : undefined;
+  };
+
+  /** 按字段名获取字段定义 */
+  const getField = (name: string): FieldDefinition | undefined => fieldByName.get(name);
+
+  /** 渲染头像区域（头部信息和基本信息共用） */
+  const renderAvatar = (
+    imageFieldName: string,
+    nameFieldName: string,
+    avatarClassName: string,
+    placeholderClassName: string,
+    onImageClick?: (fieldId: string) => void,
+  ) => {
+    const imageField = getField(imageFieldName);
+    const nameField = getField(nameFieldName);
+    if (!imageField) return null;
+
+    const imageValue = blockFields[imageField.id];
+    const nameValue = nameField ? blockFields[nameField.id] : '';
+
+    return (
+      <div
+        className={avatarClassName}
+        onClick={onImageClick ? (e) => { if (isPreview) return; e.stopPropagation(); onImageClick(imageField.id); } : undefined}
+      >
+        {imageValue ? (
+          <img src={imageValue} alt="头像" />
+        ) : (
+          <div className={placeholderClassName}>
+            {nameValue?.[0] || <CameraOutlined style={{ fontSize: 18 }} />}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ===== 模板渲染函数 =====
+
+  /** 头部信息块渲染 */
+  const renderHeaderInfo = () => (
+    <div className="free-block-header-info">
+      {renderAvatar('头像', '姓名', 'free-block-header-avatar', 'free-block-header-avatar-placeholder', handleAvatarUpload)}
+      <div className="free-block-header-info-main">
+        {getField('姓名') && (
+          <div className="free-block-header-name">{renderFieldByName('姓名')}</div>
+        )}
+        {getField('职位') && (
+          <div className="free-block-header-title">{renderFieldByName('职位')}</div>
+        )}
+        {getField('一句话简介') && (
+          <div className="free-block-header-bio">{renderFieldByName('一句话简介')}</div>
+        )}
+        <div className="free-block-header-contacts">
+          {fields
+            .filter((f) => !HEADER_EXCLUDE_NAMES.has(f.name))
+            .map((field) => {
+              const value = blockFields[field.id];
+              if (!value || value.trim() === '') return null;
+              return (
+                <span key={field.id} className="free-block-header-contact-item">
+                  {renderEditableField(field, value)}
+                </span>
+              );
+            })}
+        </div>
+      </div>
+    </div>
+  );
+
+  /** 基本信息块渲染 */
+  const renderBasicInfo = () => (
+    <div className="free-block-basic-info">
+      {fields.find((f) => f.type === FieldType.Image) && (
+        renderAvatar(
+          fields.find((f) => f.type === FieldType.Image)!.name,
+          '姓名',
+          'free-block-avatar',
+          'free-block-avatar-placeholder',
+        )
+      )}
+      <div className="free-block-basic-info-content">
+        {getField('姓名') && (
+          <div className="free-block-name-field">{renderFieldByName('姓名')}</div>
+        )}
+        <div className="free-block-contact-list">
+          {fields
+            .filter((f) => f.name !== '姓名' && f.type !== FieldType.Image)
+            .map((field) => {
+              const value = blockFields[field.id];
+              if (!value || value.trim() === '') return null;
+              return (
+                <span key={field.id} className="free-block-contact-item">
+                  <span className="free-block-contact-label">{field.name}:</span>{' '}
+                  {renderEditableField(field, value)}
+                </span>
+              );
+            })}
+        </div>
+      </div>
+    </div>
+  );
+
+  /** 技能块渲染 */
+  const renderSkills = () => (
+    <div className="free-block-skills">
+      {fields.map((field) => (
+        <div key={field.id} className="free-block-skill-item">
+          <span className="free-block-skill-name">
+            {renderEditableField(field, blockFields[field.id])}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+
+  /** 基础组件渲染（不显示字段标签） */
+  const renderBasicContent = () => (
+    <div className="free-block-basic-content">
+      {fields.map((field) => (
+        <div key={field.id} className="free-block-basic-field">
+          {renderEditableField(field, blockFields[field.id])}
+        </div>
+      ))}
+    </div>
+  );
+
+  /** 图标块渲染 */
+  const renderIconBlock = () => {
+    const iconColor = blockFields['icon-color'] || colorScheme.primary;
+    const iconFontSize = Number(blockFields['icon-font-size']) || Math.min(block.width, block.height);
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        height: '100%',
+        color: iconColor,
+      }}>
+        {renderIconByName(blockFields['icon-name'] || 'StarOutlined', {
+          style: { fontSize: iconFontSize, color: iconColor },
+        })}
+      </div>
+    );
+  };
+
+  /** 组合组件渲染（带字段标签） */
+  const renderCompositeFields = () => {
+    const endTimeField = getField('结束时间');
+    return (
+      <div className="free-block-fields">
+        {fields.map((field) => {
+          const value = blockFields[field.id];
+
+          if (TITLE_NAMES.has(field.name)) {
+            return (
+              <div key={field.id} className="free-block-field-title-row">
+                {renderEditableField(field, value)}
+              </div>
+            );
+          }
+
+          if (TIME_NAMES.has(field.name)) {
+            return (
+              <span key={field.id} className="free-block-field-time">
+                {renderEditableField(field, value)}
+                {field.name === '开始时间' && endTimeField && blockFields[endTimeField.id] ? ' - ' : ''}
+              </span>
+            );
+          }
+
+          if (SUBTITLE_NAMES.has(field.name)) {
+            return (
+              <div key={field.id} className="free-block-field-subtitle">
+                {renderEditableField(field, value)}
+              </div>
+            );
+          }
+
+          if (field.name === '是否至今' && value === 'true') {
+            return <span key={field.id} className="free-block-field-time">至今</span>;
+          }
+
+          return (
+            <div key={field.id} className="free-block-field-row">
+              <span className="free-block-field-label">{field.name}</span>
+              <div className="free-block-field-value">
+                {renderEditableField(field, value)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  /** 根据模板类型选择对应的渲染函数 */
+  const renderBlockContent = () => {
+    if (isCustomDecorationBlock) return null;
+    if (isIconBlock) return renderIconBlock();
+    if (isHeaderInfo) return renderHeaderInfo();
+    if (isBasicInfo) return renderBasicInfo();
+    if (isSkills) return renderSkills();
+    if (isBasicCategory) return renderBasicContent();
+    return renderCompositeFields();
   };
 
   return (
@@ -168,7 +407,7 @@ export default function FreeBlockCard({
             position: 'absolute',
             inset: 0,
             backgroundColor: MARGIN_INDICATOR_COLOR,
-            borderRadius: blockStyle.borderRadius ?? 6,
+            borderRadius: blockStyle.borderRadius ?? BLOCK_DEFAULT_BORDER_RADIUS,
             border: `1px dashed ${MARGIN_INDICATOR_BORDER_COLOR}`,
             pointerEvents: 'none',
           }}
@@ -193,188 +432,7 @@ export default function FreeBlockCard({
 
         {/* 块内容（含内边距） */}
         <div style={contentPaddingStyle}>
-          {isCustomDecorationBlock ? (
-            // 自定义装饰块：不渲染字段内容，装饰 SVG 已在 renderDecorations 中渲染
-            null
-          ) : isIconBlock ? (
-            // 图标块：渲染 antd 图标，颜色和字体大小可自定义
-            (() => {
-              const iconColor = block.fields['icon-color'] || colorScheme.primary;
-              const iconFontSize = Number(block.fields['icon-font-size']) || Math.min(block.width, block.height);
-              return (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  height: '100%',
-                  color: iconColor,
-                }}>
-                  {renderIconByName(block.fields['icon-name'] || 'StarOutlined', {
-                    style: { fontSize: iconFontSize, color: iconColor },
-                  })}
-                </div>
-              );
-            })()
-          ) : isHeaderInfo ? (
-            <div className="free-block-header-info">
-              {fields.find((f) => f.name === '头像') && (
-                <div
-                  className="free-block-header-avatar"
-                  onClick={(e) => {
-                    if (isPreview) return;
-                    e.stopPropagation();
-                    handleAvatarUpload(fields.find((f) => f.name === '头像')!.id);
-                  }}
-                >
-                  {block.fields[fields.find((f) => f.name === '头像')!.id] ? (
-                    <img src={block.fields[fields.find((f) => f.name === '头像')!.id]} alt="头像" />
-                  ) : (
-                    <div className="free-block-header-avatar-placeholder">
-                      {block.fields[fields.find((f) => f.name === '姓名')?.id || '']?.[0] || <CameraOutlined style={{ fontSize: 18 }} />}
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="free-block-header-info-main">
-                {fields.find((f) => f.name === '姓名') && (
-                  <div className="free-block-header-name">
-                    {renderEditableField(fields.find((f) => f.name === '姓名')!, block.fields[fields.find((f) => f.name === '姓名')!.id])}
-                  </div>
-                )}
-                {fields.find((f) => f.name === '职位') && (
-                  <div className="free-block-header-title">
-                    {renderEditableField(fields.find((f) => f.name === '职位')!, block.fields[fields.find((f) => f.name === '职位')!.id])}
-                  </div>
-                )}
-                {fields.find((f) => f.name === '一句话简介') && (
-                  <div className="free-block-header-bio">
-                    {renderEditableField(fields.find((f) => f.name === '一句话简介')!, block.fields[fields.find((f) => f.name === '一句话简介')!.id])}
-                  </div>
-                )}
-                <div className="free-block-header-contacts">
-                  {fields
-                    .filter((f) => !['头像', '姓名', '职位', '一句话简介'].includes(f.name))
-                    .map((field) => {
-                      const value = block.fields[field.id];
-                      if (!value || value.trim() === '') return null;
-                      return (
-                        <span key={field.id} className="free-block-header-contact-item">
-                          {renderEditableField(field, value)}
-                        </span>
-                      );
-                    })}
-                </div>
-              </div>
-            </div>
-          ) : isBasicInfo ? (
-            <div className="free-block-basic-info">
-              {fields.find((f) => f.type === FieldType.Image) && (
-                <div className="free-block-avatar">
-                  {block.fields[fields.find((f) => f.type === FieldType.Image)!.id] ? (
-                    <img src={block.fields[fields.find((f) => f.type === FieldType.Image)!.id]} alt="头像" />
-                  ) : (
-                    <div className="free-block-avatar-placeholder">
-                      {block.fields[fields.find((f) => f.name === '姓名')?.id || '']?.[0] || '?'}
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="free-block-basic-info-content">
-                {fields.find((f) => f.name === '姓名') && (
-                  <div className="free-block-name-field">
-                    {renderEditableField(fields.find((f) => f.name === '姓名')!, block.fields[fields.find((f) => f.name === '姓名')!.id])}
-                  </div>
-                )}
-                <div className="free-block-contact-list">
-                  {fields
-                    .filter((f) => f.name !== '姓名' && f.name !== '头像')
-                    .map((field) => {
-                      const value = block.fields[field.id];
-                      if (!value || value.trim() === '') return null;
-                      return (
-                        <span key={field.id} className="free-block-contact-item">
-                          <span className="free-block-contact-label">{field.name}:</span>{' '}
-                          {renderEditableField(field, value)}
-                        </span>
-                      );
-                    })}
-                </div>
-              </div>
-            </div>
-          ) : isSkills ? (
-            <div className="free-block-skills">
-              {fields.map((field) => {
-                const value = block.fields[field.id];
-                return (
-                  <div key={field.id} className="free-block-skill-item">
-                    <span className="free-block-skill-name">
-                      {renderEditableField(field, value)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : isBasicCategory ? (
-            /* 基础组件：直接渲染内容，不显示字段标签 */
-            <div className="free-block-basic-content">
-              {fields.map((field) => {
-                const value = block.fields[field.id];
-                return (
-                  <div key={field.id} className="free-block-basic-field">
-                    {renderEditableField(field, value)}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="free-block-fields">
-              {fields.map((field) => {
-                const value = block.fields[field.id];
-                const isTitleField = ['公司名', '学校', '项目名', '名称'].includes(field.name);
-                const isTimeField = ['开始时间', '结束时间', '时间'].includes(field.name);
-                const isSubtitleField = ['职位', '学位', '专业', '角色'].includes(field.name);
-
-                if (isTitleField) {
-                  return (
-                    <div key={field.id} className="free-block-field-title-row">
-                      {renderEditableField(field, value)}
-                    </div>
-                  );
-                }
-
-                if (isTimeField) {
-                  return (
-                    <span key={field.id} className="free-block-field-time">
-                      {renderEditableField(field, value)}
-                      {field.name === '开始时间' && block.fields[fields.find(f => f.name === '结束时间')?.id || ''] ? ' - ' : ''}
-                    </span>
-                  );
-                }
-
-                if (isSubtitleField) {
-                  return (
-                    <div key={field.id} className="free-block-field-subtitle">
-                      {renderEditableField(field, value)}
-                    </div>
-                  );
-                }
-
-                if (field.name === '是否至今' && value === 'true') {
-                  return <span key={field.id} className="free-block-field-time">至今</span>;
-                }
-
-                return (
-                  <div key={field.id} className="free-block-field-row">
-                    <span className="free-block-field-label">{field.name}</span>
-                    <div className="free-block-field-value">
-                      {renderEditableField(field, value)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {renderBlockContent()}
         </div>
 
         {/* 调整大小手柄 - 选中时显示 */}

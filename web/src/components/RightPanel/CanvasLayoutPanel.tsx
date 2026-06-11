@@ -9,13 +9,14 @@ import ImageUploadField from '@/components/shared/ImageUploadField';
 
 interface CanvasLayoutPanelProps {
   resume: Resume;
+  navigate: (path: string) => void;
 }
 
 /**
  * 画布布局设置面板
  * 包含：画布尺寸、页面规格预设、内边距、背景颜色、背景图片、重置
  */
-export default function CanvasLayoutPanel({ resume }: CanvasLayoutPanelProps) {
+export default function CanvasLayoutPanel({ resume, navigate }: CanvasLayoutPanelProps) {
   const { setCanvasConfig } = useResumeStore();
 
   return (
@@ -92,9 +93,9 @@ export default function CanvasLayoutPanel({ resume }: CanvasLayoutPanelProps) {
       <div className="right-panel-field">
         <label className="right-panel-label">背景颜色</label>
         <ColorFieldInput
-          value={resume.canvas.background || '#ffffff'}
+          value={resume.canvas.background || CANVAS_DEFAULT_BACKGROUND}
           onChange={(hex) => setCanvasConfig({ background: hex })}
-          placeholder="#ffffff"
+          placeholder={CANVAS_DEFAULT_BACKGROUND}
         />
       </div>
 
@@ -129,16 +130,13 @@ export default function CanvasLayoutPanel({ resume }: CanvasLayoutPanelProps) {
 
       {/* 自定义装饰元素 */}
       <div className="right-panel-section-title"><StarOutlined /> 自定义装饰</div>
-      <CanvasCustomDecorationSection />
+      <CanvasCustomDecorationSection navigate={navigate} />
     </div>
   );
 }
 
 /** 画布设置面板中的自定义装饰区域 */
-function CanvasCustomDecorationSection() {
-  const navigate = (window as any).__navigate || (() => {});
-  // 使用 useNavigate 需要在组件内调用，这里改用 store 中的 navigate 引用
-  // 由于 RightPanel 已经有 navigate，这里直接引用
+function CanvasCustomDecorationSection({ navigate }: { navigate: (path: string) => void }) {
   const { customDecorations, removeCustomDecoration } = useResumeStore();
 
   return (
@@ -146,12 +144,7 @@ function CanvasCustomDecorationSection() {
       <Button
         size="small"
         icon={<PlusOutlined />}
-        onClick={() => {
-          // navigate 需要通过 Router context 获取，这里通过 window 临时传递
-          if ((window as any).__navigate) {
-            (window as any).__navigate('/decoration-editor');
-          }
-        }}
+        onClick={() => navigate('/decoration-editor')}
         style={{ width: '100%' }}
       >
         创建自定义装饰
@@ -193,11 +186,7 @@ function CanvasCustomDecorationSection() {
                 type="text"
                 size="small"
                 icon={<EditOutlined />}
-                onClick={() => {
-                  if ((window as any).__navigate) {
-                    (window as any).__navigate(`/decoration-editor?id=${d.id}`);
-                  }
-                }}
+                onClick={() => navigate(`/decoration-editor?id=${d.id}`)}
               />
               <Button
                 type="text"

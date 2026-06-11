@@ -10,6 +10,7 @@ import type {
   CanvasConfig,
   CustomDecorationDefinition,
 } from '../../types';
+import type { StoreSet, StoreGet, ResumeStoreInternal } from '../types';
 import {
   CANVAS_DEFAULT_WIDTH,
   CANVAS_DEFAULT_HEIGHT,
@@ -57,13 +58,13 @@ export interface ResumeSlice {
 }
 
 // ========== Slice 实现 ==========
-export const createResumeSlice = (set: any, _get: any): ResumeSlice => ({
+export const createResumeSlice = (set: StoreSet, _get: StoreGet): ResumeSlice => ({
   resume: null,
   customColorSchemes: [],
   customDecorations: [],
 
   initResume: (title, colorScheme) =>
-    set(produce<ResumeSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       const resumeId = uuid();
       state.resume = {
         id: resumeId,
@@ -82,26 +83,26 @@ export const createResumeSlice = (set: any, _get: any): ResumeSlice => ({
     })),
 
   clearResume: () =>
-    set(produce<ResumeSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.resume = null;
     })),
 
   setResumeTitle: (title) =>
-    set(produce<ResumeSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
       state.resume.title = title;
       state.resume.updatedAt = Date.now();
     })),
 
   setColorScheme: (scheme) =>
-    set(produce<ResumeSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
       state.resume.colorScheme = scheme;
       state.resume.updatedAt = Date.now();
     })),
 
   setCanvasConfig: (config) =>
-    set(produce<ResumeSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
       for (const [key, value] of Object.entries(config)) {
         if (value === undefined) {
@@ -114,13 +115,13 @@ export const createResumeSlice = (set: any, _get: any): ResumeSlice => ({
     })),
 
   markSaved: () =>
-    set(produce<ResumeSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
       state.resume.lastSavedAt = Date.now();
     })),
 
   importFromJSON: (json) =>
-    set(produce<ResumeSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       try {
         const resume = restoreFromJSON(json);
         state.resume = resume;
@@ -130,17 +131,17 @@ export const createResumeSlice = (set: any, _get: any): ResumeSlice => ({
     })),
 
   addCustomColorScheme: (scheme) =>
-    set(produce<ResumeSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.customColorSchemes.push(scheme);
     })),
 
   removeCustomColorScheme: (schemeId) =>
-    set(produce<ResumeSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.customColorSchemes = state.customColorSchemes.filter((s) => s.id !== schemeId);
     })),
 
   saveCustomDecoration: (decoration) =>
-    set(produce<ResumeSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       const idx = state.customDecorations.findIndex((d) => d.id === decoration.id);
       if (idx !== -1) {
         state.customDecorations[idx] = { ...decoration, updatedAt: Date.now() };
@@ -150,7 +151,7 @@ export const createResumeSlice = (set: any, _get: any): ResumeSlice => ({
     })),
 
   removeCustomDecoration: (decorationId) =>
-    set(produce<ResumeSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.customDecorations = state.customDecorations.filter((d) => d.id !== decorationId);
     })),
 });

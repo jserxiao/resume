@@ -13,9 +13,10 @@ import type {
   CustomDecorationDefinition,
 } from '../../types';
 import { getNextZIndex } from '../../utils/block';
-import { getDefaultBlockWidth, getDefaultBlockHeight } from '../../utils/constants';
+import { getDefaultBlockWidth, getDefaultBlockHeight, DEFAULT_PRIMARY_COLOR } from '../../utils/constants';
 import { buildDecoPathD, getDecoPathBounds } from '../../utils/geometry';
 import { presetBlockTemplates } from '../../utils/presets';
+import type { StoreSet, StoreGet, ResumeStoreInternal } from '../types';
 
 // ========== Slice 类型 ==========
 export interface BlockSlice {
@@ -61,17 +62,34 @@ export interface BlockSlice {
   getBlockTemplate: (templateId: string) => BlockTemplate | undefined;
 }
 
-// ========== 内部辅助：获取 resume 引用 ==========
-// 由于 produce 中 state 跨 slice 共享，直接访问 state.resume
-// 需要在 produce 回调中通过完整的 store state 访问
+// ========== 辅助函数 ==========
+
+/** 在 produce 回调中查找块 */
+function findBlock(state: ResumeStoreInternal, blockId: string): BlockInstance | undefined {
+  return state.resume?.blocks.find((b) => b.id === blockId);
+}
+
+/** 块更新模板 - 通用逻辑：查找块、执行更新、标记时间戳 */
+function withBlockUpdate(
+  state: ResumeStoreInternal,
+  blockId: string,
+  updater: (block: BlockInstance) => void,
+): boolean {
+  if (!state.resume) return false;
+  const block = findBlock(state, blockId);
+  if (!block) return false;
+  updater(block);
+  state.resume.updatedAt = Date.now();
+  return true;
+}
 
 // ========== Slice 实现 ==========
-export const createBlockSlice = (set: any, get: any): BlockSlice => ({
+export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
   blockTemplates: [...presetBlockTemplates],
   customElementTemplates: [],
 
   addBlock: (templateId, x, y, width, height) =>
-    set(produce<BlockSlice & { resume: any; editor: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
       const template = state.blockTemplates.find((t) => t.id === templateId);
       if (!template) return;
@@ -113,7 +131,7 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
     })),
 
   addBlockFromCustomTemplate: (templateId, x, y) =>
-    set(produce<BlockSlice & { resume: any; editor: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
       const template = state.customElementTemplates.find((t) => t.id === templateId);
       if (!template) return;
@@ -165,7 +183,7 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
     })),
 
   addBlockFromCustomDecoration: (decorationId, x, y) =>
-    set(produce<BlockSlice & { resume: any; editor: any; customDecorations: CustomDecorationDefinition[] }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
       const decoration = state.customDecorations.find((d) => d.id === decorationId);
       if (!decoration) return;
@@ -209,8 +227,8 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
           width: defaultWidth,
           height: defaultHeight,
           rotation: 0,
-          color: decoration.paths[0]?.fillColor || '#1a56db',
-          strokeColor: decoration.paths[0]?.strokeColor || '#1a56db',
+          color: decoration.paths[0]?.fillColor || DEFAULT_PRIMARY_COLOR,
+          strokeColor: decoration.paths[0]?.strokeColor || DEFAULT_PRIMARY_COLOR,
           strokeWidth: decoration.paths[0]?.strokeWidth ?? 2,
           opacity: 1,
           zIndex: 1,
@@ -239,7 +257,7 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
     })),
 
   addBlockFromIcon: (iconName, x, y) =>
-    set(produce<BlockSlice & { resume: any; editor: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
       // 默认图标字号 24px，块宽高比图标稍大一点（留适当内距）
       const iconFontSize = 24;
@@ -276,10 +294,10 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
     })),
 
   removeBlock: (blockId) =>
-    set(produce<BlockSlice & { resume: any; editor: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      state.resume.blocks = state.resume.blocks.filter((b: BlockInstance) => b.id !== blockId);
+      const block = findBlock(state, blockId);
+      state.resume.blocks = state.resume.blocks.filter((b) => b.id !== blockId);
       state.resume.updatedAt = Date.now();
       if (state.editor.selectedBlockId === blockId) {
         state.editor.selectedBlockId = null;
@@ -287,11 +305,11 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
       state.editor.selectedBlockIds = state.editor.selectedBlockIds.filter((id: string) => id !== blockId);
 
       if (block?.groupId) {
-        const group = state.resume.groups.find((g: any) => g.id === block.groupId);
+        const group = state.resume.groups.find((g) => g.id === block.groupId);
         if (group) {
-          group.blockIds = group.blockIds.filter((id: string) => id !== blockId);
+          group.blockIds = group.blockIds.filter((id) => id !== blockId);
           if (group.blockIds.length === 0) {
-            state.resume.groups = state.resume.groups.filter((g: any) => g.id !== block.groupId);
+            state.resume.groups = state.resume.groups.filter((g) => g.id !== block.groupId);
             if (state.editor.selectedGroupId === block.groupId) {
               state.editor.selectedGroupId = null;
             }
@@ -301,31 +319,31 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
     })),
 
   removeBlocks: (blockIds) =>
-    set(produce<BlockSlice & { resume: any; editor: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
       const blockIdSet = new Set(blockIds);
 
       const affectedGroupIds = new Set<string>();
       for (const bId of blockIds) {
-        const b = state.resume.blocks.find((bl: BlockInstance) => bl.id === bId);
+        const b = state.resume.blocks.find((bl) => bl.id === bId);
         if (b?.groupId) {
           affectedGroupIds.add(b.groupId);
         }
       }
 
-      state.resume.blocks = state.resume.blocks.filter((b: BlockInstance) => !blockIdSet.has(b.id));
+      state.resume.blocks = state.resume.blocks.filter((b) => !blockIdSet.has(b.id));
       state.resume.updatedAt = Date.now();
       if (blockIdSet.has(state.editor.selectedBlockId || '')) {
         state.editor.selectedBlockId = null;
       }
-      state.editor.selectedBlockIds = state.editor.selectedBlockIds.filter((id: string) => !blockIdSet.has(id));
+      state.editor.selectedBlockIds = state.editor.selectedBlockIds.filter((id) => !blockIdSet.has(id));
 
       for (const gId of affectedGroupIds) {
-        const group = state.resume.groups.find((g: any) => g.id === gId);
+        const group = state.resume.groups.find((g) => g.id === gId);
         if (group) {
-          group.blockIds = group.blockIds.filter((id: string) => !blockIdSet.has(id));
+          group.blockIds = group.blockIds.filter((id) => !blockIdSet.has(id));
           if (group.blockIds.length === 0) {
-            state.resume.groups = state.resume.groups.filter((g: any) => g.id !== gId);
+            state.resume.groups = state.resume.groups.filter((g) => g.id !== gId);
             if (state.editor.selectedGroupId === gId) {
               state.editor.selectedGroupId = null;
             }
@@ -335,9 +353,9 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
     })),
 
   cloneBlock: (blockId) =>
-    set(produce<BlockSlice & { resume: any; editor: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
-      const source = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
+      const source = findBlock(state, blockId);
       if (!source) return;
 
       const cloned: BlockInstance = {
@@ -356,116 +374,86 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
     })),
 
   updateBlockField: (blockId, fieldId, value) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
         block.fields[fieldId] = value;
-        state.resume.updatedAt = Date.now();
-      }
+      });
     })),
 
   updateBlockPosition: (blockId, x, y) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
         block.x = x;
         block.y = y;
-        state.resume.updatedAt = Date.now();
-      }
+      });
     })),
 
   updateBlockSize: (blockId, width, height) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
         block.width = width;
         block.height = height;
-        state.resume.updatedAt = Date.now();
-      }
+      });
     })),
 
   updateBlockZIndex: (blockId, zIndex) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
         block.zIndex = zIndex;
-        state.resume.updatedAt = Date.now();
-      }
+      });
     })),
 
   toggleBlockVisibility: (blockId) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
         block.visible = !block.visible;
-        state.resume.updatedAt = Date.now();
-      }
+      });
     })),
 
   toggleBlockLock: (blockId) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
         block.locked = !block.locked;
-        state.resume.updatedAt = Date.now();
-      }
+      });
     })),
 
   setBlockColorTag: (blockId, color) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
         block.colorTag = color;
-        state.resume.updatedAt = Date.now();
-      }
+      });
     })),
 
   renameBlock: (blockId, name) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
         block.name = name;
-        state.resume.updatedAt = Date.now();
-      }
+      });
     })),
 
   updateBlockStyle: (blockId, style) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
         block.style = { ...block.style, ...style };
-        state.resume.updatedAt = Date.now();
-      }
+      });
     })),
 
   updateBlockRotation: (blockId, rotation) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
         block.rotation = rotation;
-        state.resume.updatedAt = Date.now();
-      }
+      });
     })),
 
   moveBlockZIndex: (blockId, direction) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
+      const block = findBlock(state, blockId);
       if (!block) return;
 
       const siblings = block.groupId
-        ? state.resume.blocks.filter((b: BlockInstance) => b.groupId === block.groupId && b.visible)
-        : state.resume.blocks.filter((b: BlockInstance) => !b.groupId && b.visible);
+        ? state.resume.blocks.filter((b) => b.groupId === block.groupId && b.visible)
+        : state.resume.blocks.filter((b) => !b.groupId && b.visible);
 
       if (siblings.length <= 1) return;
 
@@ -479,7 +467,7 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
           if (currentIdx < sortedSiblings.length - 1) {
             const above = sortedSiblings[currentIdx + 1];
             const tempZ = block.zIndex;
-            const aboveBlock = state.resume.blocks.find((b: BlockInstance) => b.id === above.id);
+            const aboveBlock = findBlock(state, above.id);
             if (aboveBlock) {
               block.zIndex = aboveBlock.zIndex;
               aboveBlock.zIndex = tempZ;
@@ -491,7 +479,7 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
           if (currentIdx > 0) {
             const below = sortedSiblings[currentIdx - 1];
             const tempZ = block.zIndex;
-            const belowBlock = state.resume.blocks.find((b: BlockInstance) => b.id === below.id);
+            const belowBlock = findBlock(state, below.id);
             if (belowBlock) {
               block.zIndex = belowBlock.zIndex;
               belowBlock.zIndex = tempZ;
@@ -514,42 +502,33 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
     })),
 
   addDecoration: (blockId, decoration) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
         block.decorations.push({ ...decoration, id: uuid() });
-        state.resume.updatedAt = Date.now();
-      }
+      });
     })),
 
   removeDecoration: (blockId, decorationId) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
-        block.decorations = block.decorations.filter((d: DecorationElement) => d.id !== decorationId);
-        state.resume.updatedAt = Date.now();
-      }
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
+        block.decorations = block.decorations.filter((d) => d.id !== decorationId);
+      });
     })),
 
   updateDecoration: (blockId, decorationId, updates) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
-      if (!state.resume) return;
-      const block = state.resume.blocks.find((b: BlockInstance) => b.id === blockId);
-      if (block) {
-        const deco = block.decorations.find((d: DecorationElement) => d.id === decorationId);
+    set(produce<ResumeStoreInternal>((state) => {
+      withBlockUpdate(state, blockId, (block) => {
+        const deco = block.decorations.find((d) => d.id === decorationId);
         if (deco) {
           Object.assign(deco, updates);
-          state.resume.updatedAt = Date.now();
         }
-      }
+      });
     })),
 
   saveAsCustomTemplate: (name, blockIds) =>
-    set(produce<BlockSlice & { resume: any }>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
-      const blocks: BlockInstance[] = state.resume.blocks.filter((b: BlockInstance) => blockIds.includes(b.id));
+      const blocks = state.resume.blocks.filter((b) => blockIds.includes(b.id));
       if (blocks.length === 0) return;
 
       const minX = Math.min(...blocks.map((b) => b.x));
@@ -581,12 +560,12 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
     })),
 
   removeCustomTemplate: (templateId) =>
-    set(produce<BlockSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.customElementTemplates = state.customElementTemplates.filter((t) => t.id !== templateId);
     })),
 
   updateBlockTemplate: (templateId, updates) =>
-    set(produce<BlockSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       const idx = state.blockTemplates.findIndex((t) => t.id === templateId);
       if (idx !== -1) {
         state.blockTemplates[idx] = { ...state.blockTemplates[idx], ...updates, updatedAt: Date.now() };
@@ -594,17 +573,17 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
     })),
 
   removeBlockTemplate: (templateId) =>
-    set(produce<BlockSlice>((state) => {
+    set(produce<ResumeStoreInternal>((state) => {
       state.blockTemplates = state.blockTemplates.filter((t) => t.id !== templateId);
     })),
 
   getSelectedBlock: () => {
     const state = get();
     if (!state.resume) return undefined;
-    return state.resume.blocks.find((b: BlockInstance) => b.id === state.editor.selectedBlockId);
+    return state.resume.blocks.find((b) => b.id === state.editor.selectedBlockId);
   },
 
   getBlockTemplate: (templateId) => {
-    return get().blockTemplates.find((t: BlockTemplate) => t.id === templateId);
+    return get().blockTemplates.find((t) => t.id === templateId);
   },
 });

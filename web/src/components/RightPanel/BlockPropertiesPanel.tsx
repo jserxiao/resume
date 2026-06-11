@@ -1,6 +1,7 @@
 import { Input, InputNumber, Slider, Divider, Progress, Button, App } from 'antd';
 import { RotateRightOutlined, CameraOutlined, CloseOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
+import { COMPLETE_COLOR, TEXT_SECONDARY_COLOR } from '@/utils/constants';
 import { FieldType } from '@/types';
 import type { BlockInstance, BlockTemplate } from '@/types';
 import RichTextField from './RichTextField';
@@ -135,7 +136,7 @@ export default function BlockPropertiesPanel({ block, template }: BlockPropertie
               percent={percent}
               size="small"
               format={() => `${filled}/${total} 已填写`}
-              strokeColor={percent === 100 ? '#22c55e' : undefined}
+              strokeColor={percent === 100 ? COMPLETE_COLOR : undefined}
             />
           );
         })()}
@@ -254,7 +255,7 @@ export default function BlockPropertiesPanel({ block, template }: BlockPropertie
                         }
                         disabled={isLocked}
                       />
-                      <span style={{ fontSize: 12, color: '#666' }}>{value === 'true' ? '是' : '否'}</span>
+                      <span style={{ fontSize: 12, color: TEXT_SECONDARY_COLOR }}>{value === 'true' ? '是' : '否'}</span>
                     </label>
                   </div>
                 ) : field.type === FieldType.Rating ? (

@@ -99,5 +99,23 @@ export const DECO_CLOSE_THRESHOLD = 12;
 /** 路径颜色标识 - 用于区分不同路径 */
 export const PATH_COLORS = ['#1a56db', '#c026d3', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
+// ========== 默认颜色值 ==========
+/** 默认主色（与 CSS --color-primary 一致） */
+export const DEFAULT_PRIMARY_COLOR = '#1a56db';
+/** 默认边框颜色（与 CSS --color-border 一致） */
+export const DEFAULT_BORDER_COLOR = '#e5e7eb';
+/** 完成状态色（与 CSS --color-success 一致） */
+export const COMPLETE_COLOR = '#22c55e';
+/** 分组色（与 CSS --color-warning 一致） */
+export const GROUP_COLOR = '#f59e0b';
+/** 默认画布背景色（与 CSS --color-border 一致，用于预览抽屉背景） */
+export const PREVIEW_BG_COLOR = '#e5e7eb';
+/** 辅助文字色 */
+export const TEXT_SECONDARY_COLOR = '#666';
+/** 占位/提示文字色 */
+export const TEXT_HINT_COLOR = '#999';
+/** 块默认圆角(px) */
+export const BLOCK_DEFAULT_BORDER_RADIUS = 6;
+
 // ========== 版本号 ==========
 export const CURRENT_DATA_VERSION = 4;

@@ -1,73 +1,445 @@
-# React + TypeScript + Vite
+# Resume Editor — 自由排版简历编辑器
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一款所见即所得的在线简历编辑器，采用自由定位画布架构，支持拖拽放置、精准排版、装饰绘制，让你像设计海报一样制作简历。
 
-Currently, two official plugins are available:
+## ✨ 核心特性
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **自由定位画布** — 拖拽组件到画布任意位置，精准控制每个元素的坐标、尺寸与层级
+- **丰富的组件模板** — 内置 11 种预设简历组件（头部信息、工作经历、教育背景、技能等），开箱即用
+- **贝塞尔装饰编辑器** — 自定义绘制矢量装饰图形，支持控制柄曲线编辑、形状工具、裁剪
+- **多种导出格式** — 支持导出 PDF、PNG 图片、JSON 数据，满足投递与备份需求
+- **智能辅助排版** — 对齐辅助线、距离标注、网格吸附，让排版又快又准
+- **实时预览** — 侧边抽屉预览，编辑与预览同步
 
-## React Compiler
+## 🖥 界面布局
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+编辑器采用三栏布局：
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+┌──────────────────────────────────────────────────┐
+│                    工具栏                         │
+├──────────┬────────────────────┬──────────────────┤
+│          │                    │                  │
+│  左侧面板 │     编辑画布        │    右侧属性面板   │
+│  · 组件   │  · 自由定位排版     │  · 📝 内容编辑    │
+│  · 图标   │  · 对齐辅助线      │  · 📐 变换控制    │
+│  · 装饰   │  · 距离标注        │  · 🎨 外观样式    │
+│  · 图层   │  · 框选多选        │  · 📏 间距调整    │
+│          │                    │                  │
+└──────────┴────────────────────┴──────────────────┘
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 📦 功能详解
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### 1. 组件系统
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+#### 预设块模板（11 种）
+
+| 分类 | 模板名称 | 包含字段 |
+|------|---------|---------|
+| 基础组件 | 文本框 | 富文本内容 |
+| 基础组件 | 链接 | 链接地址 |
+| 基础组件 | 日期 | 日期选择 |
+| 基础组件 | 评分 | 星级评分（1-5） |
+| 组合组件 | 头部信息 | 头像、姓名、职位、一句话简介、电话、邮箱、地址、个人网站 |
+| 组合组件 | 基本信息 | 姓名、头像、电话、邮箱、地址、个人网站 |
+| 组合组件 | 工作经历 | 公司名、职位、起止时间、是否至今、公司简介、技能标签、工作描述 |
+| 组合组件 | 教育背景 | 学校、学位（下拉选择）、专业、GPA、起止时间、课程（标签）、荣誉 |
+| 组合组件 | 项目经验 | 项目名、角色、时间、技术栈（标签）、描述、链接、截图 |
+| 组合组件 | 技能 | 技能名、熟练度（星级） |
+| 组合组件 | 自我总结 | 描述文本 |
+| 组合组件 | 证书 | 名称、颁发机构、时间、编号、链接 |
+| 组合组件 | 语言 | 语言、听说等级、读写等级 |
+| 组合组件 | 兴趣爱好 | 标签列表 |
+
+#### 字段类型
+
+支持 16 种字段类型，覆盖简历常见数据结构：
+
+| 字段类型 | 说明 | 示例 |
+|---------|------|------|
+| `Text` | 单行文本 | 姓名、公司名 |
+| `TextArea` | 多行文本 | 自我总结、荣誉 |
+| `RichText` | 富文本（基于 Tiptap） | 工作描述、项目描述 |
+| `Date` | 日期选择 | 起止时间 |
+| `Image` | 图片上传 | 头像、项目截图 |
+| `TagList` | 标签列表 | 技术栈、课程 |
+| `Link` | 链接地址 | 个人网站、项目链接 |
+| `Select` | 下拉选择 | 学位、语言等级 |
+| `Switch` | 开关 | 是否至今 |
+| `Rating` | 星级评分 | 技能熟练度 |
+| `Number` | 数字 | GPA |
+| `Percentage` | 百分比 | 完成度 |
+| `Color` | 颜色选择 | 自定义颜色 |
+| `Decoration` | 装饰元素 | 不规则图形 |
+| `SubBlock` | 子块组 | （预留，待实现） |
+
+#### 图标组件
+
+- 内置 Ant Design Icons 图标库，按分类浏览
+- 拖拽放置到画布，自动创建图标块
+- 支持自定义图标颜色与字号
+- 图标搜索功能
+
+#### 自定义元素模板
+
+- 将一组块保存为自定义元素模板，可重复使用
+- 保留块的相对布局关系、字段内容与装饰
+
+### 2. 画布编辑器
+
+#### 自由定位
+
+- 所有块可在画布上自由拖拽定位（像素级精度）
+- 8 个方向的缩放手柄（N/S/E/W/NE/NW/SE/SW）
+- 块旋转（-180° ~ 180°），支持滑块与数值输入
+- 层级控制（zIndex），支持上移/下移/置顶/置底
+
+#### 辅助排版
+
+- **对齐辅助线** — 拖拽块时自动显示与画布中心、其他块边界的对齐线，并自动吸附
+- **距离标注** — 实时显示选中块与其他元素、画布边界之间的距离
+- **网格吸附** — 可开关的网格系统（默认 8px），拖拽时自动吸附到网格点
+- **画布内边距指示** — 编辑模式下用暗色标记画布内边距区域
+
+#### 多选与分组
+
+- **Shift + 点击** 多选块
+- **框选** — 在画布空白区域拖拽绘制矩形，选中框内所有块
+- **分组** — 将多个块组合为分组，整体移动/选中
+- **分组边框** — 编辑模式下用虚线框标记分组范围
+
+#### 块操作
+
+| 操作 | 方式 |
+|------|------|
+| 选中 | 点击块 |
+| 多选 | Shift + 点击 / 框选 |
+| 移动 | 拖拽（方向键微调，Shift 加速 10px） |
+| 缩放 | 选中后拖拽 8 个缩放手柄 |
+| 旋转 | 右侧面板滑块 / 数值输入 |
+| 克隆 | 右侧面板按钮 / Ctrl+D |
+| 删除 | 右侧面板按钮 / Delete / Backspace |
+| 隐藏/显示 | 右侧面板切换 |
+| 锁定/解锁 | 右侧面板切换（锁定后不可拖拽缩放） |
+| 重命名 | 右侧面板编辑块名称 |
+| 层级调整 | 图层面板 / 右侧面板 |
+
+### 3. 块样式系统
+
+每个块支持独立的样式配置：
+
+| 属性 | 说明 |
+|------|------|
+| 背景颜色 | 自定义颜色，默认跟随配色方案 |
+| 背景图片 | 上传图片或输入 URL，支持 cover/contain/auto 适配 |
+| 透明度 | 0 ~ 1 |
+| 圆角 | 像素值，默认 6px |
+| 边框宽度 | 像素值 |
+| 边框颜色 | 自定义颜色 |
+| 边框样式 | 实线 / 虚线 / 点线 / 双线 |
+| 外边距 | 上/右/下/左独立设置（编辑模式以暗色标记） |
+| 内边距 | 上/右/下/左独立设置 |
+
+### 4. 配色方案
+
+内置 8 套精心设计的配色方案：
+
+| 名称 | 主色 | 风格 |
+|------|------|------|
+| 沉稳蓝 | `#1a56db` | 专业可靠 |
+| 优雅深灰 | `#374151` | 沉稳内敛 |
+| 清新绿 | `#059669` | 自然活力 |
+| 活力橙 | `#ea580c` | 热情主动 |
+| 创意紫 | `#7c3aed` | 创新想象 |
+| 科技青 | `#0891b2` | 技术前沿 |
+| 极简黑白 | `#111827` | 简约克制 |
+| 玫瑰粉 | `#e11d48` | 温暖亲和 |
+
+每套配色包含 8 个语义色彩变量：主色、辅色、背景色、块背景色、正文色、副文字色、标注色、强调色。
+
+支持自定义配色方案，编辑器内实时切换。
+
+### 5. 装饰编辑器
+
+独立的贝塞尔矢量图形编辑器，路径 `/decoration-editor`：
+
+#### 绘制工具
+
+- **自由锚点绘制** — 点击舞台添加锚点，自动生成贝塞尔控制柄
+- **控制柄编辑** — 橙色（出方向）/ 紫色（入方向）控制柄，拖拽调整曲线弯曲
+- **直线模式** — 将控制柄拖回锚点位置即可变为直线连接
+- **形状工具** — 一键放置预设形状：矩形、圆角矩形、圆形、椭圆、三角形、菱形、六边形、五角星、心形、箭头
+
+#### 路径管理
+
+- 多路径支持 — 一个装饰可包含多条独立路径
+- 路径颜色标识 — 不同路径用不同颜色区分
+- 闭合/开放路径 — 点击首锚点闭合，或面板按钮闭合
+- 路径可见性 — 可独立隐藏/显示每条路径
+- 路径删除 — 至少保留一条路径
+
+#### 编辑功能
+
+- **选区裁剪** — 拖拽拉出选区，裁剪保留选区范围内的图形
+- **撤销** — Ctrl+Z 撤销操作
+- **锚点编辑** — 添加、拖拽、删除（Delete键）锚点
+- **右键删除** — 右键点击舞台删除最后一个锚点
+- **属性配置** — 填充色、线条色、线条宽度
+- **舞台大小** — 可调整绘制区域尺寸（100×100 ~ 1200×1200）
+- **辅助线** — 自动吸附到画布中心、边缘、其他锚点
+- **距离标注** — 实时显示鼠标与锚点距离
+
+#### 装饰使用
+
+- 保存后在左侧面板「自定义装饰」区域拖拽到画布
+- 自动计算边界框，保持图形比例
+- 支持编辑已保存的装饰
+
+### 6. 图层面板
+
+可折叠的图层面板，位于左侧面板右侧：
+
+- 显示所有块的层级顺序
+- 拖拽排序调整层级
+- 点击选中/取消选中
+- 颜色标记
+- 右键菜单：重命名、层级调整、可见性、锁定、克隆、删除
+
+### 7. 导出功能
+
+| 格式 | 说明 |
+|------|------|
+| **PDF** | 基于 html2canvas + jsPDF，A4 尺寸，2x 高清渲染，自动分页 |
+| **PNG** | 基于 html2canvas，2x 高清，适合在线分享 |
+| **JSON** | 结构化数据导出，包含完整简历数据，可再次导入恢复 |
+
+### 8. 数据持久化
+
+- **自动保存** — 定时将简历数据保存到 localStorage（默认 30 秒）
+- **页面关闭保存** — beforeunload 时自动保存
+- **恢复提示** — 首页检测到自动保存数据时显示恢复按钮
+- **版本迁移** — JSON 导入时自动检测数据版本并迁移（当前 v4）
+- **字段名称映射** — 模板字段 ID 变更时，按字段名称映射恢复数据
+
+### 9. 键盘快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `方向键` | 移动选中元素（1px） |
+| `Shift + 方向键` | 快速移动（10px） |
+| `Delete / Backspace` | 删除选中块 |
+| `Escape` | 取消选择 |
+| `Ctrl/⌘ + S` | 保存 |
+| `Ctrl/⌘ + D` | 克隆选中块 |
+
+### 10. 画布配置
+
+- 画布尺寸（默认 A4: 794×1123px @96dpi）
+- 画布内边距（默认 40px）
+- 画布背景色
+- 画布背景图片（支持 cover/contain/auto）
+
+### 11. 智能模板渲染
+
+不同类型的块采用差异化的渲染策略：
+
+- **头部信息** — 左侧头像 + 右侧姓名/职位/联系方式的横向布局
+- **基本信息** — 上方头像 + 下方姓名/联系方式的纵向布局
+- **技能** — 简洁的技能名 + 星级评分列表
+- **工作/教育/项目** — 标题行 + 时间行 + 描述区的经典简历格式
+- **基础组件** — 无标签的纯内容渲染
+- **图标块** — 居中图标，缩放同步字号
+- **自定义装饰块** — 纯 SVG 装饰渲染
+
+## 🏗 技术架构
+
+### 技术栈
+
+| 类别 | 技术 |
+|------|------|
+| 框架 | React 19 + TypeScript 6 |
+| 构建 | Vite 8 |
+| 状态管理 | Zustand 5 + Immer |
+| UI 组件库 | Ant Design 6 |
+| 富文本 | Tiptap (Starter Kit + Link + Placeholder + TextAlign + TextStyle + Underline) |
+| 样式 | Less |
+| 路由 | React Router DOM 7 |
+| PDF 导出 | html2canvas-pro + jsPDF |
+| 颜色处理 | chroma-js |
+| 图片裁剪 | react-easy-crop |
+| ID 生成 | uuid |
+
+### 项目结构
+
 ```
+src/
+├── App.tsx                          # 路由配置
+├── main.tsx                         # 入口
+├── assets/                          # 静态资源
+│
+├── pages/                           # 页面组件
+│   ├── HomePage.tsx                 # 首页：创建简历
+│   ├── EditorPage.tsx               # 编辑器主页
+│   └── DecorationEditorPage.tsx     # 装饰编辑器页面
+│
+├── components/                      # 组件
+│   ├── EditorCanvas/                # 编辑画布
+│   │   ├── index.tsx                # 画布主组件（拖放、块渲染、事件分发）
+│   │   ├── FreeBlockCard.tsx        # 块卡片渲染（模板差异化渲染）
+│   │   ├── FreeBlockCard.less       # 块卡片样式
+│   │   ├── CanvasOverlay.tsx        # 画布覆盖层（网格、内边距、提示）
+│   │   ├── GroupBorder.tsx          # 分组边框
+│   │   ├── AlignGuideOverlay.tsx    # 对齐线渲染
+│   │   ├── DistanceIndicators.tsx   # 距离标注渲染
+│   │   ├── useAlignGuides.ts        # 对齐线逻辑 Hook
+│   │   ├── useDistanceIndicators.ts # 距离标注逻辑 Hook
+│   │   └── useMarqueeSelection.tsx  # 框选逻辑 Hook
+│   │
+│   ├── LeftPanel/                   # 左侧面板（组件/图标/装饰/图层）
+│   ├── RightPanel/                  # 右侧属性面板
+│   │   ├── index.tsx                # 面板路由（根据选中状态切换）
+│   │   ├── BlockDetailPanel.tsx     # 块详情面板（内容/变换/外观/间距）
+│   │   ├── BlockLayoutPanel.tsx     # 布局面板
+│   │   ├── BlockPropertiesPanel.tsx # 属性面板
+│   │   ├── CanvasLayoutPanel.tsx    # 画布设置面板
+│   │   ├── ColorSchemePanel.tsx     # 配色方案面板
+│   │   ├── GroupPanel.tsx           # 分组面板
+│   │   ├── IconBlockPropertiesPanel.tsx # 图标块属性面板
+│   │   ├── MultiSelectPanel.tsx     # 多选面板
+│   │   ├── RichTextField.tsx        # 富文本编辑器组件
+│   │   └── TagListField.tsx         # 标签列表编辑器
+│   │
+│   ├── Toolbar/                     # 顶部工具栏
+│   ├── ExportMenu/                  # 导出菜单
+│   ├── PreviewDrawer/               # 预览抽屉
+│   ├── LayerDrawer/                 # 图层面板
+│   │
+│   └── shared/                      # 共享组件
+│       ├── AntdIconPicker.tsx       # 图标选择器
+│       ├── BlockActionsToolbar.tsx  # 块操作工具栏
+│       ├── ColorFieldInput.tsx      # 颜色输入框
+│       ├── DecorationSvgRenderer.tsx # 装饰 SVG 渲染器
+│       ├── ImageUploadField.tsx     # 图片上传组件
+│       └── SidesInput.tsx           # 四边距输入组件
+│
+├── hooks/                           # 自定义 Hooks
+│   ├── InlineRichTextEditor.tsx     # 行内富文本编辑器
+│   ├── useAutoSave.ts              # 自动保存 Hook
+│   ├── useDragPreview.ts           # 拖拽预览 Hook
+│   ├── useEditableField.tsx        # 可编辑字段 Hook
+│   └── useKeyboardShortcuts.ts     # 键盘快捷键 Hook
+│
+├── store/                           # Zustand 状态管理
+│   ├── index.ts                     # Store 入口（组合各 Slice）
+│   ├── types.ts                     # Store 内部共享类型
+│   └── slices/
+│       ├── resumeSlice.ts           # 简历数据 Slice（CRUD、配色、画布、JSON 导入）
+│       ├── blockSlice.ts            # 块操作 Slice（增删改查、位置、样式、装饰、模板）
+│       └── editorSlice.ts           # 编辑器状态 Slice（选择、分组、UI 配置）
+│
+├── types/                           # 类型定义
+│   └── index.ts                     # 全局类型（BlockInstance、BlockTemplate、Resume 等）
+│
+├── utils/                           # 工具函数
+│   ├── block.ts                     # 块相关计算（对齐线、距离、层级）
+│   ├── color.ts                     # 颜色工具
+│   ├── constants.ts                 # 常量定义
+│   ├── decorations.ts               # 装饰定义数据
+│   ├── dragPreview.ts               # 拖拽预览图生成
+│   ├── export.ts                    # 导出功能（PDF/PNG/JSON）
+│   ├── geometry.ts                  # 几何计算（贝塞尔曲线、形状锚点生成、碰撞检测）
+│   ├── iconMap.tsx                  # 图标分类映射
+│   ├── imageUpload.ts              # 图片上传
+│   ├── migration.ts                 # 数据版本迁移
+│   ├── presets.ts                   # 预设数据（块模板、配色方案）
+│   └── tiptapExtensions.ts         # Tiptap 自定义扩展
+│
+└── styles/
+    └── global.less                  # 全局样式
+```
+
+### 数据流
+
+```
+用户操作 → Zustand Store (Immer produce) → React 组件重新渲染
+                  ↓
+          localStorage 自动保存
+                  ↓
+          JSON 导出 / PDF 导出 / PNG 导出
+```
+
+### 状态管理架构
+
+采用 Zustand Slice 模式，将状态分为三个 Slice：
+
+- **ResumeSlice** — 简历本身的 CRUD、配色方案、画布配置、JSON 导入导出
+- **BlockSlice** — 块的增删改查、位置/尺寸/层级/旋转/样式、装饰元素、自定义模板
+- **EditorSlice** — 编辑器 UI 状态、选择操作、分组操作
+
+三个 Slice 共享 `ResumeStoreInternal` 类型，通过 Immer 的 `produce` 实现不可变更新。
+
+## 🚀 快速开始
+
+### 环境要求
+
+- Node.js >= 18
+- npm >= 9
+
+### 安装与运行
+
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+
+# 构建生产版本
+npm run build
+
+# 预览构建产物
+npm run preview
+```
+
+### 开发
+
+```bash
+# 代码检查
+npm run lint
+```
+
+## 📄 页面路由
+
+| 路径 | 页面 | 说明 |
+|------|------|------|
+| `/` | HomePage | 首页，创建新简历或恢复自动保存 |
+| `/editor` | EditorPage | 简历编辑器主界面 |
+| `/decoration-editor` | DecorationEditorPage | 自定义装饰编辑器 |
+| `/decoration-editor?id=xxx` | DecorationEditorPage | 编辑指定装饰 |
+
+## 🔧 画布默认配置
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| 画布宽度 | 794px | A4 宽度 @96dpi |
+| 画布高度 | 1123px | A4 高度 @96dpi |
+| 画布内边距 | 40px | 约 10mm |
+| 画布背景色 | #ffffff | 白色 |
+| 网格大小 | 8px | 吸附网格 |
+| 对齐阈值 | 5px | 对齐辅助线触发距离 |
+| 块最小宽度 | 100px | 缩放下限 |
+| 块最小高度 | 40px | 缩放下限 |
+| 默认圆角 | 6px | 块默认圆角 |
+
+## 📝 数据版本迁移
+
+当前数据版本为 v4，支持从 v1 自动迁移：
+
+| 版本 | 变更 |
+|------|------|
+| v1 → v2 | 增加 order、templateName，column 从可选变为必填 |
+| v2 → v3 | 增加 decorations 字段 |
+| v3 → v4 | 移除布局概念，改为自由定位（column → x/y/width/height/zIndex） |
+
+导入 JSON 时自动检测版本并逐步迁移，同时通过 `fieldNamesMap` 按字段名称映射恢复数据，确保模板字段 ID 变更后数据不丢失。

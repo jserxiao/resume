@@ -16,6 +16,8 @@ interface BlockActionsToolbarProps {
   onNameChange?: (value: string) => void;
   /** 名称输入框的自定义样式 */
   nameStyle?: React.CSSProperties;
+  /** 工具栏根元素的自定义样式（可覆盖定位等） */
+  style?: React.CSSProperties;
   /** 是否可见 */
   visible?: boolean;
   /** 是否锁定 */
@@ -44,6 +46,7 @@ export default function BlockActionsToolbar({
   name,
   onNameChange,
   nameStyle,
+  style,
   visible = true,
   locked = false,
   hasGroup = false,
@@ -54,7 +57,7 @@ export default function BlockActionsToolbar({
   extraActions,
 }: BlockActionsToolbarProps) {
   return (
-    <div className="free-block-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+    <div className="free-block-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 2, ...style }}>
       {name && onNameChange ? (
         <Input
           variant="borderless"

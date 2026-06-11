@@ -75,7 +75,7 @@ export default function GroupPanel({ group, isLayoutTab = false }: GroupPanelPro
             min={-360}
             max={360}
             step={1}
-            addonAfter="°"
+            suffix="°"
           />
         </div>
 
@@ -135,7 +135,7 @@ export default function GroupPanel({ group, isLayoutTab = false }: GroupPanelPro
           min={-360}
           max={360}
           step={1}
-          addonAfter="°"
+          suffix="°"
         />
       </div>
 

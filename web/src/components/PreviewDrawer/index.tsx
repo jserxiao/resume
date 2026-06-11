@@ -16,7 +16,7 @@ export default function PreviewDrawer() {
     <Drawer
       title="简历预览"
       placement="right"
-      width={860}
+      size={860}
       open={editor.previewOpen}
       onClose={() => setPreviewOpen(false)}
       styles={{

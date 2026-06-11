@@ -1,4 +1,4 @@
-import { Button, Divider, Popconfirm, Modal, Input, Tooltip } from 'antd';
+import { Button, Divider, Popconfirm, App, Input, Tooltip } from 'antd';
 import {
   GroupOutlined,
   SaveOutlined,
@@ -24,6 +24,7 @@ interface MultiSelectPanelProps {
  */
 export default function MultiSelectPanel({ selectedBlockIds, selectedBlocks }: MultiSelectPanelProps) {
   const { resume, updateBlockPosition, createGroup, addBlocksToGroup, selectGroup, saveAsCustomTemplate, removeBlocks } = useResumeStore();
+  const { modal } = App.useApp();
 
   if (!resume) return null;
 
@@ -49,7 +50,7 @@ export default function MultiSelectPanel({ selectedBlockIds, selectedBlocks }: M
   const handleSaveAsCustom = () => {
     if (selectedBlockIds.length < 1) return;
     let inputValue = '';
-    Modal.confirm({
+    modal.confirm({
       title: '保存为自定义元素',
       content: (
         <Input

@@ -116,6 +116,91 @@
     padding: var(--gap-sm) 0;
   }
 
+  // ===== 图标面板 =====
+  &-icons {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: 45%;
+    overflow: hidden;
+    border-top: 2px solid rgba(26, 86, 219, 0.15);
+  }
+
+  &-section-header--icon {
+    color: #1a56db;
+    background: rgba(26, 86, 219, 0.06);
+  }
+
+  &-category-count--icon {
+    background: rgba(26, 86, 219, 0.08);
+    color: #1a56db;
+  }
+
+  &-icon-search {
+    padding: var(--gap-base) var(--gap-lg) 6px;
+    border-bottom: 1px solid var(--color-border-light);
+    flex-shrink: 0;
+  }
+
+  &-icon-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--gap-sm) 0;
+  }
+
+  &-icon-tabs {
+    .ant-tabs-tab {
+      font-size: 11px !important;
+      padding: 3px 6px !important;
+    }
+
+    .ant-tabs-content {
+      overflow-y: auto;
+    }
+  }
+
+  &-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    gap: 2px;
+    padding: 2px var(--gap-sm);
+  }
+
+  &-icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 4px 2px;
+    border-radius: 4px;
+    cursor: grab;
+    transition: all 0.12s;
+    border: 1px solid transparent;
+    user-select: none;
+
+    &:hover {
+      background: var(--color-primary-light);
+      border-color: var(--color-primary-light);
+    }
+
+    &:active {
+      cursor: grabbing;
+      opacity: 0.7;
+    }
+  }
+
+  &-icon-item-label {
+    font-size: 8px;
+    color: var(--color-text-muted);
+    text-align: center;
+    line-height: 1.1;
+    max-width: 48px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   // ===== 分类标签 =====
   &-category-label {
     display: flex;

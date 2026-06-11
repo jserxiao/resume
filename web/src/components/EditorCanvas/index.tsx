@@ -35,6 +35,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     clearSelection,
     updateBlockPosition,
     updateBlockSize,
+    updateBlockField,
   } = useResumeStore();
 
   const pageRef = useRef<HTMLDivElement>(null);
@@ -122,6 +123,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     const customTemplateId = e.dataTransfer.getData('customTemplateId');
     const customDecorationId = e.dataTransfer.getData('customDecorationId');
     const groupId = e.dataTransfer.getData('groupId');
+    const antdIconName = e.dataTransfer.getData('antdIconName');
 
     if (!pageRef.current) return;
     const rect = pageRef.current.getBoundingClientRect();
@@ -173,6 +175,10 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       } else {
         addBlockFromCustomTemplate(customTemplateId, mouseX, mouseY);
       }
+    } else if (antdIconName) {
+      // 拖入 antd 图标
+      const { addBlockFromIcon } = useResumeStore.getState();
+      addBlockFromIcon(antdIconName, mouseX - 15, mouseY - 15);
     } else if (groupId) {
       // 拖入分组 - 获取分组中的所有块
       const { getGroupBlocks, resume: r } = useResumeStore.getState();
@@ -321,6 +327,12 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
         }
 
         updateBlockSize(blockId, newW, newH);
+
+        // 图标块：拖拽缩放时同步更新字号
+        const currentBlock = resume.blocks.find((b) => b.id === blockId);
+        if (currentBlock?.templateId === 'antd-icon') {
+          updateBlockField(blockId, 'icon-font-size', String(Math.round(Math.min(newW, newH))));
+        }
 
         // 实时更新距离标注
         refreshDistances(blockId);

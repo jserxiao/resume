@@ -1396,7 +1396,7 @@ export default function DecorationEditorPage() {
                 step={20}
                 size="small"
                 style={{ width: 100 }}
-                addonAfter="W"
+                suffix="W"
               />
               <span style={{ color: '#666' }}>×</span>
               <InputNumber
@@ -1407,7 +1407,7 @@ export default function DecorationEditorPage() {
                 step={20}
                 size="small"
                 style={{ width: 100 }}
-                addonAfter="H"
+                suffix="H"
               />
             </div>
             <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>

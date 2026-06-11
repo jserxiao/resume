@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Modal } from 'antd';
+import { App } from 'antd';
 import Toolbar from '@/components/Toolbar';
 import LeftPanel from '@/components/LeftPanel';
 import EditorCanvas from '@/components/EditorCanvas';
@@ -26,6 +26,7 @@ export default function EditorPage() {
   const location = useLocation();
   const { resume, initResume } = useResumeStore();
   const { manualSave } = useAutoSave();
+  const { modal } = App.useApp();
 
   // 全局键盘快捷键
   useKeyboardShortcuts();
@@ -39,7 +40,7 @@ export default function EditorPage() {
     if (restored) {
       const timestamp = getAutoSaveTimestamp();
       const timeStr = timestamp ? new Date(timestamp).toLocaleString() : '未知时间';
-      Modal.info({
+      modal.info({
         title: '已恢复自动保存的数据',
         content: `您的简历数据已于 ${timeStr} 自动保存，现已恢复。`,
         okText: '知道了',
@@ -48,7 +49,7 @@ export default function EditorPage() {
       // 没有可恢复的数据，重定向到首页
       navigate('/', { replace: true });
     }
-  }, [resume, navigate]);
+  }, [resume, navigate, modal]);
 
   if (!resume) return null;
 

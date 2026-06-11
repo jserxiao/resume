@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input, Collapse, Tag, Button, Tooltip, Empty, Modal, Popconfirm } from 'antd';
+import { Input, Collapse, Tag, Button, Tooltip, Empty, App, Popconfirm, Tabs } from 'antd';
 import {
   SearchOutlined,
   AppstoreOutlined,
@@ -15,6 +15,7 @@ import {
 import { useResumeStore } from '@/store';
 import { useDragPreview } from '@/hooks/useDragPreview';
 import { buildDecoPathD } from '@/utils/geometry';
+import { ICON_CATEGORIES, renderIconByName } from '@/utils/iconMap';
 import LayerPanel from './LayerPanel';
 import './index.less';
 
@@ -28,6 +29,8 @@ export default function LeftPanel() {
   const navigate = useNavigate();
   const { resume, blockTemplates, customElementTemplates, customDecorations, editor, selectBlocks, createGroup, addBlocksToGroup, saveAsCustomTemplate, removeCustomDecoration } = useResumeStore();
   const [searchText, setSearchText] = useState('');
+  const [iconSearchText, setIconSearchText] = useState('');
+  const { modal } = App.useApp();
 
   // 拖拽预览 Hook
   const {
@@ -44,6 +47,28 @@ export default function LeftPanel() {
     groups: resume?.groups || [],
     colorScheme: resume?.colorScheme,
   });
+
+  // 搜索过滤图标
+  const filteredIconCategories = useMemo(() => {
+    if (!iconSearchText.trim()) return ICON_CATEGORIES;
+    const lower = iconSearchText.toLowerCase();
+    const result: Record<string, string[]> = {};
+    for (const [cat, names] of Object.entries(ICON_CATEGORIES)) {
+      const matched = names.filter(
+        (n) => n.toLowerCase().includes(lower) || n.replace(/Outlined$|Filled$|TwoTone$/g, '').toLowerCase().includes(lower),
+      );
+      if (matched.length > 0) {
+        result[cat] = matched;
+      }
+    }
+    return result;
+  }, [iconSearchText]);
+
+  // 图标拖拽开始
+  const handleIconDragStart = useCallback((e: React.DragEvent, iconName: string) => {
+    e.dataTransfer.setData('antdIconName', iconName);
+    e.dataTransfer.effectAllowed = 'copy';
+  }, []);
 
   if (!resume) return null;
 
@@ -94,7 +119,7 @@ export default function LeftPanel() {
   const handleSaveAsCustom = () => {
     if (selectedBlockIds.length < 1) return;
     let inputValue = '';
-    Modal.confirm({
+    modal.confirm({
       title: '保存为自定义元素',
       content: (
         <Input
@@ -284,6 +309,78 @@ export default function LeftPanel() {
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description="没有匹配的模板"
+            />
+          )}
+        </div>
+      </div>
+
+      {/* 图标面板 */}
+      <div className="left-panel-icons">
+        <div className="left-panel-section-header left-panel-section-header--icon">
+          <StarOutlined />
+          <span>基础图标</span>
+          <Tag className="left-panel-category-count left-panel-category-count--icon">
+            {Object.values(ICON_CATEGORIES).flat().length}
+          </Tag>
+        </div>
+
+        <div className="left-panel-icon-search">
+          <Input
+            placeholder="搜索图标..."
+            prefix={<SearchOutlined />}
+            value={iconSearchText}
+            onChange={(e) => setIconSearchText(e.target.value)}
+            allowClear
+            size="small"
+          />
+        </div>
+
+        <div className="left-panel-icon-list">
+          {iconSearchText.trim() ? (
+            <div className="left-panel-icon-grid">
+              {Object.values(filteredIconCategories).flat().map((iconName) => (
+                <div
+                  key={iconName}
+                  className="left-panel-icon-item"
+                  title={iconName}
+                  draggable
+                  onDragStart={(e) => handleIconDragStart(e, iconName)}
+                  onDragEnd={handleDragEnd}
+                >
+                  {renderIconByName(iconName, { style: { fontSize: 18 } })}
+                  <span className="left-panel-icon-item-label">
+                    {iconName.replace(/Outlined$|Filled$|TwoTone$/g, '')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Tabs
+              size="small"
+              items={Object.entries(ICON_CATEGORIES).map(([cat, names]) => ({
+                key: cat,
+                label: cat,
+                children: (
+                  <div className="left-panel-icon-grid">
+                    {names.map((iconName) => (
+                      <div
+                        key={iconName}
+                        className="left-panel-icon-item"
+                        title={iconName}
+                        draggable
+                        onDragStart={(e) => handleIconDragStart(e, iconName)}
+                        onDragEnd={handleDragEnd}
+                      >
+                        {renderIconByName(iconName, { style: { fontSize: 18 } })}
+                        <span className="left-panel-icon-item-label">
+                          {iconName.replace(/Outlined$|Filled$|TwoTone$/g, '')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ),
+              }))}
+              className="left-panel-icon-tabs"
             />
           )}
         </div>

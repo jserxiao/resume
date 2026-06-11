@@ -309,79 +309,101 @@ export function generateStar(x: number, y: number, w: number, h: number): ShapeA
   return points;
 }
 
-/** 心形（用10个锚点+二次贝塞尔控制柄近似）
- *  5个关键点定义左半部分（含控制点），右半通过镜像生成，确保完美对称
+/** 心形（经典参数方程 + 二次贝塞尔拟合）
+ *  x(t) = 16 sin³(t)
+ *  y(t) = 13 cos(t) − 5 cos(2t) − 2 cos(3t) − cos(4t)
+ *  用16段二次贝塞尔曲线拟合，弧顶圆润自然
  */
 export function generateHeart(x: number, y: number, w: number, h: number): ShapeAnchor[] {
+  // 经典心形参数方程
+  const hx = (t: number) => 16 * Math.pow(Math.sin(t), 3);
+  const hy = (t: number) =>
+    13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+
+  // 先采样计算心形边界，以便缩放和居中到 (x, y, w, h) 矩形内
+  const samples = 200;
+  let rawMinX = Infinity, rawMaxX = -Infinity;
+  let rawMinY = Infinity, rawMaxY = -Infinity;
+  for (let i = 0; i < samples; i++) {
+    const t = (i / samples) * 2 * Math.PI;
+    const rx = hx(t);
+    const ry = hy(t);
+    rawMinX = Math.min(rawMinX, rx);
+    rawMaxX = Math.max(rawMaxX, rx);
+    rawMinY = Math.min(rawMinY, ry);
+    rawMaxY = Math.max(rawMaxY, ry);
+  }
+  const rawW = rawMaxX - rawMinX;
+  const rawH = rawMaxY - rawMinY;
+
+  // 缩放到目标矩形，保持宽高比（取较小缩放比以完全放入矩形）
+  const scaleX = w / rawW;
+  const scaleY = h / rawH;
+  const scale = Math.min(scaleX, scaleY);
+
+  // 居中偏移
   const cx = x + w / 2;
+  const cy = y + h / 2;
+  const rawCx = (rawMinX + rawMaxX) / 2;
+  const rawCy = (rawMinY + rawMaxY) / 2;
 
-  // 左半5个点（从底部尖角顺时针到顶部凹陷）
-  // 锚点坐标使用 (dx, dy) 相对于 (cx, y)
-  const leftAnchors = [
-    { dx: 0,     dy: h * 1.0  },  // 底部尖角
-    { dx: -0.44, dy: h * 0.55 },  // 左侧最宽处
-    { dx: -0.46, dy: h * 0.22 },  // 左上弧线
-    { dx: -0.24, dy: h * 0.02 },  // 左弧顶
-    { dx: 0,     dy: h * 0.18  },  // 顶部凹陷
-  ];
+  /** 参数方程坐标 → 屏幕像素坐标 */
+  const toScreen = (t: number) => ({
+    px: cx + (hx(t) - rawCx) * scale,
+    py: cy - (hy(t) - rawCy) * scale, // SVG y 轴翻转
+  });
 
-  // 每段曲线的二次贝塞尔控制点（左半4段 + 闭合1段）
-  // 控制点在曲线外侧
-  const leftControls = [
-    // P0→P1: 尖角到最宽处，控制点在左下外侧
-    { dx: -0.02, dy: h * 0.88 },
-    // P1→P2: 最宽处到左上，控制点在左外侧
-    { dx: -0.58, dy: h * 0.38 },
-    // P2→P3: 左上弧线，控制点在左上外侧
-    { dx: -0.52, dy: h * 0.06 },
-    // P3→P4: 弧顶到凹陷，控制点在上方
-    { dx: -0.22, dy: -h * 0.12 },
-  ];
+  // 用16段二次贝塞尔曲线拟合
+  const n = 16;
+  const anchors: { px: number; py: number }[] = [];
+  const controls: { px: number; py: number }[] = [];
 
-  // 右半镜像点（逆序，从凹陷回到底部）
-  // 不包含凹陷点（已在左半末尾）和底部尖角（已在左半开头）
-  const rightAnchors = leftAnchors.slice(1, -1).map(a => ({
-    dx: -a.dx,
-    dy: a.dy,
-  })).reverse();
+  for (let i = 0; i < n; i++) {
+    const t0 = (i / n) * 2 * Math.PI;
+    const tMid = ((i + 0.5) / n) * 2 * Math.PI;
 
-  // 右半镜像控制点（逆序，从P4→P5的控制点开始）
-  const rightControls = leftControls.slice().reverse().map(c => ({
-    dx: -c.dx,
-    dy: c.dy,
-  }));
+    const p0 = toScreen(t0);
+    const pMid = toScreen(tMid);
+    anchors.push(p0);
 
-  // 闭合段控制点（P9→P0: 从右下弯曲回尖角）
-  const closeControl = { dx: 0.02, dy: h * 0.88 };
+    // 拟合控制点：Q(0.5) = 0.25·P0 + 0.5·C + 0.25·P1
+    // 在下一轮迭代才能知道 P1，但可以用中点近似：
+    // C ≈ 2·Pmid − 0.5·P0 − 0.5·P1，用 Pmid 代替 (P0+P1)/2 得到：
+    // 简化：C = 2·Pmid − (P0 + P1)/2
+    // 先用 Pmid 预估 P1（即假设 P1 ≈ 2·Pmid − P0，线性外推）
+    const p1Est = { px: 2 * pMid.px - p0.px, py: 2 * pMid.py - p0.py };
+    const controlPx = 2 * pMid.px - 0.5 * p0.px - 0.5 * p1Est.px;
+    const controlPy = 2 * pMid.py - 0.5 * p0.py - 0.5 * p1Est.py;
+    controls.push({ px: controlPx, py: controlPy });
+  }
 
-  // 合并所有点
-  const allAnchors = [...leftAnchors, ...rightAnchors];
-  const allControls = [...leftControls, ...rightControls, closeControl];
+  // 更精确：用已知的真实锚点重新计算控制点
+  const finalControls = controls.map((c, i) => {
+    const nextI = (i + 1) % n;
+    const p0 = anchors[i];
+    const p1 = anchors[nextI];
+    const tMid = ((i + 0.5) / n) * 2 * Math.PI;
+    const pMid = toScreen(tMid);
+    return {
+      px: 2 * pMid.px - 0.5 * p0.px - 0.5 * p1.px,
+      py: 2 * pMid.py - 0.5 * p0.py - 0.5 * p1.py,
+    };
+  });
 
-  // 转换为像素坐标
-  const pts = allAnchors.map(a => ({
-    x: cx + a.dx * w,
-    y: y + a.dy,
-  }));
-  const controls = allControls.map(c => ({
-    x: cx + c.dx * w,
-    y: y + c.dy,
-  }));
-
+  // 构建 ShapeAnchor[]
   const points: ShapeAnchor[] = [];
-  const n = pts.length;
   for (let i = 0; i < n; i++) {
     points.push({
-      x: pts[i].x,
-      y: pts[i].y,
-      handleOut: { x: controls[i].x, y: controls[i].y },
+      x: anchors[i].px,
+      y: anchors[i].py,
+      handleOut: { x: finalControls[i].px, y: finalControls[i].py },
     });
   }
   for (let i = 0; i < n; i++) {
     const prevIdx = (i - 1 + n) % n;
     points[i] = {
       ...points[i],
-      handleIn: { x: controls[prevIdx].x, y: controls[prevIdx].y },
+      handleIn: { x: finalControls[prevIdx].px, y: finalControls[prevIdx].py },
     };
   }
   return points;

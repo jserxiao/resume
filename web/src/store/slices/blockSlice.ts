@@ -27,6 +27,7 @@ export interface BlockSlice {
   addBlock: (templateId: string, x: number, y: number, width?: number, height?: number) => void;
   addBlockFromCustomTemplate: (templateId: string, x: number, y: number) => void;
   addBlockFromCustomDecoration: (decorationId: string, x: number, y: number) => void;
+  addBlockFromIcon: (iconName: string, x: number, y: number) => void;
   removeBlock: (blockId: string) => void;
   removeBlocks: (blockIds: string[]) => void;
   cloneBlock: (blockId: string) => void;
@@ -215,6 +216,43 @@ export const createBlockSlice = (set: any, get: any): BlockSlice => ({
           zIndex: 1,
           customSvgPaths: svgPaths,
         } as any],
+        visible: true,
+        locked: false,
+        x,
+        y,
+        width: defaultWidth,
+        height: defaultHeight,
+        zIndex: getNextZIndex(state.resume.blocks),
+        style: {
+          backgroundColor: 'transparent',
+          borderRadius: 0,
+          borderWidth: 0,
+          padding: { top: 0, right: 0, bottom: 0, left: 0 },
+          margin: { top: 0, right: 0, bottom: 0, left: 0 },
+        },
+      };
+
+      state.resume.blocks.push(block);
+      state.resume.updatedAt = Date.now();
+      state.editor.selectedBlockId = block.id;
+      state.editor.selectedBlockIds = [block.id];
+    })),
+
+  addBlockFromIcon: (iconName, x, y) =>
+    set(produce<BlockSlice & { resume: any; editor: any }>((state) => {
+      if (!state.resume) return;
+      // 默认图标字号 24px，块宽高比图标稍大一点（留适当内距）
+      const iconFontSize = 24;
+      const defaultWidth = Math.ceil(iconFontSize * 1.2);
+      const defaultHeight = Math.ceil(iconFontSize * 1.2);
+      const blockId = `${state.resume.id}-icon-${uuid().slice(0, 8)}`;
+      const block: BlockInstance = {
+        id: blockId,
+        templateId: 'antd-icon',
+        templateName: '图标',
+        name: iconName.replace(/Outlined$|Filled$|TwoTone$/g, ''),
+        fields: { 'icon-name': iconName },
+        decorations: [],
         visible: true,
         locked: false,
         x,

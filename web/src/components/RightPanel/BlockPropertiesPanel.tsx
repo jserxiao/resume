@@ -1,4 +1,4 @@
-import { Input, InputNumber, Slider, Divider, Progress, Button, Modal } from 'antd';
+import { Input, InputNumber, Slider, Divider, Progress, Button, App } from 'antd';
 import { RotateRightOutlined, CameraOutlined, CloseOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import { FieldType } from '@/types';
@@ -26,6 +26,8 @@ export default function BlockPropertiesPanel({ block, template }: BlockPropertie
     toggleBlockLock,
     renameBlock,
   } = useResumeStore();
+
+  const { modal } = App.useApp();
 
   if (!resume) return null;
 
@@ -115,7 +117,7 @@ export default function BlockPropertiesPanel({ block, template }: BlockPropertie
           min={-360}
           max={360}
           step={1}
-          addonAfter="°"
+          suffix="°"
         />
       </div>
 
@@ -210,7 +212,7 @@ export default function BlockPropertiesPanel({ block, template }: BlockPropertie
                             return;
                           }
                           let urlValue = '';
-                          Modal.confirm({
+                          modal.confirm({
                             title: '输入图片地址',
                             content: (
                               <Input

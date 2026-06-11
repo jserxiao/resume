@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input, Button, Modal } from 'antd';
+import { Input, Button, App } from 'antd';
 import { EditOutlined, ArrowRightOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import { presetColorSchemes } from '@/utils/presets';
@@ -18,6 +18,7 @@ export default function HomePage() {
   const { initResume } = useResumeStore();
   const [selectedColorScheme, setSelectedColorScheme] = useState<ColorScheme>(presetColorSchemes[0]);
   const [resumeTitle, setResumeTitle] = useState('我的简历');
+  const { modal } = App.useApp();
 
   const handleCreate = () => {
     // 创建新简历时清除旧的自动保存数据
@@ -32,7 +33,7 @@ export default function HomePage() {
     if (restored) {
       navigate('/editor');
     } else {
-      Modal.warning({ title: '恢复失败', content: '自动保存的数据已损坏或不存在。' });
+      modal.warning({ title: '恢复失败', content: '自动保存的数据已损坏或不存在。' });
     }
   };
 

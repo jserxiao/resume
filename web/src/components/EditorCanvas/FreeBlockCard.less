@@ -82,6 +82,9 @@
   z-index: 11;
   white-space: nowrap;
   overflow: hidden;
+
+  // 工具栏已移至 free-block-card 内、innerStyle 外，需要根据 margin 偏移
+  // left 和 top 通过内联样式覆盖以适配 margin
 }
 
 .free-block-name {

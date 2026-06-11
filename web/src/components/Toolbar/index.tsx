@@ -1,14 +1,16 @@
 import { useNavigate } from 'react-router-dom';
-import { Button, Tooltip, Divider, Switch } from 'antd';
+import { Button, Tooltip, Divider, Switch, Popover } from 'antd';
 import {
   ArrowLeftOutlined,
   SaveOutlined,
   EyeOutlined,
   BorderOutlined,
   AppstoreAddOutlined,
+  BgColorsOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import ExportMenu from '@/components/ExportMenu';
+import ColorSchemePanel from '@/components/RightPanel/ColorSchemePanel';
 import './index.less';
 
 interface ToolbarProps {
@@ -78,6 +80,20 @@ export default function Toolbar({ onSave }: ToolbarProps) {
       </div>
 
       <div className="toolbar-right">
+        {/* 配色方案按钮 */}
+        <Popover
+          trigger="click"
+          placement="bottomRight"
+          overlayClassName="toolbar-color-scheme-popover"
+          content={<ColorSchemePanel />}
+        >
+          <Tooltip title="配色方案">
+            <Button type="text" icon={<BgColorsOutlined />}>
+              配色
+            </Button>
+          </Tooltip>
+        </Popover>
+
         <Tooltip title="预览简历效果">
           <Button
             type="primary"

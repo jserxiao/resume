@@ -6,8 +6,8 @@ import { MARGIN_INDICATOR_COLOR, MARGIN_INDICATOR_BORDER_COLOR } from '@/utils/c
 import { uploadImage } from '@/utils/imageUpload';
 import { useResumeStore } from '@/store';
 import { useEditableField } from '@/hooks/useEditableField.tsx';
-import BlockActionsToolbar from '@/components/shared/BlockActionsToolbar';
 import DecorationSvgRenderer from '@/components/shared/DecorationSvgRenderer';
+import { renderIconByName } from '@/utils/iconMap';
 import './FreeBlockCard.less';
 
 interface FreeBlockCardProps {
@@ -57,8 +57,10 @@ export default function FreeBlockCard({
 
   // 判断是否为自定义装饰块
   const isCustomDecorationBlock = block.templateId === 'custom-decoration';
+  // 判断是否为 antd 图标块
+  const isIconBlock = block.templateId === 'antd-icon';
 
-  if (!template && !isCustomDecorationBlock) return null;
+  if (!template && !isCustomDecorationBlock && !isIconBlock) return null;
 
   const fields = template ? [...template.fields].sort((a, b) => a.order - b.order) : [];
   const blockStyle = block.style || {};
@@ -83,7 +85,7 @@ export default function FreeBlockCard({
 
   // 计算块内容区域的背景色
   // 自定义装饰块始终透明；基础组件默认透明（用户可手动设置覆盖）；组合组件使用主题色块背景
-  const defaultBgColor = isCustomDecorationBlock ? 'transparent'
+  const defaultBgColor = isCustomDecorationBlock || isIconBlock ? 'transparent'
     : isBasicCategory ? 'transparent'
     : colorScheme.blockBackground;
   const contentBgColor = blockStyle.backgroundColor || defaultBgColor;
@@ -112,9 +114,9 @@ export default function FreeBlockCard({
     marginTop: margin.top || 0,
     overflow: 'hidden',
     backgroundColor: contentBgColor,
-    borderRadius: (isCustomDecorationBlock || isBasicCategory) && blockStyle.borderRadius === undefined ? 0 : (blockStyle.borderRadius ?? 6),
+    borderRadius: (isCustomDecorationBlock || isIconBlock || isBasicCategory) && blockStyle.borderRadius === undefined ? 0 : (blockStyle.borderRadius ?? 6),
     opacity: blockStyle.opacity ?? 1,
-    border: (isCustomDecorationBlock || isBasicCategory) && !blockStyle.borderWidth ? 'none' : (blockStyle.borderWidth ? `${blockStyle.borderWidth}px ${blockStyle.borderStyle || 'solid'} ${blockStyle.borderColor || '#e5e7eb'}` : undefined),
+    border: (isCustomDecorationBlock || isIconBlock || isBasicCategory) && !blockStyle.borderWidth ? 'none' : (blockStyle.borderWidth ? `${blockStyle.borderWidth}px ${blockStyle.borderStyle || 'solid'} ${blockStyle.borderColor || '#e5e7eb'}` : undefined),
     ...(blockStyle.backgroundImage ? {
       backgroundImage: `url(${blockStyle.backgroundImage})`,
       backgroundSize: blockStyle.backgroundSize || 'cover',
@@ -173,40 +175,47 @@ export default function FreeBlockCard({
         />
       )}
 
+      {/* 覆盖层：选中边框、分组边框 —— 放在 innerStyle 外部以避免被 overflow:hidden 裁切 */}
+      {/* 选中边框 */}
+      {isSelected && !isPreview && (
+        <div className="free-block-selection-border" style={{ top: (margin.top || 0) - 1, left: (margin.left || 0) - 1 }} />
+      )}
+
+      {/* 分组选中边框 */}
+      {isGroupSelected && !isSelected && !isPreview && (
+        <div className="free-block-group-border" style={{ top: (margin.top || 0) - 1, left: (margin.left || 0) - 1 }} />
+      )}
+
       {/* 内部内容区 */}
       <div style={innerStyle}>
-        {/* 选中边框 */}
-        {isSelected && !isPreview && (
-          <div className="free-block-selection-border" />
-        )}
-
-        {/* 分组选中边框 */}
-        {isGroupSelected && !isSelected && !isPreview && (
-          <div className="free-block-group-border" />
-        )}
-
         {/* 装饰元素渲染层 */}
         <DecorationSvgRenderer decorations={block.decorations} isPreview={isPreview} />
-
-        {/* 工具栏 - 编辑模式hover/选中时显示 */}
-        {!isPreview && (isHovered || isSelected) && (
-          <BlockActionsToolbar
-            name={block.name}
-            visible={block.visible}
-            locked={block.locked}
-            hasGroup={!!block.groupId}
-            onToggleVisibility={() => {}}
-            onToggleLock={() => {}}
-            onClone={() => cloneBlock(block.id)}
-            onDelete={() => removeBlock(block.id)}
-          />
-        )}
 
         {/* 块内容（含内边距） */}
         <div style={contentPaddingStyle}>
           {isCustomDecorationBlock ? (
             // 自定义装饰块：不渲染字段内容，装饰 SVG 已在 renderDecorations 中渲染
             null
+          ) : isIconBlock ? (
+            // 图标块：渲染 antd 图标，颜色和字体大小可自定义
+            (() => {
+              const iconColor = block.fields['icon-color'] || colorScheme.primary;
+              const iconFontSize = Number(block.fields['icon-font-size']) || Math.min(block.width, block.height);
+              return (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '100%',
+                  color: iconColor,
+                }}>
+                  {renderIconByName(block.fields['icon-name'] || 'StarOutlined', {
+                    style: { fontSize: iconFontSize, color: iconColor },
+                  })}
+                </div>
+              );
+            })()
           ) : isHeaderInfo ? (
             <div className="free-block-header-info">
               {fields.find((f) => f.name === '头像') && (

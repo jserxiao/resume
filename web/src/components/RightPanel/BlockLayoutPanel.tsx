@@ -9,13 +9,15 @@ import ImageUploadField from '@/components/shared/ImageUploadField';
 
 interface BlockLayoutPanelProps {
   block: BlockInstance;
+  /** 是否为图标块——图标块不需要背景配置 */
+  isIconBlock?: boolean;
 }
 
 /**
  * 块布局编辑面板
  * 包含：位置、尺寸、层级、旋转、外边距、内边距、背景、透明度、圆角、边框
  */
-export default function BlockLayoutPanel({ block }: BlockLayoutPanelProps) {
+export default function BlockLayoutPanel({ block, isIconBlock }: BlockLayoutPanelProps) {
   const { updateBlockPosition, updateBlockSize, updateBlockZIndex, updateBlockRotation, updateBlockStyle } = useResumeStore();
 
   return (
@@ -45,32 +47,37 @@ export default function BlockLayoutPanel({ block }: BlockLayoutPanelProps) {
         </div>
       </div>
 
-      {/* 尺寸 */}
-      <div className="right-panel-section-title">尺寸</div>
-      <div className="right-panel-position-grid">
-        <div className="right-panel-field compact">
-          <label className="right-panel-label">宽</label>
-          <InputNumber
-            value={Math.round(block.width)}
-            onChange={(val) => val !== null && updateBlockSize(block.id, val, block.height)}
-            size="small"
-            style={{ width: '100%' }}
-            min={50}
-            step={1}
-          />
-        </div>
-        <div className="right-panel-field compact">
-          <label className="right-panel-label">高</label>
-          <InputNumber
-            value={Math.round(block.height)}
-            onChange={(val) => val !== null && updateBlockSize(block.id, block.width, val)}
-            size="small"
-            style={{ width: '100%' }}
-            min={30}
-            step={1}
-          />
-        </div>
-      </div>
+      {/* 图标块的尺寸由字号自动驱动，不需要手动设置 */}
+      {!isIconBlock && (
+        <>
+          {/* 尺寸 */}
+          <div className="right-panel-section-title">尺寸</div>
+          <div className="right-panel-position-grid">
+            <div className="right-panel-field compact">
+              <label className="right-panel-label">宽</label>
+              <InputNumber
+                value={Math.round(block.width)}
+                onChange={(val) => val !== null && updateBlockSize(block.id, val, block.height)}
+                size="small"
+                style={{ width: '100%' }}
+                min={50}
+                step={1}
+              />
+            </div>
+            <div className="right-panel-field compact">
+              <label className="right-panel-label">高</label>
+              <InputNumber
+                value={Math.round(block.height)}
+                onChange={(val) => val !== null && updateBlockSize(block.id, block.width, val)}
+                size="small"
+                style={{ width: '100%' }}
+                min={30}
+                step={1}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 层级 */}
       <div className="right-panel-field compact">
@@ -107,7 +114,7 @@ export default function BlockLayoutPanel({ block }: BlockLayoutPanelProps) {
           min={-360}
           max={360}
           step={1}
-          addonAfter="°"
+          suffix="°"
         />
       </div>
 
@@ -129,30 +136,35 @@ export default function BlockLayoutPanel({ block }: BlockLayoutPanelProps) {
         defaultValue={BLOCK_DEFAULT_PADDING}
       />
 
-      <Divider style={{ margin: '8px 0' }} />
+      {/* 图标块不需要背景配置 */}
+      {!isIconBlock && (
+        <>
+          <Divider style={{ margin: '8px 0' }} />
 
-      {/* 背景颜色 */}
-      <div className="right-panel-section-title"><BgColorsOutlined /> 背景</div>
-      <div className="right-panel-field">
-        <label className="right-panel-label">背景颜色</label>
-        <ColorFieldInput
-          value={block.style?.backgroundColor || ''}
-          onChange={(hex) => updateBlockStyle(block.id, { backgroundColor: hex })}
-          placeholder="跟随主题"
-          allowClear
-          onClear={() => updateBlockStyle(block.id, { backgroundColor: '' })}
-        />
-      </div>
+          {/* 背景颜色 */}
+          <div className="right-panel-section-title"><BgColorsOutlined /> 背景</div>
+          <div className="right-panel-field">
+            <label className="right-panel-label">背景颜色</label>
+            <ColorFieldInput
+              value={block.style?.backgroundColor || ''}
+              onChange={(hex) => updateBlockStyle(block.id, { backgroundColor: hex })}
+              placeholder="跟随主题"
+              allowClear
+              onClear={() => updateBlockStyle(block.id, { backgroundColor: '' })}
+            />
+          </div>
 
-      {/* 背景图片 */}
-      <div className="right-panel-field">
-        <label className="right-panel-label">背景图片</label>
-        <ImageUploadField
-          value={block.style?.backgroundImage || ''}
-          onChange={(val) => updateBlockStyle(block.id, { backgroundImage: val })}
-          uploadText="上传背景图片"
-        />
-      </div>
+          {/* 背景图片 */}
+          <div className="right-panel-field">
+            <label className="right-panel-label">背景图片</label>
+            <ImageUploadField
+              value={block.style?.backgroundImage || ''}
+              onChange={(val) => updateBlockStyle(block.id, { backgroundImage: val })}
+              uploadText="上传背景图片"
+            />
+          </div>
+        </>
+      )}
 
       {/* 透明度 */}
       <div className="right-panel-field">
@@ -166,56 +178,61 @@ export default function BlockLayoutPanel({ block }: BlockLayoutPanelProps) {
         />
       </div>
 
-      {/* 圆角 */}
-      <div className="right-panel-field compact">
-        <label className="right-panel-label">圆角</label>
-        <InputNumber
-          value={block.style?.borderRadius ?? 6}
-          onChange={(val) => updateBlockStyle(block.id, { borderRadius: val ?? 0 })}
-          size="small"
-          style={{ width: '100%' }}
-          min={0}
-          step={1}
-        />
-      </div>
+      {/* 图标块不需要圆角和边框配置 */}
+      {!isIconBlock && (
+        <>
+          {/* 圆角 */}
+          <div className="right-panel-field compact">
+            <label className="right-panel-label">圆角</label>
+            <InputNumber
+              value={block.style?.borderRadius ?? 6}
+              onChange={(val) => updateBlockStyle(block.id, { borderRadius: val ?? 0 })}
+              size="small"
+              style={{ width: '100%' }}
+              min={0}
+              step={1}
+            />
+          </div>
 
-      {/* 边框 */}
-      <div className="right-panel-border-row">
-        <div className="right-panel-field compact" style={{ flex: 1 }}>
-          <label className="right-panel-label">边框宽</label>
-          <InputNumber
-            value={block.style?.borderWidth ?? 0}
-            onChange={(val) => updateBlockStyle(block.id, { borderWidth: val ?? 0 })}
-            size="small"
-            style={{ width: '100%' }}
-            min={0}
-            step={1}
-          />
-        </div>
-        <div className="right-panel-field compact" style={{ flex: 1 }}>
-          <label className="right-panel-label">边框色</label>
-          <ColorPicker
-            value={block.style?.borderColor || '#e5e7eb'}
-            onChange={(_, hex) => updateBlockStyle(block.id, { borderColor: hex })}
-            size="small"
-          />
-        </div>
-      </div>
-      <div className="right-panel-field compact">
-        <label className="right-panel-label">边框样式</label>
-        <Select
-          value={block.style?.borderStyle || 'solid'}
-          onChange={(val) => updateBlockStyle(block.id, { borderStyle: val })}
-          size="small"
-          style={{ width: '100%' }}
-          options={[
-            { label: '实线', value: 'solid' },
-            { label: '虚线', value: 'dashed' },
-            { label: '点线', value: 'dotted' },
-            { label: '双线', value: 'double' },
-          ]}
-        />
-      </div>
+          {/* 边框 */}
+          <div className="right-panel-border-row">
+            <div className="right-panel-field compact" style={{ flex: 1 }}>
+              <label className="right-panel-label">边框宽</label>
+              <InputNumber
+                value={block.style?.borderWidth ?? 0}
+                onChange={(val) => updateBlockStyle(block.id, { borderWidth: val ?? 0 })}
+                size="small"
+                style={{ width: '100%' }}
+                min={0}
+                step={1}
+              />
+            </div>
+            <div className="right-panel-field compact" style={{ flex: 1 }}>
+              <label className="right-panel-label">边框色</label>
+              <ColorPicker
+                value={block.style?.borderColor || '#e5e7eb'}
+                onChange={(_, hex) => updateBlockStyle(block.id, { borderColor: hex })}
+                size="small"
+              />
+            </div>
+          </div>
+          <div className="right-panel-field compact">
+            <label className="right-panel-label">边框样式</label>
+            <Select
+              value={block.style?.borderStyle || 'solid'}
+              onChange={(val) => updateBlockStyle(block.id, { borderStyle: val })}
+              size="small"
+              style={{ width: '100%' }}
+              options={[
+                { label: '实线', value: 'solid' },
+                { label: '虚线', value: 'dashed' },
+                { label: '点线', value: 'dotted' },
+                { label: '双线', value: 'double' },
+              ]}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

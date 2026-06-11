@@ -16,13 +16,12 @@ import { useResumeStore } from '@/store';
 import { useDragPreview } from '@/hooks/useDragPreview';
 import { buildDecoPathD } from '@/utils/geometry';
 import { ICON_CATEGORIES, renderIconByName } from '@/utils/iconMap';
-import LayerPanel from './LayerPanel';
 import './index.less';
 
 /**
- * 左侧面板 —— 图层面板 + 组件面板 + 装饰面板
- * 上方：图层面板（显示当前舞台/分组图层）
- * 中间：可折叠的组件模板面板
+ * 左侧面板 —— 组件面板 + 图标面板 + 装饰面板
+ * 上方：可折叠的组件模板面板
+ * 中间：基础图标面板
  * 下方：自定义装饰面板
  */
 export default function LeftPanel() {
@@ -245,9 +244,6 @@ export default function LeftPanel() {
 
   return (
     <div className="left-panel" style={{ width: editor.leftPanelWidth }}>
-      {/* 上方：图层面板 */}
-      <LayerPanel />
-
       {/* 多选操作 */}
       {selectedBlockIds.length >= 2 && (
         <div className="left-panel-multi-select-actions">

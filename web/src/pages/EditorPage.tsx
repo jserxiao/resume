@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { App } from 'antd';
 import Toolbar from '@/components/Toolbar';
 import LeftPanel from '@/components/LeftPanel';
+import LayerDrawer from '@/components/LayerDrawer';
 import EditorCanvas from '@/components/EditorCanvas';
 import RightPanel from '@/components/RightPanel';
 import PreviewDrawer from '@/components/PreviewDrawer';
@@ -14,8 +15,8 @@ import '@/App.less';
 /**
  * 编辑器页面
  * 路由：/editor
- * 布局：[左侧面板: 块模板] [中间: 编辑画布] [右侧: 属性面板] + 预览抽屉
- * 
+ * 布局：[左侧面板: 块模板] [中间: 编辑画布] [右侧: 属性面板] + 悬浮图层面板 + 预览抽屉
+ *
  * 自动保存功能：
  * - 页面加载时从 localStorage 恢复数据
  * - 定时自动保存到 localStorage
@@ -61,6 +62,8 @@ export default function EditorPage() {
         <EditorCanvas />
         <RightPanel />
       </div>
+      {/* 悬浮图层面板：不影响布局 */}
+      <LayerDrawer />
       <PreviewDrawer />
     </div>
   );

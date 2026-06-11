@@ -1,5 +1,5 @@
 import { InputNumber, Divider, Button, Select } from 'antd';
-import { BgColorsOutlined } from '@ant-design/icons';
+import { BgColorsOutlined, LayoutOutlined, StarOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import type { Resume } from '@/types';
 import { CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, CANVAS_DEFAULT_PADDING, CANVAS_DEFAULT_BACKGROUND } from '@/utils/constants';
@@ -20,7 +20,7 @@ export default function CanvasLayoutPanel({ resume }: CanvasLayoutPanelProps) {
 
   return (
     <div className="right-panel-content">
-      <div className="right-panel-section-title">📐 画布设置</div>
+      <div className="right-panel-section-title"><LayoutOutlined /> 画布设置</div>
 
       {/* 画布尺寸 */}
       <div className="right-panel-section-title" style={{ fontSize: 12 }}>尺寸</div>
@@ -128,7 +128,7 @@ export default function CanvasLayoutPanel({ resume }: CanvasLayoutPanelProps) {
       <Divider style={{ margin: '8px 0' }} />
 
       {/* 自定义装饰元素 */}
-      <div className="right-panel-section-title">⭐ 自定义装饰</div>
+      <div className="right-panel-section-title"><StarOutlined /> 自定义装饰</div>
       <CanvasCustomDecorationSection />
     </div>
   );
@@ -145,7 +145,7 @@ function CanvasCustomDecorationSection() {
     <>
       <Button
         size="small"
-        icon={<span>⭐</span>}
+        icon={<PlusOutlined />}
         onClick={() => {
           // navigate 需要通过 Router context 获取，这里通过 window 临时传递
           if ((window as any).__navigate) {
@@ -192,7 +192,7 @@ function CanvasCustomDecorationSection() {
               <Button
                 type="text"
                 size="small"
-                icon={<span>✏️</span>}
+                icon={<EditOutlined />}
                 onClick={() => {
                   if ((window as any).__navigate) {
                     (window as any).__navigate(`/decoration-editor?id=${d.id}`);
@@ -203,7 +203,7 @@ function CanvasCustomDecorationSection() {
                 type="text"
                 size="small"
                 danger
-                icon={<span>🗑</span>}
+                icon={<DeleteOutlined />}
                 onClick={() => removeCustomDecoration(d.id)}
               />
             </div>

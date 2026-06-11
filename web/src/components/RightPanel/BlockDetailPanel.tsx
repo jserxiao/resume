@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Input, InputNumber, Slider, Progress, Button, App, ColorPicker, Select, Collapse } from 'antd';
+import { Input, InputNumber, Slider, Progress, Button, App, ColorPicker, Select, Collapse, Divider, Tooltip } from 'antd';
 import {
   FormOutlined,
   DragOutlined,
@@ -9,6 +9,12 @@ import {
   CloseOutlined,
   RotateRightOutlined,
   RightOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
+  LockOutlined,
+  UnlockOutlined,
+  CopyOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import { FieldType } from '@/types';
@@ -459,48 +465,46 @@ export default function BlockDetailPanel({
     <div className="right-panel-content">
       {/* 块头部信息 */}
       <div className="right-panel-block-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Input
-            variant="borderless"
-            value={block.name}
-            onChange={(e) => renameBlock(block.id, e.target.value)}
-            className="right-panel-block-name"
-          />
-        </div>
-        <div style={{ display: 'flex', gap: 2 }}>
-          <Button
-            type="text"
-            size="small"
-            onClick={() => toggleBlockVisibility(block.id)}
-            style={{ opacity: block.visible ? 1 : 0.4, fontSize: 12 }}
-          >
-            {block.visible ? '👁' : '🚫'}
-          </Button>
-          <Button
-            type="text"
-            size="small"
-            onClick={() => toggleBlockLock(block.id)}
-            style={{ opacity: block.locked ? 0.4 : 1, fontSize: 12 }}
-          >
-            {block.locked ? '🔒' : '🔓'}
-          </Button>
-          <Button
-            type="text"
-            size="small"
-            onClick={() => cloneBlock(block.id)}
-            style={{ fontSize: 12 }}
-          >
-            📋
-          </Button>
-          <Button
-            type="text"
-            size="small"
-            danger
-            onClick={() => removeBlock(block.id)}
-            style={{ fontSize: 12 }}
-          >
-            🗑
-          </Button>
+        <Input
+          variant="borderless"
+          value={block.name}
+          onChange={(e) => renameBlock(block.id, e.target.value)}
+          className="right-panel-block-name"
+        />
+        <div className="right-panel-block-actions">
+          <Tooltip title={block.visible ? '隐藏' : '显示'}>
+            <Button
+              type="text"
+              size="small"
+              icon={block.visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+              onClick={() => toggleBlockVisibility(block.id)}
+            />
+          </Tooltip>
+          <Tooltip title={block.locked ? '解锁' : '锁定'}>
+            <Button
+              type="text"
+              size="small"
+              icon={block.locked ? <LockOutlined /> : <UnlockOutlined />}
+              onClick={() => toggleBlockLock(block.id)}
+            />
+          </Tooltip>
+          <Tooltip title="复制">
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => cloneBlock(block.id)}
+            />
+          </Tooltip>
+          <Tooltip title="删除">
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => removeBlock(block.id)}
+            />
+          </Tooltip>
         </div>
       </div>
 

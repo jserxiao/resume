@@ -1,30 +1,121 @@
-.layer-panel {
+.layer-drawer {
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-  max-height: 35%;
+  width: 220px;
+  max-height: 70vh;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  user-select: none;
 
-  // ===== 头部 =====
+  &--collapsed {
+    width: auto;
+    min-width: 120px;
+
+    .layer-drawer-content {
+      display: none;
+    }
+  }
+
+  &--dragging {
+    opacity: 0.9;
+    cursor: grabbing;
+    box-shadow: var(--shadow-lg), 0 0 0 1px var(--color-primary-light);
+  }
+
+  &--pinned {
+    .layer-drawer-header {
+      cursor: grab;
+    }
+  }
+
+  // ===== 标题栏 =====
   &-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px var(--gap-lg);
+    padding: 8px 10px;
     background: var(--color-bg-hover);
     border-bottom: 1px solid var(--color-border-light);
+    flex-shrink: 0;
+
+    &:active {
+      cursor: grabbing;
+    }
   }
 
-  &-title {
+  &-header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-md);
+    min-width: 0;
+    flex: 1;
+  }
+
+  &-header-icon {
+    font-size: var(--font-size-12);
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+  }
+
+  &-header-title {
     font-size: var(--font-size-12);
     font-weight: 600;
     color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-xs);
+    flex-shrink: 0;
+  }
+
+  &-header-btn {
+    width: 22px !important;
+    height: 22px !important;
+    padding: 0 !important;
+    font-size: var(--font-size-11) !important;
+    color: var(--color-text-muted) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      color: var(--color-primary) !important;
+      background: var(--color-primary-bg-hover) !important;
+    }
+
+    &.is-active {
+      color: var(--color-primary) !important;
+      background: var(--color-primary-bg) !important;
+    }
+
+    .anticon {
+      font-size: var(--font-size-11);
+    }
+  }
+
+  // ===== 内容区 =====
+  &-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
   }
 
   // ===== 图层列表 =====
   &-list {
-    overflow-y: auto;
     flex: 1;
+    overflow-y: auto;
+    padding: var(--gap-sm) 0;
+    min-height: 120px;
   }
 
   // ===== 图层项 =====
@@ -96,8 +187,8 @@
     transition: opacity var(--transition-fast);
     flex-shrink: 0;
 
-    .layer-panel-item:hover &,
-    .layer-panel-item.selected & {
+    .layer-drawer-item:hover &,
+    .layer-drawer-item.selected & {
       opacity: 1;
     }
   }

@@ -38,6 +38,7 @@ export interface EditorSlice {
   // 分组操作
   createGroup: (name: string) => string;
   addBlocksToGroup: (groupId: string, blockIds: string[]) => void;
+  removeBlocksFromGroup: (groupId: string, blockIds: string[]) => void;
   removeGroup: (groupId: string) => void;
   renameGroup: (groupId: string, name: string) => void;
   updateGroupRotation: (groupId: string, rotation: number) => void;
@@ -138,6 +139,42 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
       }
     })),
 
+  removeBlocksFromGroup: (groupId, blockIds) =>
+    set(produce<EditorSlice & { resume: any }>((state) => {
+      if (!state.resume) return;
+      const group = state.resume.groups.find((g: BlockGroup) => g.id === groupId);
+      if (!group) return;
+      for (const id of blockIds) {
+        group.blockIds = group.blockIds.filter((bid: string) => bid !== id);
+        const block = state.resume.blocks.find((b: any) => b.id === id);
+        if (block) {
+          block.groupId = undefined;
+        }
+      }
+      // 如果分组为空则自动删除
+      if (group.blockIds.length === 0) {
+        state.resume.groups = state.resume.groups.filter((g: BlockGroup) => g.id !== groupId);
+        // 清除分组选中状态
+        if (state.editor.selectedGroupId === groupId) {
+          state.editor.selectedGroupId = null;
+        }
+      }
+      // 如果移出的是当前选中的块，确保选中状态正确
+      if (state.editor.selectedGroupId === groupId) {
+        // 仍选中分组，但更新 selectedBlockIds（移除已移出的块）
+        state.editor.selectedBlockIds = state.editor.selectedBlockIds.filter(
+          (id: string) => !blockIds.includes(id)
+        );
+        if (state.editor.selectedBlockIds.length === 0) {
+          state.editor.selectedBlockId = null;
+        } else if (!state.editor.selectedBlockIds.includes(state.editor.selectedBlockId!)) {
+          state.editor.selectedBlockId = state.editor.selectedBlockIds[0];
+        }
+      }
+      group.updatedAt = Date.now();
+      state.resume.updatedAt = Date.now();
+    })),
+
   removeGroup: (groupId) =>
     set(produce<EditorSlice & { resume: any }>((state) => {
       if (!state.resume) return;
@@ -151,6 +188,17 @@ export const createEditorSlice = (set: any, get: any): EditorSlice => ({
         }
       }
       state.resume.groups = state.resume.groups.filter((g: BlockGroup) => g.id !== groupId);
+      // 清除分组选中状态，将选中切换为原分组内的块
+      if (state.editor.selectedGroupId === groupId) {
+        state.editor.selectedGroupId = null;
+        if (group && group.blockIds.length > 0) {
+          state.editor.selectedBlockIds = [...group.blockIds];
+          state.editor.selectedBlockId = group.blockIds[0];
+        } else {
+          state.editor.selectedBlockIds = [];
+          state.editor.selectedBlockId = null;
+        }
+      }
       state.resume.updatedAt = Date.now();
     })),
 

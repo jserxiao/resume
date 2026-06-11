@@ -80,6 +80,15 @@ export default function Toolbar({ onSave }: ToolbarProps) {
       </div>
 
       <div className="toolbar-right">
+        <Tooltip title="预览简历效果">
+          <Button
+            type="primary"
+            icon={<EyeOutlined />}
+            onClick={() => setPreviewOpen(true)}
+          >
+            预览
+          </Button>
+        </Tooltip>
         {/* 配色方案按钮 */}
         <Popover
           trigger="click"
@@ -93,16 +102,6 @@ export default function Toolbar({ onSave }: ToolbarProps) {
             </Button>
           </Tooltip>
         </Popover>
-
-        <Tooltip title="预览简历效果">
-          <Button
-            type="primary"
-            icon={<EyeOutlined />}
-            onClick={() => setPreviewOpen(true)}
-          >
-            预览
-          </Button>
-        </Tooltip>
         <Tooltip title="保存 (Ctrl+S)">
           <Button type="text" icon={<SaveOutlined />} onClick={handleSave}>
             保存

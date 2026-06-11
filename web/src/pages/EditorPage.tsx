@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { App } from 'antd';
 import Toolbar from '@/components/Toolbar';
 import LeftPanel from '@/components/LeftPanel';
-import LayerDrawer from '@/components/LayerDrawer';
 import EditorCanvas from '@/components/EditorCanvas';
 import RightPanel from '@/components/RightPanel';
 import PreviewDrawer from '@/components/PreviewDrawer';
@@ -62,8 +61,6 @@ export default function EditorPage() {
         <EditorCanvas />
         <RightPanel />
       </div>
-      {/* 悬浮图层面板：不影响布局 */}
-      <LayerDrawer />
       <PreviewDrawer />
     </div>
   );

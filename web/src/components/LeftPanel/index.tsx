@@ -1,21 +1,22 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input, Collapse, Tag, Button, Tooltip, Empty, App, Popconfirm, Tabs } from 'antd';
+import { Input, Collapse, Tag, Button, Tooltip, Empty, Popconfirm, Tabs } from 'antd';
 import {
   SearchOutlined,
   AppstoreOutlined,
   HolderOutlined,
-  SaveOutlined,
   GroupOutlined,
   StarOutlined,
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
+  MinusOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import { useDragPreview } from '@/hooks/useDragPreview';
 import { buildDecoPathD } from '@/utils/geometry';
 import { ICON_CATEGORIES, renderIconByName } from '@/utils/iconMap';
+import LayerDrawer from '@/components/LayerDrawer';
 import './index.less';
 
 /**
@@ -26,10 +27,16 @@ import './index.less';
  */
 export default function LeftPanel() {
   const navigate = useNavigate();
-  const { resume, blockTemplates, customElementTemplates, customDecorations, editor, selectBlocks, createGroup, addBlocksToGroup, saveAsCustomTemplate, removeCustomDecoration } = useResumeStore();
+  const { resume, blockTemplates, customElementTemplates, customDecorations, editor, removeCustomDecoration } = useResumeStore();
   const [searchText, setSearchText] = useState('');
   const [iconSearchText, setIconSearchText] = useState('');
-  const { modal } = App.useApp();
+  const [layerCollapsed, setLayerCollapsed] = useState(false);
+  // 各分区收起/展开状态
+  const [sectionCollapsed, setSectionCollapsed] = useState<Record<string, boolean>>({});
+
+  const toggleSection = (section: string) => {
+    setSectionCollapsed((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
 
   // 拖拽预览 Hook
   const {
@@ -72,7 +79,6 @@ export default function LeftPanel() {
   if (!resume) return null;
 
   const { colorScheme } = resume;
-  const selectedBlockIds = editor.selectedBlockIds;
 
   // 过滤模板
   const filteredTemplates = blockTemplates.filter((t) =>
@@ -106,37 +112,6 @@ export default function LeftPanel() {
   });
 
 // 拖拽逻辑已抽取到 useDragPreview Hook
-
-  // 创建分组
-  const handleCreateGroup = () => {
-    if (selectedBlockIds.length < 2) return;
-    const groupId = createGroup(`分组 ${resume.groups.length + 1}`);
-    addBlocksToGroup(groupId, selectedBlockIds);
-  };
-
-  // 保存为自定义元素
-  const handleSaveAsCustom = () => {
-    if (selectedBlockIds.length < 1) return;
-    let inputValue = '';
-    modal.confirm({
-      title: '保存为自定义元素',
-      content: (
-        <Input
-          placeholder="请输入自定义元素名称"
-          onChange={(e) => { inputValue = e.target.value; }}
-          style={{ marginTop: 8 }}
-          autoFocus
-        />
-      ),
-      okText: '保存',
-      cancelText: '取消',
-      onOk: () => {
-        if (inputValue.trim()) {
-          saveAsCustomTemplate(inputValue.trim(), selectedBlockIds);
-        }
-      },
-    });
-  };
 
   // 块模板折叠面板
   const templateItems = sortedCategories.map((category) => {
@@ -243,44 +218,24 @@ export default function LeftPanel() {
   const allItems = [...templateItems, ...customItems, ...groupItems];
 
   return (
-    <div className="left-panel" style={{ width: editor.leftPanelWidth }}>
-      {/* 多选操作 */}
-      {selectedBlockIds.length >= 2 && (
-        <div className="left-panel-multi-select-actions">
-          <span className="left-panel-selected-count">
-            已选择 {selectedBlockIds.length} 个元素
-          </span>
-          <div className="left-panel-action-buttons">
-            <Tooltip title="创建分组">
-              <Button
-                size="small"
-                icon={<GroupOutlined />}
-                onClick={handleCreateGroup}
-              >
-                分组
-              </Button>
-            </Tooltip>
-            <Tooltip title="保存为自定义元素">
-              <Button
-                size="small"
-                icon={<SaveOutlined />}
-                onClick={handleSaveAsCustom}
-              >
-                保存元素
-              </Button>
-            </Tooltip>
-          </div>
-        </div>
-      )}
-
+    <div className="left-panel-wrapper" style={{ width: editor.leftPanelWidth }}>
+    <div className="left-panel">
       {/* 组件面板 */}
-      <div className="left-panel-components">
-        <div className="left-panel-section-header left-panel-section-header--component">
+      <div className={`left-panel-components ${sectionCollapsed['component'] ? 'left-panel-components--collapsed' : ''}`}>
+        <div className="left-panel-section-header left-panel-section-header--component" onClick={() => toggleSection('component')}>
           <AppstoreOutlined />
           <span>组件</span>
+          <Button
+            type="text"
+            size="small"
+            icon={sectionCollapsed['component'] ? <PlusOutlined /> : <MinusOutlined />}
+            className="left-panel-section-toggle"
+            onClick={(e) => { e.stopPropagation(); toggleSection('component'); }}
+          />
         </div>
 
         {/* 搜索 */}
+        {!sectionCollapsed['component'] && (
         <div className="left-panel-search">
           <Input
             placeholder="搜索块模板..."
@@ -291,8 +246,10 @@ export default function LeftPanel() {
             size="small"
           />
         </div>
+        )}
 
         {/* 块模板列表 */}
+        {!sectionCollapsed['component'] && (
         <div className="left-panel-templates">
           {allItems.length > 0 ? (
             <Collapse
@@ -308,18 +265,27 @@ export default function LeftPanel() {
             />
           )}
         </div>
+        )}
       </div>
 
       {/* 图标面板 */}
-      <div className="left-panel-icons">
-        <div className="left-panel-section-header left-panel-section-header--icon">
+      <div className={`left-panel-icons ${sectionCollapsed['icon'] ? 'left-panel-icons--collapsed' : ''}`}>
+        <div className="left-panel-section-header left-panel-section-header--icon" onClick={() => toggleSection('icon')}>
           <StarOutlined />
           <span>基础图标</span>
           <Tag className="left-panel-category-count left-panel-category-count--icon">
             {Object.values(ICON_CATEGORIES).flat().length}
           </Tag>
+          <Button
+            type="text"
+            size="small"
+            icon={sectionCollapsed['icon'] ? <PlusOutlined /> : <MinusOutlined />}
+            className="left-panel-section-toggle"
+            onClick={(e) => { e.stopPropagation(); toggleSection('icon'); }}
+          />
         </div>
 
+        {!sectionCollapsed['icon'] && (<>
         <div className="left-panel-icon-search">
           <Input
             placeholder="搜索图标..."
@@ -380,11 +346,12 @@ export default function LeftPanel() {
             />
           )}
         </div>
+        </>)}
       </div>
 
       {/* 自定义装饰面板 */}
-      <div className="left-panel-decorations">
-        <div className="left-panel-section-header left-panel-section-header--deco">
+      <div className={`left-panel-decorations ${sectionCollapsed['decoration'] ? 'left-panel-decorations--collapsed' : ''}`}>
+        <div className="left-panel-section-header left-panel-section-header--deco" onClick={() => toggleSection('decoration')}>
           <StarOutlined />
           <span>自定义装饰</span>
           <Button
@@ -392,12 +359,20 @@ export default function LeftPanel() {
             size="small"
             icon={<PlusOutlined />}
             className="left-panel-section-header-action"
-            onClick={() => navigate('/decoration-editor')}
+            onClick={(e) => { e.stopPropagation(); navigate('/decoration-editor'); }}
           >
             新建
           </Button>
+          <Button
+            type="text"
+            size="small"
+            icon={sectionCollapsed['decoration'] ? <PlusOutlined /> : <MinusOutlined />}
+            className="left-panel-section-toggle"
+            onClick={(e) => { e.stopPropagation(); toggleSection('decoration'); }}
+          />
         </div>
 
+        {!sectionCollapsed['decoration'] && (
         <div className="left-panel-deco-list">
           {customDecorations.length > 0 ? (
             <div className="left-panel-template-list">
@@ -481,7 +456,11 @@ export default function LeftPanel() {
             </div>
           )}
         </div>
+        )}
       </div>
+    </div>
+      {/* 舞台图层面板 - 使用 position:absolute 定位到左侧面板右侧 */}
+      <LayerDrawer collapsed={layerCollapsed} onToggle={() => setLayerCollapsed(!layerCollapsed)} />
     </div>
   );
 }

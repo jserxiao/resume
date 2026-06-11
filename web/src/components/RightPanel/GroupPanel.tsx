@@ -82,7 +82,7 @@ export default function GroupPanel({ group, isLayoutTab = false }: GroupPanelPro
         <Divider style={{ margin: '8px 0' }} />
 
         <div className="right-panel-group-hint">
-          分组不可调整边距、背景等样式，请取消分组后单独调整各元素
+          分组不可调整边距、背景等样式，请单独调整各元素
         </div>
       </div>
     );
@@ -167,7 +167,7 @@ export default function GroupPanel({ group, isLayoutTab = false }: GroupPanelPro
       <Divider style={{ margin: '8px 0' }} />
 
       <div className="right-panel-group-hint">
-        分组不可调整边距、背景等样式，请取消分组后单独调整各元素
+        分组不可调整边距、背景等样式，请单独调整各元素
       </div>
     </div>
   );

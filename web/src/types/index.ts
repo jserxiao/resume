@@ -53,6 +53,7 @@ export interface BlockStyle {
   margin?: BoxSides;              // 外边距（编辑模式以暗色显示）
   padding?: BoxSides;             // 内边距
   backgroundColor?: string;       // 背景颜色（空字符串跟随主题）
+  color?: string;                  // 文字颜色（空字符串跟随主题）
   backgroundImage?: string;       // 背景图片URL
   backgroundSize?: 'cover' | 'contain' | 'auto'; // 背景图片适配方式
   borderRadius?: number;          // 圆角(px)
@@ -253,6 +254,8 @@ export interface CustomSvgPathData {
   strokeWidth: number;
   isClosed: boolean;
   clipRect?: { x: number; y: number; width: number; height: number } | null;
+  /** 逐边颜色：edgeColors[i] 为第 i 条边（从锚点 i 到锚点 i+1）的描边色，未设置时使用 strokeColor */
+  edgeColors?: string[];
 }
 
 /** 装饰元素实例 — 放置在块中的具体装饰 */
@@ -301,6 +304,8 @@ export interface DecorationPath {
   strokeWidth: number;
   /** 裁剪矩形（0-100 百分比），仅显示该矩形范围内的图形 */
   clipRect?: { x: number; y: number; width: number; height: number } | null;
+  /** 逐边颜色：edgeColors[i] 为第 i 条边（从锚点 i 到锚点 i+1）的描边色，未设置时使用 strokeColor */
+  edgeColors?: string[];
 }
 
 export interface CustomDecorationDefinition {
@@ -308,6 +313,10 @@ export interface CustomDecorationDefinition {
   name: string;
   /** 路径列表，一个装饰可包含多条路径 */
   paths: DecorationPath[];
+  /** 裁剪后的实际宽度（px），用于放置时的默认块尺寸和编辑还原 */
+  stageWidth?: number;
+  /** 裁剪后的实际高度（px），用于放置时的默认块尺寸和编辑还原 */
+  stageHeight?: number;
   createdAt: number;
   updatedAt: number;
 }

@@ -357,6 +357,18 @@ export default function BlockDetailPanel({
             />
           </div>
 
+          {/* 文字颜色 */}
+          <div className="right-panel-field">
+            <label className="right-panel-label">文字颜色</label>
+            <ColorFieldInput
+              value={block.style?.color || ''}
+              onChange={(hex) => updateBlockStyle(block.id, { color: hex })}
+              placeholder="跟随主题"
+              allowClear
+              onClear={() => updateBlockStyle(block.id, { color: '' })}
+            />
+          </div>
+
           {/* 背景图片 */}
           <div className="right-panel-field">
             <label className="right-panel-label">背景图片</label>

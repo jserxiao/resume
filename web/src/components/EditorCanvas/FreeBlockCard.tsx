@@ -133,6 +133,7 @@ export default function FreeBlockCard({
     marginTop: margin.top || 0,
     overflow: 'hidden',
     backgroundColor: contentBgColor,
+    color: blockStyle.color || colorScheme.textPrimary,
     borderRadius: isTransparentBg && blockStyle.borderRadius === undefined ? 0 : (blockStyle.borderRadius ?? BLOCK_DEFAULT_BORDER_RADIUS),
     opacity: blockStyle.opacity ?? 1,
     border: isTransparentBg && !blockStyle.borderWidth ? 'none' : (blockStyle.borderWidth ? `${blockStyle.borderWidth}px ${blockStyle.borderStyle || 'solid'} ${blockStyle.borderColor || DEFAULT_BORDER_COLOR}` : undefined),

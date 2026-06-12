@@ -384,34 +384,74 @@ export default function LeftPanel() {
                   onDragStart={(e) => handleDecorationDragStart(e, deco.id)}
                   onDragEnd={handleDragEnd}
                 >
-                  <svg width="22" height="22" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
-                    {deco.paths.map((p, pIdx) => (
-                      <g key={pIdx}>
-                        {p.clipRect && (
-                          <defs>
-                            <clipPath id={`lp-clip-${deco.id}-${pIdx}`}>
-                              <rect x={p.clipRect.x} y={p.clipRect.y} width={p.clipRect.width} height={p.clipRect.height} />
-                            </clipPath>
-                          </defs>
-                        )}
-                        <g clipPath={p.clipRect ? `url(#lp-clip-${deco.id}-${pIdx})` : undefined}>
-                          {p.isClosed && (
-                            <path
-                              d={buildDecoPathD(p.anchors, p.isClosed)}
-                              fill={p.fillColor}
-                              stroke="none"
-                            />
-                          )}
-                          <path
-                            d={buildDecoPathD(p.anchors, p.isClosed)}
-                            fill="none"
-                            stroke={p.strokeColor}
-                            strokeWidth={3}
-                          />
-                        </g>
-                      </g>
-                    ))}
-                  </svg>
+                  {(() => {
+                    const dw = deco.stageWidth || 100;
+                    const dh = deco.stageHeight || 100;
+                    const maxThumb = 22;
+                    const thumbScale = maxThumb / Math.max(dw, dh);
+                    const tw = Math.max(8, Math.round(dw * thumbScale));
+                    const th = Math.max(8, Math.round(dh * thumbScale));
+                    return (
+                      <svg width={tw} height={th} viewBox="0 0 100 100" preserveAspectRatio="none" style={{ flexShrink: 0 }}>
+                        {deco.paths.map((p, pIdx) => (
+                          <g key={pIdx}>
+                            {p.clipRect && (
+                              <defs>
+                                <clipPath id={`lp-clip-${deco.id}-${pIdx}`}>
+                                  <rect x={p.clipRect.x} y={p.clipRect.y} width={p.clipRect.width} height={p.clipRect.height} />
+                                </clipPath>
+                              </defs>
+                            )}
+                            <g clipPath={p.clipRect ? `url(#lp-clip-${deco.id}-${pIdx})` : undefined}>
+                              {p.isClosed && (
+                                <path
+                                  d={buildDecoPathD(p.anchors, p.isClosed)}
+                                  fill={p.fillColor}
+                                  stroke="none"
+                                />
+                              )}
+                              {p.edgeColors && p.edgeColors.some((c, i) => c && c !== p.strokeColor) ? (
+                                // 逐边着色缩略图
+                                (() => {
+                                  const n = p.anchors.length;
+                                  const edgeCount = p.isClosed ? n : n - 1;
+                                  const segments: React.ReactNode[] = [];
+                                  for (let i = 0; i < edgeCount; i++) {
+                                    const from = p.anchors[i];
+                                    const to = p.anchors[(i + 1) % n];
+                                    const control = from.handleOut || to.handleIn;
+                                    let segD = `M ${from.x} ${from.y}`;
+                                    if (control) {
+                                      segD += ` Q ${control.x} ${control.y} ${to.x} ${to.y}`;
+                                    } else {
+                                      segD += ` L ${to.x} ${to.y}`;
+                                    }
+                                    segments.push(
+                                      <path
+                                        key={`edge-${i}`}
+                                        d={segD}
+                                        fill="none"
+                                        stroke={p.edgeColors[i] || p.strokeColor}
+                                        strokeWidth={3}
+                                      />
+                                    );
+                                  }
+                                  return segments;
+                                })()
+                              ) : (
+                                <path
+                                  d={buildDecoPathD(p.anchors, p.isClosed)}
+                                  fill="none"
+                                  stroke={p.strokeColor}
+                                  strokeWidth={3}
+                                />
+                              )}
+                            </g>
+                          </g>
+                        ))}
+                      </svg>
+                    );
+                  })()}
                   <div className="left-panel-template-info">
                     <span className="left-panel-template-name">{deco.name}</span>
                     <span className="left-panel-template-fields">

@@ -151,9 +151,16 @@ function CanvasCustomDecorationSection({ navigate }: { navigate: (path: string) 
       </Button>
       {customDecorations.length > 0 && (
         <div style={{ marginTop: 8 }}>
-          {customDecorations.map((d) => (
+          {customDecorations.map((d) => {
+            const dw = d.stageWidth || 100;
+            const dh = d.stageHeight || 100;
+            const maxThumb = 20;
+            const thumbScale = maxThumb / Math.max(dw, dh);
+            const tw = Math.max(8, Math.round(dw * thumbScale));
+            const th = Math.max(8, Math.round(dh * thumbScale));
+            return (
             <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
-              <svg width="20" height="20" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
+              <svg width={tw} height={th} viewBox="0 0 100 100" preserveAspectRatio="none" style={{ flexShrink: 0 }}>
                 {d.paths.map((p, pIdx) => (
                   <g key={pIdx}>
                     {p.clipRect && (
@@ -171,12 +178,42 @@ function CanvasCustomDecorationSection({ navigate }: { navigate: (path: string) 
                           stroke="none"
                         />
                       )}
-                      <path
-                        d={buildDecoPathD(p.anchors, p.isClosed)}
-                        fill="none"
-                        stroke={p.strokeColor}
-                        strokeWidth={3}
-                      />
+                      {p.edgeColors && p.edgeColors.some((c, i) => c && c !== p.strokeColor) ? (
+                        // 逐边着色缩略图
+                        (() => {
+                          const n = p.anchors.length;
+                          const edgeCount = p.isClosed ? n : n - 1;
+                          const segments: React.ReactNode[] = [];
+                          for (let i = 0; i < edgeCount; i++) {
+                            const from = p.anchors[i];
+                            const to = p.anchors[(i + 1) % n];
+                            const control = from.handleOut || to.handleIn;
+                            let segD = `M ${from.x} ${from.y}`;
+                            if (control) {
+                              segD += ` Q ${control.x} ${control.y} ${to.x} ${to.y}`;
+                            } else {
+                              segD += ` L ${to.x} ${to.y}`;
+                            }
+                            segments.push(
+                              <path
+                                key={`edge-${i}`}
+                                d={segD}
+                                fill="none"
+                                stroke={p.edgeColors[i] || p.strokeColor}
+                                strokeWidth={3}
+                              />
+                            );
+                          }
+                          return segments;
+                        })()
+                      ) : (
+                        <path
+                          d={buildDecoPathD(p.anchors, p.isClosed)}
+                          fill="none"
+                          stroke={p.strokeColor}
+                          strokeWidth={3}
+                        />
+                      )}
                     </g>
                   </g>
                 ))}
@@ -196,7 +233,8 @@ function CanvasCustomDecorationSection({ navigate }: { navigate: (path: string) 
                 onClick={() => removeCustomDecoration(d.id)}
               />
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </>

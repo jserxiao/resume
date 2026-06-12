@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useResumeStore, calculateAlignGuides } from '@/store';
 import { GRID_SIZE, RESIZE_MIN_WIDTH, RESIZE_MIN_HEIGHT, getDefaultBlockWidth, getDefaultBlockHeight } from '@/utils/constants';
-import { getDecoPathBounds } from '@/utils/geometry';
 import { useDistanceIndicators } from './useDistanceIndicators';
 import { useAlignGuides } from './useAlignGuides';
 import DistanceIndicators from './DistanceIndicators';
@@ -142,24 +141,12 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       const { addBlockFromCustomDecoration, customDecorations } = useResumeStore.getState();
       const decoration = customDecorations.find(d => d.id === customDecorationId);
       if (decoration) {
-        const allAnchors = decoration.paths.flatMap(p => p.anchors);
-        if (allAnchors.length > 0) {
-          // 基于贝塞尔曲线实际采样点计算边界框，避免控制柄远离曲线导致大片空白
-          const pathBounds = decoration.paths.map(p => getDecoPathBounds(p.anchors, p.isClosed)).filter(Boolean) as { minX: number; minY: number; maxX: number; maxY: number }[];
-          const minX = Math.min(...pathBounds.map(b => b.minX));
-          const minY = Math.min(...pathBounds.map(b => b.minY));
-          const maxX = Math.max(...pathBounds.map(b => b.maxX));
-          const maxY = Math.max(...pathBounds.map(b => b.maxY));
-          const rangeX = maxX - minX;
-          const rangeY = maxY - minY;
-          const aspectRatio = rangeX > 0 && rangeY > 0 ? rangeX / rangeY : 1;
-          const baseSize = Math.max(60, Math.round(Math.max(rangeX, rangeY) * 2));
-          const bw = Math.round(aspectRatio >= 1 ? baseSize : baseSize * aspectRatio);
-          const bh = Math.round(aspectRatio >= 1 ? baseSize / aspectRatio : baseSize);
-          addBlockFromCustomDecoration(customDecorationId, mouseX - bw / 2, mouseY - bh / 2);
-        } else {
-          addBlockFromCustomDecoration(customDecorationId, mouseX, mouseY);
-        }
+        // 使用保存时的舞台尺寸作为默认块尺寸
+        const sw = decoration.stageWidth || 400;
+        const sh = decoration.stageHeight || 400;
+        const bw = Math.max(60, Math.round(sw));
+        const bh = Math.max(60, Math.round(sh));
+        addBlockFromCustomDecoration(customDecorationId, mouseX - bw / 2, mouseY - bh / 2);
       }
     } else if (customTemplateId) {
       const { addBlockFromCustomTemplate, customElementTemplates } = useResumeStore.getState();

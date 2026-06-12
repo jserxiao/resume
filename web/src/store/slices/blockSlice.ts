@@ -14,7 +14,7 @@ import type {
 } from '../../types';
 import { getNextZIndex } from '../../utils/block';
 import { getDefaultBlockWidth, getDefaultBlockHeight, DEFAULT_PRIMARY_COLOR } from '../../utils/constants';
-import { buildDecoPathD, getDecoPathBounds } from '../../utils/geometry';
+import { buildDecoPathD } from '../../utils/geometry';
 import { presetBlockTemplates } from '../../utils/presets';
 import type { StoreSet, StoreGet, ResumeStoreInternal } from '../types';
 
@@ -188,20 +188,11 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
       const decoration = state.customDecorations.find((d) => d.id === decorationId);
       if (!decoration) return;
 
-      const allAnchors = decoration.paths.flatMap((p) => p.anchors);
-      // 基于贝塞尔曲线实际采样点计算边界框，避免控制柄远离曲线导致大片空白
-      const pathBounds = decoration.paths.map((p) => getDecoPathBounds(p.anchors, p.isClosed)).filter(Boolean) as { minX: number; minY: number; maxX: number; maxY: number }[];
-      const minX = pathBounds.length > 0 ? Math.min(...pathBounds.map((b) => b.minX)) : 0;
-      const minY = pathBounds.length > 0 ? Math.min(...pathBounds.map((b) => b.minY)) : 0;
-      const maxX = pathBounds.length > 0 ? Math.max(...pathBounds.map((b) => b.maxX)) : 100;
-      const maxY = pathBounds.length > 0 ? Math.max(...pathBounds.map((b) => b.maxY)) : 100;
-
-      const rangeX = maxX - minX;
-      const rangeY = maxY - minY;
-      const aspectRatio = rangeX > 0 && rangeY > 0 ? rangeX / rangeY : 1;
-      const baseSize = Math.max(60, Math.round(Math.max(rangeX, rangeY) * 2));
-      const defaultWidth = Math.round(aspectRatio >= 1 ? baseSize : baseSize * aspectRatio);
-      const defaultHeight = Math.round(aspectRatio >= 1 ? baseSize / aspectRatio : baseSize);
+      // 使用保存时的舞台尺寸作为默认块尺寸
+      const sw = decoration.stageWidth || 400;
+      const sh = decoration.stageHeight || 400;
+      const defaultWidth = Math.max(60, Math.round(sw));
+      const defaultHeight = Math.max(60, Math.round(sh));
 
       const svgPaths = decoration.paths.map((p) => ({
         pathD: buildDecoPathD(p.anchors, p.isClosed),
@@ -210,6 +201,7 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
         strokeWidth: Math.max(0.5, p.strokeWidth),
         isClosed: p.isClosed,
         clipRect: p.clipRect,
+        edgeColors: p.edgeColors,
       }));
 
       const blockId = `${state.resume.id}-cdeco-${uuid().slice(0, 8)}`;

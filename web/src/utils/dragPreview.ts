@@ -314,29 +314,11 @@ export function createGroupDragPreview(
 export function createCustomDecorationDragPreview(
 decoration: CustomDecorationDefinition,
 ): HTMLElement {
-const allAnchors = decoration.paths.flatMap(p => p.anchors);
-if (allAnchors.length === 0) {
-// fallback: 空装饰
-const el = document.createElement('div');
-el.style.cssText = `
-position: fixed; top: -9999px; left: -9999px;
-width: 60px; height: 60px;
-border: 1.5px dashed #9ca3af; border-radius: 4px;
-pointer-events: none; opacity: 0.7;
-`;
-document.body.appendChild(el);
-return el;
-}
-
-// 计算边界框
-const minX = Math.min(...allAnchors.map(a => a.x));
-const minY = Math.min(...allAnchors.map(a => a.y));
-const maxX = Math.max(...allAnchors.map(a => a.x));
-const maxY = Math.max(...allAnchors.map(a => a.y));
-
-// 实际像素尺寸（与 store 中 addBlockFromCustomDecoration 一致）
-const w = Math.max(60, Math.round((maxX - minX) * 2));
-const h = Math.max(60, Math.round((maxY - minY) * 2));
+// 使用保存时的舞台尺寸作为预览尺寸（与 store 中 addBlockFromCustomDecoration 一致）
+const sw = decoration.stageWidth || 400;
+const sh = decoration.stageHeight || 400;
+const w = Math.max(60, Math.round(sw));
+const h = Math.max(60, Math.round(sh));
 
 const firstPath = decoration.paths[0];
 

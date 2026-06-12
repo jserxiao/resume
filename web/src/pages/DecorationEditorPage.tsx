@@ -41,6 +41,8 @@ interface EditablePath {
   visible: boolean;
   /** 裁剪矩形（像素），仅显示该矩形范围内的图形 */
   clipRect?: { x: number; y: number; width: number; height: number } | null;
+  /** 逐边颜色：edgeColors[i] 为第 i 条边（从锚点 i 到锚点 i+1）的描边色 */
+  edgeColors?: string[];
 }
 
 /** 辅助线 */
@@ -68,6 +70,7 @@ function createEmptyPath(): EditablePath {
     strokeColor: '#1a56db',
     strokeWidth: 2,
     visible: true,
+    edgeColors: [],
   };
 }
 
@@ -101,9 +104,21 @@ export default function DecorationEditorPage() {
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   /** 拖拽控制柄: 'out-i' 表示第i个锚点的handleOut, 'in-i' 表示handleIn */
   const [draggingHandle, setDraggingHandle] = useState<string | null>(null);
+  /** 拖拽边中点: edge-i 表示第 i 条边的中点 */
+  const [draggingEdge, setDraggingEdge] = useState<string | null>(null);
+  /** 拖拽边中点时记录的初始中点位置，用于计算偏移量 */
+  const edgeDragStartRef = useRef<AnchorPixel | null>(null);
+  /** 拖拽边中点时记录的两个端点初始位置快照，避免累积误差 */
+  const edgeDragSnapshotRef = useRef<{
+    fromAnchor: { idx: number; x: number; y: number; handleIn?: { x: number; y: number } | null; handleOut?: { x: number; y: number } | null };
+    toAnchor: { idx: number; x: number; y: number; handleIn?: { x: number; y: number } | null; handleOut?: { x: number; y: number } | null };
+  } | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  /** 标记刚结束拖拽（锚点或控制柄），用于阻止紧随的 click 创建新锚点 */
+  /** 标记刚结束拖拽（锚点或控制柄或边中点），用于阻止紧随的 click 创建新锚点 */
   const justDraggedRef = useRef(false);
+
+  // ===== 边选中状态 =====
+  const [selectedEdgeIdx, setSelectedEdgeIdx] = useState<number | null>(null);
 
   // ===== 形状工具 =====
   const [activeShape, setActiveShape] = useState<ShapeType>('select');
@@ -152,8 +167,8 @@ export default function DecorationEditorPage() {
         setEditDecoId(existing.id);
         setDecoName(existing.name);
 
-        const sw = 400;
-        const sh = 400;
+        const sw = existing.stageWidth || 400;
+        const sh = existing.stageHeight || 400;
         setStageWidth(sw);
         setStageHeight(sh);
 
@@ -178,6 +193,8 @@ export default function DecorationEditorPage() {
             width: (p.clipRect.width / 100) * sw,
             height: (p.clipRect.height / 100) * sh,
           } : undefined,
+          // 逐边颜色
+          edgeColors: p.edgeColors ? [...p.edgeColors] : undefined,
         }));
 
         if (editPaths.length === 0) editPaths.push(createEmptyPath());
@@ -298,10 +315,42 @@ export default function DecorationEditorPage() {
     });
   }, []);
 
+  // ===== 计算边中点位置 =====
+  const getEdgeMidpoint = useCallback((edgeIdx: number): AnchorPixel | null => {
+    if (!activePath || activePath.anchors.length < 2) return null;
+    const anchors = activePath.anchors;
+    const n = anchors.length;
+    // 闭合路径有 n 条边，开放路径有 n-1 条边
+    const edgeCount = activePath.isClosed ? n : n - 1;
+    if (edgeIdx < 0 || edgeIdx >= edgeCount) return null;
+
+    const fromAnchor = anchors[edgeIdx];
+    const toAnchor = anchors[(edgeIdx + 1) % n];
+
+    // 如果有控制柄，用二次贝塞尔曲线的中点
+    const control = fromAnchor.handleOut || toAnchor.handleIn;
+    if (control) {
+      // 二次贝塞尔曲线 t=0.5 的点
+      const t = 0.5;
+      const x = (1 - t) * (1 - t) * fromAnchor.x + 2 * (1 - t) * t * control.x + t * t * toAnchor.x;
+      const y = (1 - t) * (1 - t) * fromAnchor.y + 2 * (1 - t) * t * control.y + t * t * toAnchor.y;
+      return { x, y };
+    }
+    // 直线的中点
+    return { x: (fromAnchor.x + toAnchor.x) / 2, y: (fromAnchor.y + toAnchor.y) / 2 };
+  }, [activePath]);
+
+  // ===== 获取边数量 =====
+  const getEdgeCount = useCallback((path: EditablePath): number => {
+    if (path.anchors.length < 2) return 0;
+    return path.isClosed ? path.anchors.length : path.anchors.length - 1;
+  }, []);
+
   // ===== 切换形状工具 =====
   const handleShapeSelect = useCallback((shape: ShapeType) => {
     setActiveShape(shape);
     setSelectedAnchorIdx(null);
+    setSelectedEdgeIdx(null);
   }, []);
 
   // ===== 裁剪：保留选区范围内的图形 =====
@@ -572,7 +621,7 @@ export default function DecorationEditorPage() {
       setIsMouseOnStage(true);
 
       // ===== 选区裁剪拖拽 =====
-      if (activeShape === 'select' && selectionStartRef.current && !draggingIdx && !draggingHandle) {
+      if (activeShape === 'select' && selectionStartRef.current && !draggingIdx && !draggingHandle && !draggingEdge) {
         const start = selectionStartRef.current;
         const dx = pos.x - start.x;
         const dy = pos.y - start.y;
@@ -594,6 +643,60 @@ export default function DecorationEditorPage() {
       if (!activePath.isClosed && activePath.anchors.length > 0) {
         setGuideLines(computeGuides(pos.x, pos.y));
         setDistances(computeDistances(pos.x, pos.y));
+      }
+
+      // ===== 拖拽边中点：整条边平移 =====
+      if (draggingEdge !== null) {
+        const match = draggingEdge.match(/^edge-(\d+)$/);
+        if (match) {
+          const edgeIdx = parseInt(match[1], 10);
+          // 使用初始中点位置计算偏移量，避免累积误差
+          const startPos = edgeDragStartRef.current;
+          if (startPos) {
+            const dx = pos.x - startPos.x;
+            const dy = pos.y - startPos.y;
+            // 从初始锚点快照计算新位置，避免累积误差
+            const snapshot = edgeDragSnapshotRef.current;
+            if (snapshot) {
+              setPaths(prev => {
+                const newPaths = [...prev];
+                const path = { ...newPaths[activePathIdx] };
+                const newAnchors = [...path.anchors];
+
+                // 从快照恢复 fromAnchor，然后加上偏移
+                const fromSnapshot = snapshot.fromAnchor;
+                const fromAnchor = { ...newAnchors[fromSnapshot.idx] };
+                fromAnchor.x = fromSnapshot.x + dx;
+                fromAnchor.y = fromSnapshot.y + dy;
+                fromAnchor.handleIn = fromSnapshot.handleIn
+                  ? { x: fromSnapshot.handleIn.x + dx, y: fromSnapshot.handleIn.y + dy }
+                  : undefined;
+                fromAnchor.handleOut = fromSnapshot.handleOut
+                  ? { x: fromSnapshot.handleOut.x + dx, y: fromSnapshot.handleOut.y + dy }
+                  : undefined;
+                newAnchors[fromSnapshot.idx] = fromAnchor;
+
+                // 从快照恢复 toAnchor，然后加上偏移
+                const toSnapshot = snapshot.toAnchor;
+                const toAnchor = { ...newAnchors[toSnapshot.idx] };
+                toAnchor.x = toSnapshot.x + dx;
+                toAnchor.y = toSnapshot.y + dy;
+                toAnchor.handleIn = toSnapshot.handleIn
+                  ? { x: toSnapshot.handleIn.x + dx, y: toSnapshot.handleIn.y + dy }
+                  : undefined;
+                toAnchor.handleOut = toSnapshot.handleOut
+                  ? { x: toSnapshot.handleOut.x + dx, y: toSnapshot.handleOut.y + dy }
+                  : undefined;
+                newAnchors[toSnapshot.idx] = toAnchor;
+
+                path.anchors = newAnchors;
+                newPaths[activePathIdx] = path;
+                return newPaths;
+              });
+            }
+          }
+        }
+        return;
       }
 
       // 拖拽控制柄
@@ -644,7 +747,7 @@ export default function DecorationEditorPage() {
         });
       }
     },
-    [getStagePos, activePath, activePathIdx, computeGuides, computeDistances, draggingIdx, draggingHandle, isSelecting, activeShape],
+    [getStagePos, activePath, activePathIdx, computeGuides, computeDistances, draggingIdx, draggingHandle, draggingEdge, isSelecting, activeShape],
   );
 
   const handleStageMouseLeave = useCallback(() => {
@@ -662,8 +765,8 @@ export default function DecorationEditorPage() {
   // ===== 舞台鼠标按下：记录起点（供选区裁剪用） =====
   const handleStageMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      // 仅在选择模式下且不在拖拽锚点/控制柄时
-      if (activeShape === 'select' && !draggingIdx && !draggingHandle) {
+      // 仅在选择模式下且不在拖拽锚点/控制柄/边中点时
+      if (activeShape === 'select' && !draggingIdx && !draggingHandle && !draggingEdge) {
         const pos = getStagePos(e);
         if (pos) {
           // 只记录起点，不立即启动选区（等待 mousemove 判断是否为拖拽）
@@ -671,7 +774,7 @@ export default function DecorationEditorPage() {
         }
       }
     },
-    [activeShape, draggingIdx, draggingHandle, getStagePos],
+    [activeShape, draggingIdx, draggingHandle, draggingEdge, getStagePos],
   );
 
   // ===== 锚点拖拽 =====
@@ -680,6 +783,7 @@ export default function DecorationEditorPage() {
       e.stopPropagation();
       setDraggingIdx(idx);
       setSelectedAnchorIdx(idx);
+      setSelectedEdgeIdx(null);
     },
     [],
   );
@@ -729,6 +833,14 @@ export default function DecorationEditorPage() {
         setDraggingHandle(null);
         justDraggedRef.current = true;
       }
+      // ===== 边中点拖拽完成 =====
+      if (draggingEdge !== null) {
+        pushHistory(paths);
+        setDraggingEdge(null);
+        edgeDragStartRef.current = null;
+        edgeDragSnapshotRef.current = null;
+        justDraggedRef.current = true;
+      }
       // ===== 选区裁剪完成 =====
       if (isSelecting) {
         setIsSelecting(false);
@@ -752,13 +864,14 @@ export default function DecorationEditorPage() {
     };
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [draggingIdx, draggingHandle, paths, pushHistory, isSelecting, selectionRect]);
+  }, [draggingIdx, draggingHandle, draggingEdge, paths, pushHistory, isSelecting, selectionRect]);
 
   // ===== 键盘事件 =====
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setSelectedAnchorIdx(null);
+        setSelectedEdgeIdx(null);
         setSelectionRect(null);
         setActiveShape('select');
       }
@@ -893,12 +1006,17 @@ export default function DecorationEditorPage() {
         width: (p.clipRect.width / cropW) * 100,
         height: (p.clipRect.height / cropH) * 100,
       } : undefined,
+      // 逐边颜色
+      edgeColors: p.edgeColors,
     }));
 
     const decoration: CustomDecorationDefinition = {
       id: isEditMode && editDecoId ? editDecoId : `cde-${uuid().slice(0, 8)}`,
       name: decoName || '自定义装饰',
       paths: savedPaths,
+      // 保存裁剪后的实际尺寸，用于放置时的默认块尺寸和编辑还原
+      stageWidth: cropW,
+      stageHeight: cropH,
       createdAt: isEditMode && editDecoId ? (customDecorations.find(d => d.id === editDecoId)?.createdAt || Date.now()) : Date.now(),
       updatedAt: Date.now(),
     };
@@ -1006,7 +1124,7 @@ export default function DecorationEditorPage() {
             </defs>
           )}
           <g clipPath={path.clipRect ? `url(#clip-${path.id})` : undefined}>
-            {/* 填充区域 */}
+            {/* 填充区域（整条路径） */}
             {path.isClosed && path.anchors.length >= 3 && (
               <path
                 d={pathD}
@@ -1014,16 +1132,50 @@ export default function DecorationEditorPage() {
                 stroke="none"
               />
             )}
-            {/* 线条 */}
-            <path
-              d={pathD}
-              fill="none"
-              stroke={path.strokeColor}
-              strokeWidth={path.strokeWidth}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              opacity={isActive ? 1 : 0.5}
-            />
+            {/* 逐边着色线条 */}
+            {path.edgeColors && path.edgeColors.some((c, i) => c && c !== path.strokeColor) ? (
+              // 有自定义边颜色时，逐边绘制
+              (() => {
+                const n = path.anchors.length;
+                const edgeCount = path.isClosed ? n : n - 1;
+                const segments: React.ReactNode[] = [];
+                for (let i = 0; i < edgeCount; i++) {
+                  const from = path.anchors[i];
+                  const to = path.anchors[(i + 1) % n];
+                  const control = from.handleOut || to.handleIn;
+                  let segD = `M ${from.x} ${from.y}`;
+                  if (control) {
+                    segD += ` Q ${control.x} ${control.y} ${to.x} ${to.y}`;
+                  } else {
+                    segD += ` L ${to.x} ${to.y}`;
+                  }
+                  segments.push(
+                    <path
+                      key={`edge-${i}`}
+                      d={segD}
+                      fill="none"
+                      stroke={path.edgeColors[i] || path.strokeColor}
+                      strokeWidth={path.strokeWidth}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      opacity={isActive ? 1 : 0.5}
+                    />
+                  );
+                }
+                return segments;
+              })()
+            ) : (
+              // 无自定义边颜色时，整条路径绘制
+              <path
+                d={pathD}
+                fill="none"
+                stroke={path.strokeColor}
+                strokeWidth={path.strokeWidth}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                opacity={isActive ? 1 : 0.5}
+              />
+            )}
           </g>
           {/* 追踪线（不受裁剪影响） */}
           {trackingPathD && (
@@ -1077,6 +1229,66 @@ export default function DecorationEditorPage() {
         }}
       />
     ));
+  };
+
+  // ===== 渲染边中点（仅活跃路径，闭合路径时） =====
+  const renderEdgeMidpoints = () => {
+    if (!activePath || !activePath.visible || activePath.anchors.length < 2) return null;
+    const midpoints: React.ReactNode[] = [];
+    const edgeCount = getEdgeCount(activePath);
+
+    for (let i = 0; i < edgeCount; i++) {
+      const mid = getEdgeMidpoint(i);
+      if (!mid) continue;
+      const edgeColor = activePath.edgeColors?.[i] || activePath.strokeColor;
+      const isSelected = selectedEdgeIdx === i;
+
+      midpoints.push(
+        <div
+          key={`edge-mid-${i}`}
+          className={`deco-editor-edge-midpoint ${isSelected ? 'selected' : ''}`}
+          style={{ left: mid.x, top: mid.y }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            // 记录初始中点位置和端点快照，用于整条边平移
+            edgeDragStartRef.current = mid;
+            const from = activePath.anchors[i];
+            const toIdx = (i + 1) % activePath.anchors.length;
+            const to = activePath.anchors[toIdx];
+            edgeDragSnapshotRef.current = {
+              fromAnchor: {
+                idx: i,
+                x: from.x, y: from.y,
+                handleIn: from.handleIn ? { x: from.handleIn.x, y: from.handleIn.y } : null,
+                handleOut: from.handleOut ? { x: from.handleOut.x, y: from.handleOut.y } : null,
+              },
+              toAnchor: {
+                idx: toIdx,
+                x: to.x, y: to.y,
+                handleIn: to.handleIn ? { x: to.handleIn.x, y: to.handleIn.y } : null,
+                handleOut: to.handleOut ? { x: to.handleOut.x, y: to.handleOut.y } : null,
+              },
+            };
+            setDraggingEdge(`edge-${i}`);
+            setSelectedEdgeIdx(i);
+            setSelectedAnchorIdx(null);
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedEdgeIdx(i);
+            setSelectedAnchorIdx(null);
+          }}
+        >
+          {/* 小色块指示边颜色 */}
+          <div
+            className="deco-editor-edge-midpoint-color"
+            style={{ background: edgeColor }}
+          />
+        </div>,
+      );
+    }
+
+    return midpoints;
   };
 
   // ===== 渲染控制柄（仅活跃路径） =====
@@ -1362,6 +1574,7 @@ export default function DecorationEditorPage() {
                 );
               })()}
               {renderAnchors()}
+{renderEdgeMidpoints()}
               {renderHandles()}
               {renderCursor()}
             </div>
@@ -1540,6 +1753,57 @@ export default function DecorationEditorPage() {
               </Button>
             )}
           </div>
+
+          {/* 逐边颜色 */}
+          {activePath && activePath.anchors.length >= 2 && (
+            <div className="deco-editor-panel-section">
+              <div className="deco-editor-panel-section-title">逐边颜色</div>
+              <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>
+                点击色块修改单条边的颜色，拖拽边中点可平移整条边
+              </div>
+              <div className="deco-editor-edge-list">
+                {(() => {
+                  const edgeCount = getEdgeCount(activePath);
+                  const items: React.ReactNode[] = [];
+                  for (let i = 0; i < edgeCount; i++) {
+                    const fromAnchor = activePath.anchors[i];
+                    const toIdx = (i + 1) % activePath.anchors.length;
+                    const toAnchor = activePath.anchors[toIdx];
+                    const edgeColor = activePath.edgeColors?.[i] || activePath.strokeColor;
+                    const isSelected = selectedEdgeIdx === i;
+                    items.push(
+                      <div
+                        key={`edge-color-${i}`}
+                        className="deco-editor-edge-item"
+                        style={{
+                          background: isSelected ? 'rgba(26, 86, 219, 0.06)' : undefined,
+                          borderLeft: isSelected ? '2px solid var(--color-primary)' : undefined,
+                        }}
+                        onClick={() => { setSelectedEdgeIdx(i); setSelectedAnchorIdx(null); }}
+                      >
+                        <span className="deco-editor-edge-item-label">
+                          边 {i + 1}
+                        </span>
+                        <span className="deco-editor-edge-item-coord">
+                          ({Math.round(fromAnchor.x)},{Math.round(fromAnchor.y)})→({Math.round(toAnchor.x)},{Math.round(toAnchor.y)})
+                        </span>
+                        <ColorFieldInput
+                          value={edgeColor}
+                          onChange={(hex) => {
+                            const newEdgeColors = [...(activePath.edgeColors || new Array(edgeCount).fill(''))];
+                            newEdgeColors[i] = hex;
+                            updatePath(activePathIdx, { edgeColors: newEdgeColors });
+                          }}
+                          rowClassName="deco-editor-edge-item-color-row"
+                        />
+                      </div>,
+                    );
+                  }
+                  return items;
+                })()}
+              </div>
+            </div>
+          )}
 
           {/* 锚点列表 */}
           <div className="deco-editor-panel-section" style={{ flex: 1 }}>

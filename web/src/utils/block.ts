@@ -12,6 +12,41 @@ export function getNextZIndex(blocks: BlockInstance[]): number {
   return Math.max(...blocks.map((b) => b.zIndex || 0)) + 1;
 }
 
+/**
+ * 生成唯一名称：如果 baseName 在 existingNames 中已存在，
+ * 则自动添加数字后缀（如 "标题 2"、"标题 3"）避免重复
+ *
+ * @param baseName - 期望的名称
+ * @param existingNames - 已有的名称列表
+ * @returns 不重复的唯一名称
+ *
+ * @example
+ * getUniqueName('标题', ['标题', '文本', '标题 2']) // => '标题 3'
+ * getUniqueName('文本', ['标题', '文本块'])         // => '文本'
+ */
+export function getUniqueName(baseName: string, existingNames: string[]): string {
+  if (!existingNames.includes(baseName)) return baseName;
+
+  // 去掉 baseName 本身如果已存在类似 "标题 2" 的模式，提取基础名
+  // 先找出所有以 baseName 开头、后跟 " 数字" 模式的名称
+  const suffixPattern = new RegExp(`^${escapeRegExp(baseName)} (\\d+)$`);
+  let maxSuffix = 0;
+  for (const name of existingNames) {
+    const match = name.match(suffixPattern);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxSuffix) maxSuffix = num;
+    }
+  }
+
+  return `${baseName} ${maxSuffix + 1}`;
+}
+
+/** 转义正则表达式中的特殊字符 */
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** 计算块的边界框 */
 export function getBlockBounds(block: BlockInstance) {
   return {

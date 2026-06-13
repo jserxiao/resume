@@ -8,18 +8,18 @@ import { useResumeStore } from '@/store';
  * 1. 定时自动保存简历数据到 localStorage
  * 2. 页面关闭前（beforeunload）自动保存
  * 3. 页面加载时从 localStorage 恢复数据
- * 4. 未保存变更时关闭页面弹出浏览器确认提示
  */
 
 const STORAGE_KEY = 'resume-autosave';
 
 /** 保存当前简历数据到 localStorage */
 export function saveToLocalStorage() {
-  const { resume, customElementTemplates, customColorSchemes, customDecorations, blockTemplates, editor } = useResumeStore.getState();
+  const { resume, customElementTemplates, groupTemplates, customColorSchemes, customDecorations, blockTemplates, editor } = useResumeStore.getState();
   
   const data = {
     resume,
     customElementTemplates,
+    groupTemplates,
     customColorSchemes,
     customDecorations,
     // 不保存预设模板（它们从代码初始化），只保存自定义模板
@@ -76,6 +76,13 @@ export function restoreFromLocalStorage(): boolean {
       // 直接设置（需要通过 store action 或 produce）
       useResumeStore.setState(produce(state => {
         state.customElementTemplates = data.customElementTemplates;
+      }));
+    }
+
+    // 恢复分组组件模板
+    if (data.groupTemplates && Array.isArray(data.groupTemplates)) {
+      useResumeStore.setState(produce(state => {
+        state.groupTemplates = data.groupTemplates;
       }));
     }
 
@@ -200,23 +207,15 @@ export function useAutoSave() {
     };
   }, [editor.autoSave, editor.autoSaveInterval, resume]);
 
-  // beforeunload：保存数据 + 未保存时提示
+  // beforeunload：页面关闭前自动保存数据
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // 始终保存
+    const handleBeforeUnload = () => {
       saveToLocalStorage();
-
-      // 如果有未保存的更改，弹出浏览器确认提示
-      if (resume && !resume.lastSavedAt) {
-        e.preventDefault();
-        // 现代浏览器会忽略自定义消息，但设置 returnValue 是必要的
-        e.returnValue = '';
-      }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [resume]);
+  }, []);
 
   return {
     manualSave,

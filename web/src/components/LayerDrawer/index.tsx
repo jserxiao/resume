@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Button, Tooltip, Empty, Dropdown } from 'antd';
+import { Button, Tooltip, Empty, Dropdown, Popconfirm } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   EyeOutlined,
@@ -18,6 +18,8 @@ import {
   DownOutlined,
   RightOutlined as ExpandIcon,
   ScissorOutlined,
+  DeleteOutlined,
+  SaveOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import { useLayerItems } from './useLayerItems';
@@ -55,6 +57,10 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
   const moveBlockZIndex = useResumeStore((s) => s.moveBlockZIndex);
   const removeGroup = useResumeStore((s) => s.removeGroup);
   const removeBlocksFromGroup = useResumeStore((s) => s.removeBlocksFromGroup);
+  const removeBlock = useResumeStore((s) => s.removeBlock);
+  const removeBlocks = useResumeStore((s) => s.removeBlocks);
+  const saveAsGroupTemplate = useResumeStore((s) => s.saveAsGroupTemplate);
+  const selectBlockInGroup = useResumeStore((s) => s.selectBlockInGroup);
 
   // 使用提取的 hooks
   const { layers, isGroupExpanded, toggleGroupExpand, isSelected } = useLayerItems();
@@ -74,6 +80,16 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
       return;
     }
 
+    // 如果点击的元素属于当前选中的分组，保留分组选中状态（"进入分组"选择子元素）
+    if (item.groupId && item.groupId === selectedGroupId) {
+      if (e.shiftKey) {
+        addToSelection(item.id);
+      } else {
+        selectBlockInGroup(item.id, item.groupId);
+      }
+      return;
+    }
+
     if (e.shiftKey) {
       if (selectedBlockIds.includes(item.id)) {
         const newIds = selectedBlockIds.filter((id) => id !== item.id);
@@ -82,9 +98,6 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
         addToSelection(item.id);
       }
     } else {
-      if (selectedBlockIds.length > 1 && selectedBlockIds.includes(item.id)) {
-        return;
-      }
       selectBlock(item.id);
     }
   };
@@ -197,6 +210,36 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
               onClick={(e) => handleLockToggle(e, item)}
             />
           </Tooltip>
+          <Popconfirm
+            title="确定删除该图层？"
+            onConfirm={() => removeBlock(item.id)}
+            okText="删除"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="删除">
+              <Button
+                type="text"
+                size="small"
+                icon={<DeleteOutlined />}
+                className="layer-drawer-action-btn layer-drawer-action-btn--danger"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Tooltip>
+          </Popconfirm>
+          <Dropdown
+            menu={{ items: getLayerMenuItems(item) }}
+            placement="bottomRight"
+            trigger={['click']}
+          >
+            <Button
+              type="text"
+              size="small"
+              icon={<MoreOutlined />}
+              className="layer-drawer-action-btn"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </Dropdown>
         </div>
       </div>
     </Dropdown>
@@ -207,6 +250,17 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
     const actions = [];
 
     if (selectedGroupId) {
+      actions.push(
+        <Tooltip title="添加到分组组件" key="save-group">
+          <Button
+            type="text"
+            size="small"
+            className="layer-drawer-header-btn"
+            icon={<SaveOutlined />}
+            onClick={() => saveAsGroupTemplate(selectedGroupId)}
+          />
+        </Tooltip>
+      );
       actions.push(
         <Tooltip title="取消分组" key="ungroup">
           <Button
@@ -356,6 +410,38 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
                                     onClick={(e) => handleLockToggle(e, item)}
                                   />
                                 </Tooltip>
+                                <Popconfirm
+                                  title="确定删除该分组及其所有元素？"
+                                  onConfirm={() => removeBlocks(item.children?.map(c => c.id) || [])}
+                                  okText="删除"
+                                  cancelText="取消"
+                                  okButtonProps={{ danger: true }}
+                                >
+                                  <Tooltip title="删除">
+                                    <Button
+                                      type="text"
+                                      size="small"
+                                      icon={<DeleteOutlined />}
+                                      className="layer-drawer-action-btn layer-drawer-action-btn--danger"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </Tooltip>
+                                </Popconfirm>
+                                {item.children && item.children.length > 0 && (
+                                  <Dropdown
+                                    menu={{ items: getLayerMenuItems(item) }}
+                                    placement="bottomRight"
+                                    trigger={['click']}
+                                  >
+                                    <Button
+                                      type="text"
+                                      size="small"
+                                      icon={<MoreOutlined />}
+                                      className="layer-drawer-action-btn"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </Dropdown>
+                                )}
                               </div>
                             </div>
                             {expanded && item.children && (
@@ -402,6 +488,23 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
                                 onClick={(e) => handleLockToggle(e, item)}
                               />
                             </Tooltip>
+                            <Popconfirm
+                              title="确定删除该图层？"
+                              onConfirm={() => removeBlock(item.id)}
+                              okText="删除"
+                              cancelText="取消"
+                              okButtonProps={{ danger: true }}
+                            >
+                              <Tooltip title="删除">
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<DeleteOutlined />}
+                                  className="layer-drawer-action-btn layer-drawer-action-btn--danger"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </Tooltip>
+                            </Popconfirm>
                             <Dropdown
                               menu={{ items: getLayerMenuItems(item) }}
                               placement="bottomRight"

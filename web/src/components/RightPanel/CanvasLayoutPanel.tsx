@@ -1,8 +1,20 @@
-import { InputNumber, Divider, Button, Select } from 'antd';
-import { BgColorsOutlined, LayoutOutlined, StarOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { InputNumber, Input, Divider, Button, Select, Switch, Slider } from 'antd';
+import { BgColorsOutlined, LayoutOutlined, StarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, FontSizeOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
-import type { Resume } from '@/types';
-import { CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, CANVAS_DEFAULT_PADDING, CANVAS_DEFAULT_BACKGROUND } from '@/utils/constants';
+import type { Resume, WatermarkConfig } from '@/types';
+import {
+  CANVAS_DEFAULT_WIDTH,
+  CANVAS_DEFAULT_HEIGHT,
+  CANVAS_DEFAULT_PADDING,
+  CANVAS_DEFAULT_BACKGROUND,
+  WATERMARK_DEFAULT_TEXT,
+  WATERMARK_DEFAULT_FONT_SIZE,
+  WATERMARK_DEFAULT_ROTATION,
+  WATERMARK_DEFAULT_COLOR,
+  WATERMARK_DEFAULT_OPACITY,
+  WATERMARK_DEFAULT_GAP_X,
+  WATERMARK_DEFAULT_GAP_Y,
+} from '@/utils/constants';
 import { buildDecoPathD } from '@/utils/geometry';
 import ColorFieldInput from '@/components/shared/ColorFieldInput';
 import ImageUploadField from '@/components/shared/ImageUploadField';
@@ -14,10 +26,39 @@ interface CanvasLayoutPanelProps {
 
 /**
  * 画布布局设置面板
- * 包含：画布尺寸、页面规格预设、内边距、背景颜色、背景图片、重置
+ * 包含：画布尺寸、页面规格预设、内边距、背景颜色、背景图片、水印、重置
  */
 export default function CanvasLayoutPanel({ resume, navigate }: CanvasLayoutPanelProps) {
   const { setCanvasConfig } = useResumeStore();
+
+  const watermark = resume.canvas.watermark;
+  const isWatermarkEnabled = !!watermark;
+
+  /** 更新水印配置（局部更新） */
+  const updateWatermark = (updates: Partial<WatermarkConfig>) => {
+    if (!watermark) return;
+    setCanvasConfig({ watermark: { ...watermark, ...updates } });
+  };
+
+  /** 启用水印 */
+  const enableWatermark = () => {
+    setCanvasConfig({
+      watermark: {
+        text: WATERMARK_DEFAULT_TEXT || '水印文字',
+        fontSize: WATERMARK_DEFAULT_FONT_SIZE,
+        rotation: WATERMARK_DEFAULT_ROTATION,
+        color: WATERMARK_DEFAULT_COLOR,
+        opacity: WATERMARK_DEFAULT_OPACITY,
+        gapX: WATERMARK_DEFAULT_GAP_X,
+        gapY: WATERMARK_DEFAULT_GAP_Y,
+      },
+    });
+  };
+
+  /** 禁用水印 */
+  const disableWatermark = () => {
+    setCanvasConfig({ watermark: undefined });
+  };
 
   return (
     <div className="right-panel-content">
@@ -110,6 +151,111 @@ export default function CanvasLayoutPanel({ resume, navigate }: CanvasLayoutPane
 
       <Divider style={{ margin: '8px 0' }} />
 
+      {/* 水印设置 */}
+      <div className="right-panel-section-title" style={{ fontSize: 12 }}><FontSizeOutlined /> 水印</div>
+      <div className="right-panel-field">
+        <label className="right-panel-label">启用水印&nbsp;
+            <Switch
+                size="small"
+                checked={isWatermarkEnabled}
+                onChange={(checked) => checked ? enableWatermark() : disableWatermark()}
+            />
+        </label>
+        
+      </div>
+
+      {isWatermarkEnabled && watermark && (
+        <>
+          <div className="right-panel-field">
+            <label className="right-panel-label">文字内容</label>
+            <Input
+              value={watermark.text}
+              onChange={(e) => updateWatermark({ text: e.target.value })}
+              size="small"
+              style={{ width: '100%' }}
+              placeholder="请输入水印文字"
+            />
+          </div>
+
+          <div className="right-panel-position-grid">
+            <div className="right-panel-field compact">
+              <label className="right-panel-label">字号</label>
+              <InputNumber
+                value={watermark.fontSize}
+                onChange={(val) => val !== null && updateWatermark({ fontSize: val })}
+                size="small"
+                style={{ width: '100%' }}
+                min={8}
+                max={72}
+                step={1}
+              />
+            </div>
+            <div className="right-panel-field compact">
+              <label className="right-panel-label">旋转</label>
+              <InputNumber
+                value={watermark.rotation}
+                onChange={(val) => val !== null && updateWatermark({ rotation: val })}
+                size="small"
+                style={{ width: '100%' }}
+                min={-90}
+                max={90}
+                step={1}
+                addonAfter="°"
+              />
+            </div>
+          </div>
+
+          <div className="right-panel-position-grid">
+            <div className="right-panel-field compact">
+              <label className="right-panel-label">水平间距</label>
+              <InputNumber
+                value={watermark.gapX}
+                onChange={(val) => val !== null && updateWatermark({ gapX: val })}
+                size="small"
+                style={{ width: '100%' }}
+                min={40}
+                max={400}
+                step={10}
+              />
+            </div>
+            <div className="right-panel-field compact">
+              <label className="right-panel-label">垂直间距</label>
+              <InputNumber
+                value={watermark.gapY}
+                onChange={(val) => val !== null && updateWatermark({ gapY: val })}
+                size="small"
+                style={{ width: '100%' }}
+                min={30}
+                max={300}
+                step={10}
+              />
+            </div>
+          </div>
+
+          <div className="right-panel-field">
+            <label className="right-panel-label">颜色</label>
+            <ColorFieldInput
+              value={watermark.color}
+              onChange={(hex) => updateWatermark({ color: hex })}
+              placeholder="rgba(0,0,0,0.08)"
+            />
+          </div>
+
+          <div className="right-panel-field">
+            <label className="right-panel-label">透明度</label>
+            <Slider
+              min={0}
+              max={1}
+              step={0.05}
+              value={watermark.opacity}
+              onChange={(val) => updateWatermark({ opacity: val })}
+            />
+          </div>
+        </>
+      )}
+
+      <Divider style={{ margin: '8px 0' }} />
+
       {/* 重置按钮 */}
       <Button
         size="small"
@@ -120,6 +266,7 @@ export default function CanvasLayoutPanel({ resume, navigate }: CanvasLayoutPane
           background: CANVAS_DEFAULT_BACKGROUND,
           backgroundImage: undefined,
           backgroundSize: undefined,
+          watermark: undefined,
         })}
         style={{ width: '100%' }}
       >

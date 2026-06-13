@@ -27,7 +27,7 @@ import './index.less';
  */
 export default function LeftPanel() {
   const navigate = useNavigate();
-  const { resume, blockTemplates, customElementTemplates, customDecorations, editor, removeCustomDecoration } = useResumeStore();
+  const { resume, blockTemplates, customElementTemplates, groupTemplates, customDecorations, editor, removeCustomDecoration, removeGroupTemplate } = useResumeStore();
   const [searchText, setSearchText] = useState('');
   const [iconSearchText, setIconSearchText] = useState('');
   const [layerCollapsed, setLayerCollapsed] = useState(false);
@@ -42,15 +42,14 @@ export default function LeftPanel() {
   const {
     handleBlockDragStart,
     handleCustomDragStart,
-    handleGroupDragStart,
+    handleGroupTemplateDragStart,
     handleDecorationDragStart,
     handleDragEnd,
   } = useDragPreview({
     blockTemplates,
     customElementTemplates,
+    groupTemplates,
     customDecorations,
-    blocks: resume?.blocks || [],
-    groups: resume?.groups || [],
     colorScheme: resume?.colorScheme,
   });
 
@@ -91,6 +90,8 @@ export default function LeftPanel() {
   const CATEGORY_ICONS: Record<string, React.ReactNode> = {
     '基础组件': <AppstoreOutlined />,
     '组合组件': <GroupOutlined />,
+    '分组组件': <GroupOutlined />,
+  '自定义元素': <StarOutlined />,
   };
 
   // 按分类分组
@@ -182,40 +183,63 @@ export default function LeftPanel() {
     ),
   }] : [];
 
-  // 分组面板
-  const groupItems = resume.groups.length > 0 ? [{
-    key: 'groups',
+  // 分组组件模板面板 - 始终显示
+  const groupTemplateItems = [{
+    key: 'group-templates',
     label: (
       <div className="left-panel-category-label">
         <GroupOutlined />
-        <span>分组</span>
-        <Tag className="left-panel-category-count">{resume.groups.length}</Tag>
+        <span>分组组件</span>
+        <Tag className="left-panel-category-count">{groupTemplates.length}</Tag>
       </div>
     ),
     children: (
       <div className="left-panel-template-list">
-        {resume.groups.map((group) => (
+        {groupTemplates.length > 0 ? groupTemplates.map((template) => (
           <div
-            key={group.id}
+            key={template.id}
             className="left-panel-template-item group-item"
             draggable
-            onDragStart={(e) => handleGroupDragStart(e, group.id)}
+            onDragStart={(e) => handleGroupTemplateDragStart(e, template.id)}
             onDragEnd={handleDragEnd}
           >
             <GroupOutlined className="left-panel-template-drag-icon" />
             <div className="left-panel-template-info">
-              <span className="left-panel-template-name">{group.name}</span>
+              <span className="left-panel-template-name">{template.name}</span>
               <span className="left-panel-template-fields">
-                {group.blockIds.length} 块
+                {template.blocks.length} 块
               </span>
             </div>
+            {!template.isPreset && (
+              <div className="left-panel-item-actions">
+                <Popconfirm
+                  title="确定删除该分组组件模板？"
+                  onConfirm={() => removeGroupTemplate(template.id)}
+                  okText="删除"
+                  cancelText="取消"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    className="left-panel-item-action-btn left-panel-item-action-btn--danger"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </Popconfirm>
+              </div>
+            )}
           </div>
-        ))}
+        )) : (
+          <div className="left-panel-empty-hint">
+            暂无分组组件<br />选中分组后点击"添加到分组组件"
+          </div>
+        )}
       </div>
     ),
-  }] : [];
+  }];
 
-  const allItems = [...templateItems, ...customItems, ...groupItems];
+  const allItems = [...templateItems, ...groupTemplateItems, ...customItems];
 
   return (
     <div className="left-panel-wrapper" style={{ width: editor.leftPanelWidth }}>

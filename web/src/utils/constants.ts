@@ -8,6 +8,22 @@ export const CANVAS_DEFAULT_PADDING = 40;
 /** 默认画布背景色 */
 export const CANVAS_DEFAULT_BACKGROUND = '#ffffff';
 
+// ========== 水印默认配置 ==========
+/** 水印默认文字 */
+export const WATERMARK_DEFAULT_TEXT = '';
+/** 水印默认字号(px) */
+export const WATERMARK_DEFAULT_FONT_SIZE = 16;
+/** 水印默认旋转角度(度) */
+export const WATERMARK_DEFAULT_ROTATION = -22;
+/** 水印默认颜色 */
+export const WATERMARK_DEFAULT_COLOR = 'rgba(0, 0, 0, 0.08)';
+/** 水印默认透明度 */
+export const WATERMARK_DEFAULT_OPACITY = 1;
+/** 水印默认水平间距(px) */
+export const WATERMARK_DEFAULT_GAP_X = 120;
+/** 水印默认垂直间距(px) */
+export const WATERMARK_DEFAULT_GAP_Y = 80;
+
 // ========== 对齐与吸附 ==========
 /** 对齐吸附阈值(px) - 元素边界与参考线距离小于此值时触发吸附 */
 export const ALIGN_THRESHOLD = 5;

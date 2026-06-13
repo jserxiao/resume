@@ -146,6 +146,18 @@ export interface CanvasConfig {
   background: string;           // 画布背景色
   backgroundImage?: string;     // 画布背景图片URL
   backgroundSize?: 'cover' | 'contain' | 'auto'; // 背景图片适配方式
+  watermark?: WatermarkConfig;  // 水印配置
+}
+
+// ========== 水印配置 ==========
+export interface WatermarkConfig {
+  text: string;                 // 水印文字内容
+  fontSize: number;             // 字号（px）
+  rotation: number;             // 旋转角度（度，负值表示逆时针）
+  color: string;                // 水印颜色（含透明度）
+  opacity: number;              // 整体透明度 0~1
+  gapX: number;                 // 水平间距（px）
+  gapY: number;                 // 垂直间距（px）
 }
 
 // ========== 色彩方案 ==========

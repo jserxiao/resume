@@ -6,6 +6,7 @@ import { produce } from 'immer';
 import { v4 as uuid } from 'uuid';
 import type { EditorState, BlockGroup, BlockInstance } from '../../types';
 import type { StoreSet, StoreGet, ResumeStoreInternal } from '../types';
+import { getUniqueName } from '../../utils/block';
 
 // ========== 编辑器初始状态 ==========
 export const INITIAL_EDITOR: EditorState = {
@@ -36,6 +37,9 @@ export interface EditorSlice {
   removeFromSelection: (blockId: string) => void;
   clearSelection: () => void;
 
+  // 分组内选择
+  selectBlockInGroup: (blockId: string, groupId: string) => void;
+
   // 分组操作
   createGroup: (name: string) => string;
   addBlocksToGroup: (groupId: string, blockIds: string[]) => void;
@@ -56,9 +60,16 @@ export interface EditorSlice {
   setShowAlignGuides: (show: boolean) => void;
   setSnapToGrid: (snap: boolean) => void;
 
+  // 距离标注回调注册
+  registerDistanceRefresh: (fn: ((blockId: string) => void) | null) => void;
+  refreshDistancesForBlock: (blockId: string) => void;
+
   // 选择器
   getGroupBlocks: (groupId: string) => BlockInstance[];
 }
+
+// 距离标注刷新回调（由 EditorCanvas 注册，由键盘快捷键等外部逻辑调用）
+let _distanceRefreshFn: ((blockId: string) => void) | null = null;
 
 // ========== Slice 实现 ==========
 export const createEditorSlice = (set: StoreSet, get: StoreGet): EditorSlice => ({
@@ -102,14 +113,22 @@ export const createEditorSlice = (set: StoreSet, get: StoreGet): EditorSlice => 
       state.editor.selectedGroupId = null;
     })),
 
+  selectBlockInGroup: (blockId, groupId) =>
+    set(produce<ResumeStoreInternal>((state) => {
+      state.editor.selectedBlockId = blockId;
+      state.editor.selectedBlockIds = blockId ? [blockId] : [];
+      state.editor.selectedGroupId = groupId;
+    })),
+
   // ========== 分组操作 ==========
   createGroup: (name) => {
     const groupId = uuid();
     set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
+      const uniqueName = getUniqueName(name, state.resume.groups.map((g) => g.name));
       const group: BlockGroup = {
         id: groupId,
-        name,
+        name: uniqueName,
         blockIds: [],
         rotation: 0,
         createdAt: Date.now(),
@@ -256,7 +275,9 @@ export const createEditorSlice = (set: StoreSet, get: StoreGet): EditorSlice => 
   groupSelectedBlocks: () => {
     const state = get();
     if (!state.resume || state.editor.selectedBlockIds.length < 2) return null;
-    const groupId = state.createGroup(`分组 ${state.resume.groups.length + 1}`);
+    const baseName = `分组 ${state.resume.groups.length + 1}`;
+    const uniqueName = getUniqueName(baseName, state.resume.groups.map((g) => g.name));
+    const groupId = state.createGroup(uniqueName);
     state.addBlocksToGroup(groupId, state.editor.selectedBlockIds);
     set(produce<ResumeStoreInternal>((s) => {
       s.editor.selectedGroupId = groupId;
@@ -299,6 +320,17 @@ export const createEditorSlice = (set: StoreSet, get: StoreGet): EditorSlice => 
     set(produce<ResumeStoreInternal>((state) => {
       state.editor.snapToGrid = snap;
     })),
+
+  // ========== 距离标注回调注册 ==========
+  registerDistanceRefresh: (fn) => {
+    _distanceRefreshFn = fn;
+  },
+
+  refreshDistancesForBlock: (blockId) => {
+    if (_distanceRefreshFn) {
+      _distanceRefreshFn(blockId);
+    }
+  },
 
   // ========== 选择器 ==========
   getGroupBlocks: (groupId) => {

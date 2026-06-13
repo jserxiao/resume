@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useResumeStore } from '@/store';
 
 /** 图层项（统一的数据结构） */
@@ -30,6 +30,18 @@ export function useLayerItems() {
 
   const selectedGroupId = editor.selectedGroupId;
   const selectedBlockIds = editor.selectedBlockIds;
+
+  // 选中分组时自动展开（将 groupId 加入 expandedGroupIds）
+  useEffect(() => {
+    if (selectedGroupId) {
+      setExpandedGroupIds((prev) => {
+        if (prev.has(selectedGroupId)) return prev;
+        const next = new Set(prev);
+        next.add(selectedGroupId);
+        return next;
+      });
+    }
+  }, [selectedGroupId]);
 
   /** 计算舞台图层列表（始终显示完整图层树） */
   const layers = useMemo<LayerItem[]>(() => {
@@ -82,10 +94,10 @@ export function useLayerItems() {
     return items.sort((a, b) => b.zIndex - a.zIndex);
   }, [resume]);
 
-  // 选中分组时自动展开
+  // 分组展开只由 expandedGroupIds 控制（选中分组时通过 effect 自动加入）
   const isGroupExpanded = useCallback((groupId: string) => {
-    return expandedGroupIds.has(groupId) || selectedGroupId === groupId;
-  }, [expandedGroupIds, selectedGroupId]);
+    return expandedGroupIds.has(groupId);
+  }, [expandedGroupIds]);
 
   const toggleGroupExpand = useCallback((e: React.MouseEvent, groupId: string) => {
     e.stopPropagation();

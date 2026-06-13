@@ -12,7 +12,7 @@ import type {
   CustomElementTemplate,
   CustomDecorationDefinition,
 } from '../../types';
-import { getNextZIndex } from '../../utils/block';
+import { getNextZIndex, getUniqueName } from '../../utils/block';
 import { getDefaultBlockWidth, getDefaultBlockHeight, DEFAULT_PRIMARY_COLOR } from '../../utils/constants';
 import { buildDecoPathD } from '../../utils/geometry';
 import { presetBlockTemplates } from '../../utils/presets';
@@ -23,10 +23,12 @@ export interface BlockSlice {
   // 数据
   blockTemplates: BlockTemplate[];
   customElementTemplates: CustomElementTemplate[];
+  groupTemplates: CustomElementTemplate[];
 
   // 块实例操作
   addBlock: (templateId: string, x: number, y: number, width?: number, height?: number) => void;
   addBlockFromCustomTemplate: (templateId: string, x: number, y: number) => void;
+  addBlockFromGroupTemplate: (templateId: string, x: number, y: number) => void;
   addBlockFromCustomDecoration: (decorationId: string, x: number, y: number) => void;
   addBlockFromIcon: (iconName: string, x: number, y: number) => void;
   removeBlock: (blockId: string) => void;
@@ -57,6 +59,10 @@ export interface BlockSlice {
   updateBlockTemplate: (templateId: string, updates: Partial<BlockTemplate>) => void;
   removeBlockTemplate: (templateId: string) => void;
 
+  // 分组模板操作
+  saveAsGroupTemplate: (groupId: string, name?: string) => void;
+  removeGroupTemplate: (templateId: string) => void;
+
   // 选择器
   getSelectedBlock: () => BlockInstance | undefined;
   getBlockTemplate: (templateId: string) => BlockTemplate | undefined;
@@ -83,10 +89,31 @@ function withBlockUpdate(
   return true;
 }
 
+/**
+ * 确保块名称唯一：如果 block.name 与现有块重名，自动添加数字后缀
+ * 在所有创建/克隆块的逻辑中，push 之前统一调用
+ */
+function ensureUniqueBlockName(state: ResumeStoreInternal, block: BlockInstance): void {
+  if (!state.resume) return;
+  const existingNames = state.resume.blocks.map((b) => b.name);
+  block.name = getUniqueName(block.name, existingNames);
+}
+
+/**
+ * 确保分组名称唯一：如果 group.name 与现有分组重名，自动添加数字后缀
+ * 在所有创建分组的逻辑中统一调用
+ */
+function ensureUniqueGroupName(state: ResumeStoreInternal, name: string): string {
+  if (!state.resume) return name;
+  const existingNames = state.resume.groups.map((g) => g.name);
+  return getUniqueName(name, existingNames);
+}
+
 // ========== Slice 实现 ==========
 export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
   blockTemplates: [...presetBlockTemplates],
   customElementTemplates: [],
+  groupTemplates: [],
 
   addBlock: (templateId, x, y, width, height) =>
     set(produce<ResumeStoreInternal>((state) => {
@@ -124,6 +151,7 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
         zIndex: getNextZIndex(state.resume.blocks),
       };
 
+      ensureUniqueBlockName(state, block);
       state.resume.blocks.push(block);
       state.resume.updatedAt = Date.now();
       state.editor.selectedBlockId = block.id;
@@ -137,9 +165,10 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
       if (!template) return;
 
       const groupId = uuid();
+      const groupName = ensureUniqueGroupName(state, template.name);
       const group = {
         id: groupId,
-        name: template.name,
+        name: groupName,
         blockIds: [] as string[],
         rotation: 0,
         createdAt: Date.now(),
@@ -172,6 +201,7 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
           groupId,
         };
 
+        ensureUniqueBlockName(state, block);
         state.resume.blocks.push(block);
         group.blockIds.push(blockId);
       }
@@ -242,6 +272,7 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
         },
       };
 
+      ensureUniqueBlockName(state, block);
       state.resume.blocks.push(block);
       state.resume.updatedAt = Date.now();
       state.editor.selectedBlockId = block.id;
@@ -279,6 +310,7 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
         },
       };
 
+      ensureUniqueBlockName(state, block);
       state.resume.blocks.push(block);
       state.resume.updatedAt = Date.now();
       state.editor.selectedBlockId = block.id;
@@ -359,6 +391,7 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
         zIndex: getNextZIndex(state.resume.blocks),
       };
 
+      ensureUniqueBlockName(state, cloned);
       state.resume.blocks.push(cloned);
       state.resume.updatedAt = Date.now();
       state.editor.selectedBlockId = cloned.id;
@@ -554,6 +587,107 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
   removeCustomTemplate: (templateId) =>
     set(produce<ResumeStoreInternal>((state) => {
       state.customElementTemplates = state.customElementTemplates.filter((t) => t.id !== templateId);
+    })),
+
+  addBlockFromGroupTemplate: (templateId, x, y) =>
+    set(produce<ResumeStoreInternal>((state) => {
+      if (!state.resume) return;
+      const template = state.groupTemplates.find((t) => t.id === templateId);
+      if (!template) return;
+
+      const groupId = uuid();
+      const groupName = ensureUniqueGroupName(state, template.name);
+      const group = {
+        id: groupId,
+        name: groupName,
+        blockIds: [] as string[],
+        rotation: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      state.resume.groups.push(group);
+
+      const newBlockIds: string[] = [];
+      for (const blockDef of template.blocks) {
+        const fields: Record<string, string> = {};
+        for (const [k, v] of Object.entries(blockDef.fields)) {
+          fields[k] = v;
+        }
+
+        const blockId = `${state.resume.id}-group-${uuid().slice(0, 8)}`;
+        const block: BlockInstance = {
+          id: blockId,
+          templateId: blockDef.templateId,
+          templateName: blockDef.templateName,
+          name: blockDef.name,
+          fields,
+          fieldNamesMap: blockDef.fieldNamesMap,
+          decorations: blockDef.decorations ? [...blockDef.decorations] : [],
+          visible: true,
+          locked: false,
+          x: x + blockDef.relativeX,
+          y: y + blockDef.relativeY,
+          width: blockDef.width,
+          height: blockDef.height,
+          zIndex: getNextZIndex(state.resume.blocks),
+          groupId,
+        };
+
+        ensureUniqueBlockName(state, block);
+        state.resume.blocks.push(block);
+        group.blockIds.push(blockId);
+        newBlockIds.push(blockId);
+      }
+
+      state.editor.selectedGroupId = groupId;
+      state.editor.selectedBlockIds = [...group.blockIds];
+      state.editor.selectedBlockId = group.blockIds.length > 0 ? group.blockIds[0] : null;
+      state.resume.updatedAt = Date.now();
+    })),
+
+  saveAsGroupTemplate: (groupId, name) =>
+    set(produce<ResumeStoreInternal>((state) => {
+      if (!state.resume) return;
+      const group = state.resume.groups.find((g) => g.id === groupId);
+      if (!group || group.blockIds.length === 0) return;
+
+      const blocks = state.resume.blocks.filter((b) => group.blockIds.includes(b.id));
+      if (blocks.length === 0) return;
+
+      const minX = Math.min(...blocks.map((b) => b.x));
+      const minY = Math.min(...blocks.map((b) => b.y));
+
+      const templateName = name || group.name;
+      const uniqueName = getUniqueName(templateName, state.groupTemplates.map((t) => t.name));
+
+      const template: CustomElementTemplate = {
+        id: `gtpl-${uuid().slice(0, 8)}`,
+        name: uniqueName,
+        category: '分组组件',
+        isPreset: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        blocks: blocks.map((b) => ({
+          templateId: b.templateId,
+          templateName: b.templateName,
+          name: b.name,
+          fields: { ...b.fields },
+          fieldNamesMap: b.fieldNamesMap ? { ...b.fieldNamesMap } : undefined,
+          decorations: b.decorations ? JSON.parse(JSON.stringify(b.decorations)) : [],
+          relativeX: b.x - minX,
+          relativeY: b.y - minY,
+          width: b.width,
+          height: b.height,
+          zIndex: b.zIndex,
+        })),
+      };
+
+      state.groupTemplates.push(template);
+    })),
+
+  removeGroupTemplate: (templateId) =>
+    set(produce<ResumeStoreInternal>((state) => {
+      state.groupTemplates = state.groupTemplates.filter((t) => t.id !== templateId);
     })),
 
   updateBlockTemplate: (templateId, updates) =>

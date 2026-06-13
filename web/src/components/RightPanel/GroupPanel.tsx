@@ -1,5 +1,5 @@
-import { Input, InputNumber, Slider, Divider, Button } from 'antd';
-import { GroupOutlined, RotateRightOutlined, DisconnectOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Input, InputNumber, Slider, Divider, Button, message } from 'antd';
+import { GroupOutlined, RotateRightOutlined, DisconnectOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import type { BlockGroup } from '@/types';
 import { GROUP_COLOR } from '@/utils/constants';
@@ -17,7 +17,7 @@ interface GroupPanelProps {
  * 布局 Tab: 位置微调、旋转、提示
  */
 export default function GroupPanel({ group, isLayoutTab = false }: GroupPanelProps) {
-  const { resume, renameGroup, updateGroupRotation, updateGroupPosition, removeGroup, removeBlocks } = useResumeStore();
+  const { resume, renameGroup, updateGroupRotation, updateGroupPosition, removeGroup, removeBlocks, saveAsGroupTemplate } = useResumeStore();
 
   if (!resume) return null;
 
@@ -144,6 +144,16 @@ export default function GroupPanel({ group, isLayoutTab = false }: GroupPanelPro
 
       {/* 分组操作 */}
       <div className="right-panel-multi-actions">
+        <Button
+          icon={<SaveOutlined />}
+          onClick={() => {
+            saveAsGroupTemplate(group.id);
+            message.success('已添加到分组组件');
+          }}
+          block
+        >
+          添加到分组组件
+        </Button>
         <Button
           icon={<DisconnectOutlined />}
           onClick={() => removeGroup(group.id)}

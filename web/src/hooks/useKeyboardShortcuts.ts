@@ -41,6 +41,12 @@ export function useKeyboardShortcuts() {
           // 如果选中了分组，移动整个分组
           if (editor.selectedGroupId) {
             updateGroupPosition(editor.selectedGroupId, dx, dy);
+            // 刷新距离标注
+            const groupId = editor.selectedGroupId;
+            const group = resume.groups.find((g) => g.id === groupId);
+            if (group && group.blockIds.length > 0) {
+              state.refreshDistancesForBlock(group.blockIds[0]);
+            }
           } else {
             // 移动选中的块（支持多选）
             const blockIds = editor.selectedBlockIds.length > 0
@@ -51,6 +57,10 @@ export function useKeyboardShortcuts() {
               if (block) {
                 updateBlockPosition(blockId, block.x + dx, block.y + dy);
               }
+            }
+            // 刷新距离标注（以第一个选中的块为基准）
+            if (blockIds.length > 0) {
+              state.refreshDistancesForBlock(blockIds[0]);
             }
           }
         }

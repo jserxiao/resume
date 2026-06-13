@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { App } from 'antd';
 import Toolbar from '@/components/Toolbar';
@@ -28,16 +28,24 @@ export default function EditorPage() {
   const { manualSave } = useAutoSave();
   const { modal } = App.useApp();
 
+  // 防止 modal 重复弹出（React StrictMode 双重执行 effect）
+  const restoreModalShownRef = useRef(false);
+
   // 全局键盘快捷键
   useKeyboardShortcuts();
 
   // 如果没有简历数据，尝试从 localStorage 恢复
   useEffect(() => {
     if (resume) return;
+    if (restoreModalShownRef.current) return;
+    restoreModalShownRef.current = true;
 
     // 尝试从 localStorage 恢复
     const restored = restoreFromLocalStorage();
     if (restored) {
+      // 恢复成功后标记为已保存，避免 beforeunload 弹出未保存提示
+      useResumeStore.getState().markSaved();
+
       const timestamp = getAutoSaveTimestamp();
       const timeStr = timestamp ? new Date(timestamp).toLocaleString() : '未知时间';
       modal.info({

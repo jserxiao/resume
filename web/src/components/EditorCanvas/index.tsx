@@ -9,6 +9,7 @@ import { useMarqueeSelection } from './useMarqueeSelection';
 import FreeBlockCard from './FreeBlockCard';
 import GroupBorder from './GroupBorder';
 import CanvasOverlay from './CanvasOverlay';
+import WatermarkOverlay from './WatermarkOverlay';
 import './index.less';
 
 interface EditorCanvasProps {
@@ -35,6 +36,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     updateBlockPosition,
     updateBlockSize,
     updateBlockField,
+    registerDistanceRefresh,
   } = useResumeStore();
 
   const pageRef = useRef<HTMLDivElement>(null);
@@ -49,6 +51,14 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
   // 使用封装的 hooks
   const { refreshDistances, clearDistances, distances, activeBlockPos } = useDistanceIndicators(isPreview);
   const { updateAlignGuides, clearAlignGuides, alignGuides } = useAlignGuides(isPreview);
+
+  // 将 refreshDistances 注册到 store，供键盘快捷键等外部逻辑调用
+  useEffect(() => {
+    if (!isPreview) {
+      registerDistanceRefresh(refreshDistances);
+      return () => registerDistanceRefresh(null);
+    }
+  }, [isPreview, refreshDistances, registerDistanceRefresh]);
   const marquee = useMarqueeSelection(
     isPreview,
     pageRef,
@@ -121,7 +131,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     const templateId = e.dataTransfer.getData('templateId');
     const customTemplateId = e.dataTransfer.getData('customTemplateId');
     const customDecorationId = e.dataTransfer.getData('customDecorationId');
-    const groupId = e.dataTransfer.getData('groupId');
+    const groupTemplateId = e.dataTransfer.getData('groupTemplateId');
     const antdIconName = e.dataTransfer.getData('antdIconName');
 
     if (!pageRef.current) return;
@@ -148,6 +158,21 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
         const bh = Math.max(60, Math.round(sh));
         addBlockFromCustomDecoration(customDecorationId, mouseX - bw / 2, mouseY - bh / 2);
       }
+    } else if (groupTemplateId) {
+      // 拖入分组组件模板 - 创建分组
+      const { addBlockFromGroupTemplate, groupTemplates } = useResumeStore.getState();
+      const template = groupTemplates.find(t => t.id === groupTemplateId);
+      if (template && template.blocks.length > 0) {
+        const minX = Math.min(...template.blocks.map(b => b.relativeX));
+        const minY = Math.min(...template.blocks.map(b => b.relativeY));
+        const maxX = Math.max(...template.blocks.map(b => b.relativeX + b.width));
+        const maxY = Math.max(...template.blocks.map(b => b.relativeY + b.height));
+        const bw = maxX - minX;
+        const bh = maxY - minY;
+        addBlockFromGroupTemplate(groupTemplateId, mouseX - bw / 2, mouseY - bh / 2);
+      } else {
+        addBlockFromGroupTemplate(groupTemplateId, mouseX, mouseY);
+      }
     } else if (customTemplateId) {
       const { addBlockFromCustomTemplate, customElementTemplates } = useResumeStore.getState();
       const template = customElementTemplates.find(t => t.id === customTemplateId);
@@ -166,23 +191,6 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       // 拖入 antd 图标
       const { addBlockFromIcon } = useResumeStore.getState();
       addBlockFromIcon(antdIconName, mouseX - 15, mouseY - 15);
-    } else if (groupId) {
-      // 拖入分组 - 获取分组中的所有块
-      const { getGroupBlocks, resume: r } = useResumeStore.getState();
-      if (r) {
-        const groupBlocks = getGroupBlocks(groupId);
-        if (groupBlocks.length > 0) {
-          const minX = Math.min(...groupBlocks.map((b) => b.x));
-          const minY = Math.min(...groupBlocks.map((b) => b.y));
-          const maxX = Math.max(...groupBlocks.map((b) => b.x + b.width));
-          const maxY = Math.max(...groupBlocks.map((b) => b.y + b.height));
-          const bw = maxX - minX;
-          const bh = maxY - minY;
-          for (const gb of groupBlocks) {
-            addBlock(gb.templateId, mouseX - bw / 2 + (gb.x - minX), mouseY - bh / 2 + (gb.y - minY), gb.width, gb.height);
-          }
-        }
-      }
     }
   }, [addBlock]);
 
@@ -445,6 +453,15 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
           distances={<DistanceIndicators isPreview={isPreview} activeBlockPos={activeBlockPos} distances={distances} />}
           marquee={marquee.renderMarquee()}
         />
+
+        {/* 水印层 */}
+        {canvas.watermark && (
+          <WatermarkOverlay
+            watermark={canvas.watermark}
+            canvasWidth={canvas.width}
+            canvasHeight={canvas.height}
+          />
+        )}
 
         {/* 渲染分组边框 */}
         {resume.groups.map((group) => (

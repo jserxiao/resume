@@ -5,7 +5,7 @@ import { FieldType } from '@/types';
 import { MARGIN_INDICATOR_COLOR, MARGIN_INDICATOR_BORDER_COLOR, DEFAULT_BORDER_COLOR, BLOCK_DEFAULT_BORDER_RADIUS } from '@/utils/constants';
 import { uploadImage } from '@/utils/imageUpload';
 import { useResumeStore } from '@/store';
-import { useEditableField } from '@/hooks/useEditableField';
+import { useEditableField } from '@/hooks/useEditableField.tsx';
 import DecorationSvgRenderer from '@/components/shared/DecorationSvgRenderer';
 import { renderIconByName } from '@/utils/iconMap';
 import './FreeBlockCard.less';
@@ -17,6 +17,7 @@ interface FreeBlockCardProps {
   isDragging: boolean;
   isResizing: boolean;
   isGroupSelected: boolean;
+  isFlexboxDropTarget?: boolean;
   colorScheme: ColorScheme;
   mode?: 'edit' | 'preview';
   onSelect: (e?: React.MouseEvent) => void;
@@ -50,6 +51,7 @@ export default function FreeBlockCard({
   isDragging,
   isResizing,
   isGroupSelected,
+  isFlexboxDropTarget = false,
   colorScheme,
   mode = 'edit',
   onSelect,
@@ -76,6 +78,10 @@ export default function FreeBlockCard({
   const isCustomDecorationBlock = block.templateId === 'custom-decoration';
   // 判断是否为 antd 图标块
   const isIconBlock = block.templateId === 'antd-icon';
+  // 判断是否为头像块
+  const isAvatarBlock = block.templateId === 'tpl-avatar';
+  // 判断是否为弹性盒子块
+  const isFlexboxBlock = block.templateId === 'tpl-flexbox';
 
   if (!template && !isCustomDecorationBlock && !isIconBlock) return null;
 
@@ -98,12 +104,13 @@ export default function FreeBlockCard({
   const isHeaderInfo = template?.name === '头部信息';
   const isBasicInfo = template?.name === '基本信息';
   const isSkills = template?.name === '技能';
+  const isLayoutCategory = template?.category === '布局组件';
   const isBasicCategory = template?.category === '基础组件';
 
   // 装饰渲染已抽取到 DecorationSvgRenderer 组件
 
   // 计算块内容区域的背景色
-  const isTransparentBg = isCustomDecorationBlock || isIconBlock || isBasicCategory;
+  const isTransparentBg = isCustomDecorationBlock || isIconBlock || isFlexboxBlock || isBasicCategory;
   const defaultBgColor = isTransparentBg ? 'transparent' : colorScheme.blockBackground;
   const contentBgColor = blockStyle.backgroundColor || defaultBgColor;
 
@@ -131,7 +138,7 @@ export default function FreeBlockCard({
     height: block.height,
     marginLeft: margin.left || 0,
     marginTop: margin.top || 0,
-    overflow: 'hidden',
+    overflow: isFlexboxBlock ? 'visible' : 'hidden',
     backgroundColor: contentBgColor,
     color: blockStyle.color || colorScheme.textPrimary,
     borderRadius: isTransparentBg && blockStyle.borderRadius === undefined ? 0 : (blockStyle.borderRadius ?? BLOCK_DEFAULT_BORDER_RADIUS),
@@ -292,6 +299,123 @@ export default function FreeBlockCard({
     </div>
   );
 
+  /** 头像块渲染 */
+  const renderAvatarBlock = () => {
+    const src = blockFields['avatar-src'] || '';
+    const shape = blockFields['avatar-shape'] || 'circle';
+    const borderWidth = Number(blockFields['avatar-border-width']) || 0;
+    const borderColor = blockFields['avatar-border-color'] || '#e5e7eb';
+    const size = Math.min(block.width, block.height);
+    const borderRadius = shape === 'circle' ? '50%' : (blockStyle.borderRadius ?? 6);
+
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        onClick={!isPreview ? (e) => {
+          e.stopPropagation();
+          handleAvatarUpload('avatar-src');
+        } : undefined}
+      >
+        {src ? (
+          <img
+            src={src}
+            alt="头像"
+            style={{
+              width: size - borderWidth * 2,
+              height: size - borderWidth * 2,
+              borderRadius,
+              objectFit: 'cover',
+              border: borderWidth > 0 ? `${borderWidth}px solid ${borderColor}` : 'none',
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: size - borderWidth * 2,
+              height: size - borderWidth * 2,
+              borderRadius,
+              border: borderWidth > 0 ? `${borderWidth}px solid ${borderColor}` : '2px dashed #d1d5db',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#f3f4f6',
+              color: '#9ca3af',
+            }}
+          >
+            <CameraOutlined style={{ fontSize: Math.max(16, size * 0.25) }} />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /** 弹性盒子块渲染 */
+  const renderFlexboxBlock = () => {
+    const flexDirection = blockFields['flex-direction'] || 'row';
+    const justifyContent = blockFields['justify-content'] || 'flex-start';
+    const alignItems = blockFields['align-items'] || 'stretch';
+    const flexWrap = blockFields['flex-wrap'] || 'nowrap';
+    const gap = Number(blockFields['gap']) || 0;
+
+    // 获取弹性盒子的子块（通过 groupId 关联的块）
+    const { resume: storeResume, blockTemplates: storeTemplates } = useResumeStore.getState();
+    const childBlocks = storeResume?.blocks.filter(
+      (b) => b.groupId === block.id && b.visible
+    ) || [];
+
+    return (
+      <div
+        className="free-block-flexbox"
+        style={{
+          display: 'flex',
+          flexDirection: flexDirection as React.CSSProperties['flexDirection'],
+          justifyContent: justifyContent as React.CSSProperties['justifyContent'],
+          alignItems: alignItems as React.CSSProperties['alignItems'],
+          flexWrap: flexWrap as React.CSSProperties['flexWrap'],
+          gap: `${gap}px`,
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+        }}
+      >
+        {childBlocks.length > 0 ? (
+          childBlocks.map((child) => {
+            const childTemplate = storeTemplates.find(t => t.id === child.templateId);
+            return (
+              <FlexboxChildRenderer
+                key={child.id}
+                child={child}
+                template={childTemplate}
+                colorScheme={colorScheme}
+                isPreview={isPreview}
+              />
+            );
+          })
+        ) : (
+          <div style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#d1d5db',
+            fontSize: 12,
+            border: '2px dashed #e5e7eb',
+            borderRadius: 8,
+          }}>
+            弹性盒子容器
+          </div>
+        )}
+      </div>
+    );
+  };
+
   /** 图标块渲染 */
   const renderIconBlock = () => {
     const iconColor = blockFields['icon-color'] || colorScheme.primary;
@@ -366,6 +490,8 @@ export default function FreeBlockCard({
   const renderBlockContent = () => {
     if (isCustomDecorationBlock) return null;
     if (isIconBlock) return renderIconBlock();
+    if (isAvatarBlock) return renderAvatarBlock();
+    if (isFlexboxBlock) return renderFlexboxBlock();
     if (isHeaderInfo) return renderHeaderInfo();
     if (isBasicInfo) return renderBasicInfo();
     if (isSkills) return renderSkills();
@@ -376,7 +502,7 @@ export default function FreeBlockCard({
   return (
     <div
       ref={cardRef}
-      className={`free-block-card ${isPreview ? 'preview-mode' : ''} ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isResizing ? 'resizing' : ''} ${isGroupSelected && !isSelected ? 'group-selected' : ''} ${isHovered && !isPreview ? 'hovered' : ''} ${block.locked ? 'locked' : ''}`}
+      className={`free-block-card ${isPreview ? 'preview-mode' : ''} ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isResizing ? 'resizing' : ''} ${isGroupSelected && !isSelected ? 'group-selected' : ''} ${isHovered && !isPreview ? 'hovered' : ''} ${block.locked ? 'locked' : ''} ${isFlexboxDropTarget && isFlexboxBlock ? 'flexbox-drop-target' : ''}`}
       style={outerStyle}
       onClick={(e) => {
         e.stopPropagation();
@@ -426,8 +552,27 @@ export default function FreeBlockCard({
         <div className="free-block-group-border" style={{ top: (margin.top || 0) - 1, left: (margin.left || 0) - 1 }} />
       )}
 
-      {/* 内部内容区 */}
-      <div style={innerStyle}>
+        {/* 弹性盒子拖入高亮指示层 */}
+        {isFlexboxDropTarget && isFlexboxBlock && !isPreview && (
+          <div
+            className="free-block-flexbox-drop-highlight"
+            style={{
+              position: 'absolute',
+              top: (margin.top || 0) - 1,
+              left: (margin.left || 0) - 1,
+              right: -(margin.right || 0) - 1,
+              bottom: -(margin.bottom || 0) - 1,
+              border: '2px dashed #1677ff',
+              borderRadius: blockStyle.borderRadius ?? 4,
+              backgroundColor: 'rgba(22, 119, 255, 0.06)',
+              pointerEvents: 'none',
+              zIndex: 15,
+            }}
+          />
+        )}
+
+        {/* 内部内容区 */}
+        <div style={innerStyle}>
         {/* 装饰元素渲染层 */}
         <DecorationSvgRenderer decorations={block.decorations} isPreview={isPreview} />
 
@@ -449,6 +594,196 @@ export default function FreeBlockCard({
             <div className="free-block-resize-handle w" onMouseDown={(e) => onResizeStart('w', e)} />
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ========== 弹性盒子子元素渲染器 ==========
+/** 弹性盒子内子元素的简化渲染 */
+function FlexboxChildRenderer({
+  child,
+  template,
+  colorScheme,
+  isPreview,
+}: {
+  child: BlockInstance;
+  template: BlockTemplate | undefined;
+  colorScheme: ColorScheme;
+  isPreview: boolean;
+}) {
+  const childFields = child.fields;
+  const childStyle = child.style || {};
+  const { selectBlock } = useResumeStore();
+
+  // 默认背景色：基础组件和图标透明，其他跟随主题
+  const isBasicCategory = template?.category === '基础组件';
+  const isIconBlock = child.templateId === 'antd-icon';
+  const isAvatarBlock = child.templateId === 'tpl-avatar';
+  const isCustomDecorationBlock = child.templateId === 'custom-decoration';
+  const isTransparentBg = isIconBlock || isAvatarBlock || isBasicCategory || isCustomDecorationBlock;
+  const defaultBgColor = isTransparentBg ? 'transparent' : colorScheme.blockBackground;
+  const contentBgColor = childStyle.backgroundColor || defaultBgColor;
+
+  const containerStyle: React.CSSProperties = {
+    position: 'relative',
+    flex: '0 0 auto',
+    minWidth: child.width,
+    minHeight: child.height,
+    overflow: 'hidden',
+    cursor: isPreview ? 'default' : 'pointer',
+  };
+
+  const contentStyle: React.CSSProperties = {
+    width: child.width,
+    height: child.height,
+    backgroundColor: contentBgColor,
+    color: childStyle.color || colorScheme.textPrimary,
+    borderRadius: isTransparentBg && childStyle.borderRadius === undefined ? 0 : (childStyle.borderRadius ?? 4),
+    opacity: childStyle.opacity ?? 1,
+    border: isTransparentBg && !childStyle.borderWidth ? 'none' : (childStyle.borderWidth ? `${childStyle.borderWidth}px ${childStyle.borderStyle || 'solid'} ${childStyle.borderColor || DEFAULT_BORDER_COLOR}` : undefined),
+    overflow: isCustomDecorationBlock ? 'visible' : 'hidden',
+    ...(isCustomDecorationBlock ? { padding: 0 } : { padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, lineHeight: 1.3, wordBreak: 'break-all' }),
+  };
+
+  // 渲染子块的内容
+  const renderChildContent = () => {
+    // 自定义装饰块渲染（通过 DecorationSvgRenderer）
+    if (isCustomDecorationBlock) {
+      return (
+        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+          <DecorationSvgRenderer decorations={child.decorations} isPreview={isPreview} />
+        </div>
+      );
+    }
+
+    if (isIconBlock) {
+      const iconColor = childFields['icon-color'] || colorScheme.primary;
+      const iconFontSize = Number(childFields['icon-font-size']) || Math.min(child.width, child.height);
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: iconColor }}>
+          {renderIconByName(childFields['icon-name'] || 'StarOutlined', {
+            style: { fontSize: Math.min(iconFontSize, Math.min(child.width, child.height) - 8), color: iconColor },
+          })}
+        </div>
+      );
+    }
+
+    if (isAvatarBlock) {
+      const src = childFields['avatar-src'] || '';
+      const shape = childFields['avatar-shape'] || 'circle';
+      const borderWidth = Number(childFields['avatar-border-width']) || 0;
+      const borderColor = childFields['avatar-border-color'] || '#e5e7eb';
+      const size = Math.min(child.width, child.height) - 8;
+      const borderRadius = shape === 'circle' ? '50%' : (childStyle.borderRadius ?? 4);
+      if (src) {
+        return <img src={src} alt="头像" style={{ width: size, height: size, borderRadius, objectFit: 'cover', border: borderWidth > 0 ? `${borderWidth}px solid ${borderColor}` : 'none' }} />;
+      }
+      return (
+        <CameraOutlined style={{ fontSize: Math.max(12, size * 0.3), color: '#9ca3af' }} />
+      );
+    }
+
+    // 基础组件渲染（文本等）
+    if (isBasicCategory && template) {
+      const fields = [...template.fields].sort((a, b) => a.order - b.order);
+      return (
+        <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          {fields.map((field) => {
+            const value = childFields[field.id];
+            if (!value) return null;
+            if (field.type === FieldType.RichText) {
+              return <div key={field.id} dangerouslySetInnerHTML={{ __html: value }} style={{ fontSize: 10, lineHeight: 1.3 }} />;
+            }
+            if (field.type === FieldType.TagList) {
+              const tags = value.split(',').filter(Boolean);
+              return (
+                <div key={field.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {tags.map((tag, i) => (
+                    <span key={i} style={{ fontSize: 9, padding: '1px 4px', backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 2 }}>{tag}</span>
+                  ))}
+                </div>
+              );
+            }
+            if (field.type === FieldType.Image) {
+              return <img key={field.id} src={value} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />;
+            }
+            if (field.type === FieldType.Rating) {
+              const num = parseInt(value) || 0;
+              return (
+                <div key={field.id} style={{ display: 'flex', gap: 1 }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span key={star} style={{ fontSize: 8, opacity: num >= star ? 1 : 0.3 }}>⭐</span>
+                  ))}
+                </div>
+              );
+            }
+            return <span key={field.id} style={{ fontSize: 10 }}>{value}</span>;
+          })}
+        </div>
+      );
+    }
+
+    // 组合组件渲染（带字段标签）
+    if (template) {
+      const fields = [...template.fields].sort((a, b) => a.order - b.order);
+      return (
+        <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          {fields.slice(0, 3).map((field) => {
+            const value = childFields[field.id];
+            if (!value) return null;
+            if (TITLE_NAMES.has(field.name)) {
+              return <div key={field.id} style={{ fontWeight: 600, fontSize: 10 }}>{value}</div>;
+            }
+            if (SUBTITLE_NAMES.has(field.name)) {
+              return <div key={field.id} style={{ fontSize: 9, color: colorScheme.textSecondary }}>{value}</div>;
+            }
+            if (TIME_NAMES.has(field.name)) {
+              return <span key={field.id} style={{ fontSize: 8, color: colorScheme.textMuted }}>{value}</span>;
+            }
+            if (field.type === FieldType.RichText) {
+              return <div key={field.id} dangerouslySetInnerHTML={{ __html: value }} style={{ fontSize: 9, lineHeight: 1.2, color: colorScheme.textSecondary }} />;
+            }
+            if (field.type === FieldType.TagList) {
+              const tags = value.split(',').filter(Boolean);
+              return (
+                <div key={field.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {tags.map((tag, i) => (
+                    <span key={i} style={{ fontSize: 8, padding: '0 3px', backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 2 }}>{tag}</span>
+                  ))}
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      );
+    }
+
+    // 其他无模板的块
+    return (
+      <div style={{ fontSize: 9, color: '#9ca3af' }}>{child.name}</div>
+    );
+  };
+
+  return (
+    <div
+      style={containerStyle}
+      onClick={(e) => {
+        if (isPreview) return;
+        e.stopPropagation();
+        selectBlock(child.id);
+      }}
+      draggable={!isPreview}
+      onDragStart={(e) => {
+        if (isPreview) return;
+        e.stopPropagation();
+        e.dataTransfer.setData('blockId', child.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+    >
+      <div style={contentStyle}>
+        {renderChildContent()}
       </div>
     </div>
   );

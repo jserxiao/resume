@@ -78,6 +78,7 @@ export function getDefaultBlockWidth(category: string): number {
   switch (category) {
     case '基础组件': return 240;
     case '组合组件': return 400;
+    case '布局组件': return 400;
     default: return 350;
   }
 }
@@ -90,6 +91,9 @@ export function getDefaultBlockHeight(name: string): number {
     case '链接': return 40;
     case '日期': return 40;
     case '评分': return 50;
+    case '头像': return 100;
+    // 布局组件
+    case '弹性盒子': return 200;
     // 组合组件
     case '头部信息': return 120;
     case '基本信息': return 100;

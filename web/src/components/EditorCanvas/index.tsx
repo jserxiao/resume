@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { message } from 'antd';
 import { useResumeStore, calculateAlignGuides } from '@/store';
 import { GRID_SIZE, RESIZE_MIN_WIDTH, RESIZE_MIN_HEIGHT, getDefaultBlockWidth, getDefaultBlockHeight } from '@/utils/constants';
 import { useDistanceIndicators } from './useDistanceIndicators';
@@ -42,6 +43,8 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
   const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  // 弹性盒子拖入高亮状态
+  const [flexboxDropTargetId, setFlexboxDropTargetId] = useState<string | null>(null);
 
   // 标记块拖拽已处理选择，防止 onClick 重复处理
   const blockDragStartedRef = useRef(false);
@@ -116,21 +119,98 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
-    setDragOverSlot(true);
-  }, []);
+
+    // 检测是否拖到弹性盒子区域
+    const flexboxTarget = findFlexboxAtPoint(e.clientX, e.clientY);
+    setFlexboxDropTargetId(flexboxTarget);
+
+    if (flexboxTarget) {
+      setDragOverSlot(false);
+    } else {
+      setDragOverSlot(true);
+    }
+  }, [resume]);
 
   const handleDragLeave = useCallback(() => {
     setDragOverSlot(false);
+    setFlexboxDropTargetId(null);
   }, []);
+
+  // 检测鼠标位置是否在某个弹性盒子块内
+  const findFlexboxAtPoint = useCallback((clientX: number, clientY: number): string | null => {
+    if (!pageRef.current || !resume) return null;
+    const rect = pageRef.current.getBoundingClientRect();
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
+
+    // 查找弹性盒子块
+    const flexboxBlocks = resume.blocks.filter(
+      (b) => b.templateId === 'tpl-flexbox' && b.visible
+    );
+    // 从上到下（zIndex 最大的优先匹配）
+    const sorted = [...flexboxBlocks].sort((a, b) => b.zIndex - a.zIndex);
+    for (const fb of sorted) {
+      if (
+        mouseX >= fb.x && mouseX <= fb.x + fb.width &&
+        mouseY >= fb.y && mouseY <= fb.y + fb.height
+      ) {
+        return fb.id;
+      }
+    }
+    return null;
+  }, [resume]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOverSlot(false);
+
+    // 检测是否落入弹性盒子
+    const flexboxTarget = findFlexboxAtPoint(e.clientX, e.clientY);
+
+    // 拖拽的块 ID（从画布内拖拽时设置）
+    const draggedBlockId = e.dataTransfer.getData('blockId');
+
     const templateId = e.dataTransfer.getData('templateId');
     const customTemplateId = e.dataTransfer.getData('customTemplateId');
     const customDecorationId = e.dataTransfer.getData('customDecorationId');
     const groupTemplateId = e.dataTransfer.getData('groupTemplateId');
     const antdIconName = e.dataTransfer.getData('antdIconName');
+
+    // 如果拖入的是画布上已有的块到弹性盒子
+    if (flexboxTarget && draggedBlockId) {
+      const { addBlockToFlexbox } = useResumeStore.getState();
+      const success = addBlockToFlexbox(draggedBlockId, flexboxTarget);
+      if (!success) {
+        message.warning('分组元素不能放置到弹性盒子中');
+      }
+      setFlexboxDropTargetId(null);
+      return;
+    }
+
+    // 如果拖出弹性盒子子元素到画布空白处，自动移出弹性盒子
+    if (!flexboxTarget && draggedBlockId) {
+      const block = resume.blocks.find((b) => b.id === draggedBlockId);
+      if (block?.groupId) {
+        const parentBlock = resume.blocks.find((b) => b.id === block.groupId);
+        if (parentBlock && parentBlock.templateId === 'tpl-flexbox') {
+          const { removeBlockFromFlexbox } = useResumeStore.getState();
+          // 计算落点位置
+          if (pageRef.current) {
+            const rect = pageRef.current.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            // 先移出，再更新位置到鼠标落点
+            removeBlockFromFlexbox(draggedBlockId, block.groupId!);
+            const { updateBlockPosition } = useResumeStore.getState();
+            updateBlockPosition(draggedBlockId, mouseX - block.width / 2, mouseY - block.height / 2);
+          } else {
+            removeBlockFromFlexbox(draggedBlockId, block.groupId!);
+          }
+          setFlexboxDropTargetId(null);
+          return;
+        }
+      }
+    }
 
     if (!pageRef.current) return;
     const rect = pageRef.current.getBoundingClientRect();
@@ -138,12 +218,42 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     const mouseY = e.clientY - rect.top;
 
     if (templateId) {
+      // 不允许将弹性盒子自身拖入另一个弹性盒子
+      if (flexboxTarget && templateId === 'tpl-flexbox') {
+        setFlexboxDropTargetId(null);
+        return;
+      }
       // 拖拽预览图鼠标在中心，放置时也需要以鼠标为中心
       const { blockTemplates } = useResumeStore.getState();
       const template = blockTemplates.find(t => t.id === templateId);
       const bw = getDefaultBlockWidth(template?.category || '');
       const bh = getDefaultBlockHeight(template?.name || '');
+
+      if (flexboxTarget) {
+        // 从左侧面板拖入到弹性盒子
+        addBlock(templateId, mouseX - bw / 2, mouseY - bh / 2);
+        const { addBlockToFlexbox, resume: updatedResume } = useResumeStore.getState();
+        // 找到刚添加的块
+        const newBlock = updatedResume?.blocks[updatedResume.blocks.length - 1];
+        if (newBlock) {
+          const success = addBlockToFlexbox(newBlock.id, flexboxTarget);
+          if (!success) {
+            message.warning('分组元素不能放置到弹性盒子中');
+          }
+        }
+        setFlexboxDropTargetId(null);
+        return;
+      }
+
       addBlock(templateId, mouseX - bw / 2, mouseY - bh / 2);
+    } else if (flexboxTarget && groupTemplateId) {
+      // 分组组件模板不允许拖入弹性盒子
+      message.warning('分组元素不能放置到弹性盒子中');
+      setFlexboxDropTargetId(null);
+      return;
+    } else if (flexboxTarget && (customDecorationId || customTemplateId || antdIconName)) {
+      // 其他类型的拖入暂不加入弹性盒子，正常处理
+      setFlexboxDropTargetId(null);
     } else if (customDecorationId) {
       // 拖入自定义装饰元素
       const { addBlockFromCustomDecoration, customDecorations } = useResumeStore.getState();
@@ -187,10 +297,22 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       }
     } else if (antdIconName) {
       // 拖入 antd 图标
+      if (flexboxTarget) {
+        const { addBlockFromIcon, addBlockToFlexbox, resume: updatedResume } = useResumeStore.getState();
+        addBlockFromIcon(antdIconName, mouseX - 15, mouseY - 15);
+        const newBlock = updatedResume?.blocks[updatedResume.blocks.length - 1];
+        if (newBlock) {
+          addBlockToFlexbox(newBlock.id, flexboxTarget);
+        }
+        setFlexboxDropTargetId(null);
+        return;
+      }
       const { addBlockFromIcon } = useResumeStore.getState();
       addBlockFromIcon(antdIconName, mouseX - 15, mouseY - 15);
     }
-  }, [addBlock]);
+
+    setFlexboxDropTargetId(null);
+  }, [addBlock, findFlexboxAtPoint]);
 
   // 块拖拽开始
   const handleBlockDragStart = useCallback((blockId: string, e: React.MouseEvent) => {
@@ -205,8 +327,9 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
 
     // 画布上点击/拖拽分组内的元素时，直接选中该元素，不选中分组
     // 只有在图层面板点击分组才选中分组（由 LayerDrawer 处理）
+    // 弹性盒子子元素也通过 groupId 关联，直接选中该块进行拖拽
     if (block.groupId) {
-      // 分组内的块，直接选中该块进行拖拽
+      // 分组内的块/弹性盒子子块，直接选中该块进行拖拽
       if (!editor.selectedBlockIds.includes(blockId)) {
         selectBlock(blockId);
       }
@@ -268,6 +391,10 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
           newX = Math.round(newX / grid) * grid;
           newY = Math.round(newY / grid) * grid;
         }
+
+        // 检测是否拖到了弹性盒子上
+        const fbTarget = findFlexboxAtPoint(e.clientX, e.clientY);
+        setFlexboxDropTargetId(fbTarget);
 
         // 计算对齐线
         const currentBlock = { ...resume.blocks.find((b) => b.id === blockId)!, x: newX, y: newY };
@@ -334,13 +461,57 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
       // 完成框选（由 hook 处理）
       if (marquee.handleMarqueeMouseUp()) return;
 
       if (dragStateRef.current) {
+        const { blockId, blockStartX, blockStartY, startX, startY } = dragStateRef.current;
+
+        // 检查是否拖到了弹性盒子上，如果是则加入弹性盒子
+        const fbTarget = findFlexboxAtPoint(e.clientX, e.clientY);
+        if (fbTarget && fbTarget !== blockId) {
+          const block = resume.blocks.find((b) => b.id === blockId);
+          // 不允许弹性盒子嵌套
+        if (block && block.templateId !== 'tpl-flexbox' && block.groupId !== fbTarget) {
+          const { addBlockToFlexbox } = useResumeStore.getState();
+          const success = addBlockToFlexbox(blockId, fbTarget);
+          if (!success) {
+            message.warning('分组元素不能放置到弹性盒子中');
+          }
+        }
+        }
+
+        // 检查弹性盒子子元素是否被拖出了弹性盒子
+        const block = resume.blocks.find((b) => b.id === blockId);
+        if (block?.groupId) {
+          const parentBlock = resume.blocks.find((b) => b.id === block.groupId);
+          if (parentBlock) {
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            const movedDistance = Math.sqrt(dx * dx + dy * dy);
+            // 只有明显移动了才检查是否拖出
+            if (movedDistance > 5) {
+              const newBlock = useResumeStore.getState().resume?.blocks.find((b) => b.id === blockId);
+              if (newBlock?.groupId) {
+                // 检查拖拽结束位置是否在弹性盒子外
+                const isOutside =
+                  newBlock.x < parentBlock.x - 10 ||
+                  newBlock.x + newBlock.width > parentBlock.x + parentBlock.width + 10 ||
+                  newBlock.y < parentBlock.y - 10 ||
+                  newBlock.y + newBlock.height > parentBlock.y + parentBlock.height + 10;
+                if (isOutside) {
+                  const { removeBlockFromFlexbox } = useResumeStore.getState();
+                  removeBlockFromFlexbox(blockId, block.groupId!);
+                }
+              }
+            }
+          }
+        }
+
         clearAlignGuides();
         setDraggingBlockId(null);
+        setFlexboxDropTargetId(null);
         dragStateRef.current = null;
       }
       if (resizeStateRef.current) {
@@ -355,7 +526,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isPreview, editor.snapToGrid, editor.gridSize, editor.showAlignGuides, resume, updateBlockPosition, updateBlockSize, refreshDistances, updateAlignGuides, clearAlignGuides, marquee]);
+  }, [isPreview, editor.snapToGrid, editor.gridSize, editor.showAlignGuides, resume, updateBlockPosition, updateBlockSize, refreshDistances, updateAlignGuides, clearAlignGuides, marquee, findFlexboxAtPoint]);
 
   // 块调整大小开始
   const handleBlockResizeStart = useCallback((blockId: string, direction: string, e: React.MouseEvent) => {
@@ -467,8 +638,16 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
           />
         ))}
 
-        {/* 渲染所有块 */}
+        {/* 渲染所有块（弹性盒子子元素由弹性盒子内部渲染，不在画布顶层渲染） */}
         {visibleBlocks.map((block) => {
+          // 跳过弹性盒子子元素的顶层渲染
+          if (block.groupId) {
+            const parentBlock = resume.blocks.find((b) => b.id === block.groupId);
+            if (parentBlock && parentBlock.templateId === 'tpl-flexbox') {
+              return null;
+            }
+          }
+
           const template = blockTemplates.find((t) => t.id === block.templateId);
           const isSelected = !isPreview && (
             editor.selectedBlockId === block.id || editor.selectedBlockIds.includes(block.id)
@@ -489,6 +668,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
               isDragging={isDragging}
               isResizing={isResizing}
               isGroupSelected={!!isGroupSelected}
+              isFlexboxDropTarget={flexboxDropTargetId === block.id}
               colorScheme={colorScheme}
               mode={mode}
               onSelect={(e) => handleBlockSelect(block.id, e)}

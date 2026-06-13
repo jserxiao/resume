@@ -6,6 +6,7 @@ import {
   AppstoreOutlined,
   HolderOutlined,
   GroupOutlined,
+  LayoutOutlined,
   StarOutlined,
   PlusOutlined,
   EditOutlined,
@@ -86,9 +87,10 @@ export default function LeftPanel() {
   );
 
   // 分类排序顺序
-  const CATEGORY_ORDER = ['基础组件'];
+  const CATEGORY_ORDER = ['基础组件', '布局组件'];
   const CATEGORY_ICONS: Record<string, React.ReactNode> = {
     '基础组件': <AppstoreOutlined />,
+    '布局组件': <LayoutOutlined />,
     '分组组件': <GroupOutlined />,
     '自定义元素': <StarOutlined />,
   };

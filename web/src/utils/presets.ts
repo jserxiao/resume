@@ -49,6 +49,39 @@ export const presetBlockTemplates: BlockTemplate[] = [
       { id: 'rating-value', name: '评分', type: FieldType.Rating, order: 0, defaultValue: '3', required: false, placeholder: '' },
     ],
   },
+  {
+    id: 'tpl-avatar',
+    name: '头像',
+    category: '基础组件',
+    isPreset: true,
+    createdAt: 0,
+    updatedAt: 0,
+    fields: [
+      { id: 'avatar-src', name: '头像图片', type: FieldType.Image, order: 0, defaultValue: '', required: true, placeholder: '上传头像图片' },
+      { id: 'avatar-shape', name: '形状', type: FieldType.Select, order: 1, defaultValue: 'circle', required: false, placeholder: '选择形状', options: ['circle', 'square'] },
+      { id: 'avatar-border-width', name: '边框宽度', type: FieldType.Number, order: 2, defaultValue: '0', required: false, placeholder: '0' },
+      { id: 'avatar-border-color', name: '边框颜色', type: FieldType.Color, order: 3, defaultValue: '#e5e7eb', required: false, placeholder: '#e5e7eb' },
+    ],
+  },
+];
+
+// ---- 布局组件 ----
+export const presetLayoutTemplates: BlockTemplate[] = [
+  {
+    id: 'tpl-flexbox',
+    name: '弹性盒子',
+    category: '布局组件',
+    isPreset: true,
+    createdAt: 0,
+    updatedAt: 0,
+    fields: [
+      { id: 'flex-direction', name: '主轴方向', type: FieldType.Select, order: 0, defaultValue: 'row', required: false, placeholder: 'row', options: ['row', 'row-reverse', 'column', 'column-reverse'] },
+      { id: 'justify-content', name: '主轴对齐', type: FieldType.Select, order: 1, defaultValue: 'flex-start', required: false, placeholder: 'flex-start', options: ['flex-start', 'flex-end', 'center', 'space-between', 'space-around', 'space-evenly'] },
+      { id: 'align-items', name: '交叉轴对齐', type: FieldType.Select, order: 2, defaultValue: 'stretch', required: false, placeholder: 'stretch', options: ['flex-start', 'flex-end', 'center', 'stretch', 'baseline'] },
+      { id: 'flex-wrap', name: '换行', type: FieldType.Select, order: 3, defaultValue: 'nowrap', required: false, placeholder: 'nowrap', options: ['nowrap', 'wrap', 'wrap-reverse'] },
+      { id: 'gap', name: '间距(px)', type: FieldType.Number, order: 4, defaultValue: '0', required: false, placeholder: '0' },
+    ],
+  },
 ];
 
 // ========== 预设色彩方案 ==========

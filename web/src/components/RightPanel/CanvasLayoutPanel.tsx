@@ -1,5 +1,5 @@
 import { InputNumber, Input, Divider, Button, Select, Switch, Slider } from 'antd';
-import { BgColorsOutlined, LayoutOutlined, StarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, FontSizeOutlined, FormOutlined } from '@ant-design/icons';
+import { BgColorsOutlined, LayoutOutlined, FontSizeOutlined, FormOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import type { Resume, WatermarkConfig } from '@/types';
 import {
@@ -15,20 +15,18 @@ import {
   WATERMARK_DEFAULT_GAP_X,
   WATERMARK_DEFAULT_GAP_Y,
 } from '@/utils/constants';
-import { buildDecoPathD } from '@/utils/geometry';
 import ColorFieldInput from '@/components/shared/ColorFieldInput';
 import ImageUploadField from '@/components/shared/ImageUploadField';
 
 interface CanvasLayoutPanelProps {
   resume: Resume;
-  navigate: (path: string) => void;
 }
 
 /**
  * 画布布局设置面板
  * 包含：画布尺寸、页面规格预设、内边距、背景颜色、背景图片、水印、重置
  */
-export default function CanvasLayoutPanel({ resume, navigate }: CanvasLayoutPanelProps) {
+export default function CanvasLayoutPanel({ resume }: CanvasLayoutPanelProps) {
   const { setCanvasConfig, setResumeTitle } = useResumeStore();
 
   const watermark = resume.canvas.watermark;
@@ -286,117 +284,7 @@ export default function CanvasLayoutPanel({ resume, navigate }: CanvasLayoutPane
         重置为默认画布
       </Button>
 
-      <Divider style={{ margin: '8px 0' }} />
-
-      {/* 自定义装饰元素 */}
-      <div className="right-panel-section-title"><StarOutlined /> 自定义装饰</div>
-      <CanvasCustomDecorationSection navigate={navigate} />
     </div>
   );
 }
 
-/** 画布设置面板中的自定义装饰区域 */
-function CanvasCustomDecorationSection({ navigate }: { navigate: (path: string) => void }) {
-  const { customDecorations, removeCustomDecoration } = useResumeStore();
-
-  return (
-    <>
-      <Button
-        size="small"
-        icon={<PlusOutlined />}
-        onClick={() => navigate('/decoration-editor')}
-        style={{ width: '100%' }}
-      >
-        创建自定义装饰
-      </Button>
-      {customDecorations.length > 0 && (
-        <div style={{ marginTop: 8 }}>
-          {customDecorations.map((d) => {
-            const dw = d.stageWidth || 100;
-            const dh = d.stageHeight || 100;
-            const maxThumb = 20;
-            const thumbScale = maxThumb / Math.max(dw, dh);
-            const tw = Math.max(8, Math.round(dw * thumbScale));
-            const th = Math.max(8, Math.round(dh * thumbScale));
-            return (
-            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
-              <svg width={tw} height={th} viewBox="0 0 100 100" preserveAspectRatio="none" style={{ flexShrink: 0 }}>
-                {d.paths.map((p, pIdx) => (
-                  <g key={pIdx}>
-                    {p.clipRect && (
-                      <defs>
-                        <clipPath id={`thumb-clip-${d.id}-${pIdx}`}>
-                          <rect x={p.clipRect.x} y={p.clipRect.y} width={p.clipRect.width} height={p.clipRect.height} />
-                        </clipPath>
-                      </defs>
-                    )}
-                    <g clipPath={p.clipRect ? `url(#thumb-clip-${d.id}-${pIdx})` : undefined}>
-                      {p.isClosed && (
-                        <path
-                          d={buildDecoPathD(p.anchors, p.isClosed)}
-                          fill={p.fillColor}
-                          stroke="none"
-                        />
-                      )}
-                      {p.edgeColors && p.edgeColors.some((c, i) => c && c !== p.strokeColor) ? (
-                        // 逐边着色缩略图
-                        (() => {
-                          const n = p.anchors.length;
-                          const edgeCount = p.isClosed ? n : n - 1;
-                          const segments: React.ReactNode[] = [];
-                          for (let i = 0; i < edgeCount; i++) {
-                            const from = p.anchors[i];
-                            const to = p.anchors[(i + 1) % n];
-                            const control = from.handleOut || to.handleIn;
-                            let segD = `M ${from.x} ${from.y}`;
-                            if (control) {
-                              segD += ` Q ${control.x} ${control.y} ${to.x} ${to.y}`;
-                            } else {
-                              segD += ` L ${to.x} ${to.y}`;
-                            }
-                            segments.push(
-                              <path
-                                key={`edge-${i}`}
-                                d={segD}
-                                fill="none"
-                                stroke={p.edgeColors[i] || p.strokeColor}
-                                strokeWidth={3}
-                              />
-                            );
-                          }
-                          return segments;
-                        })()
-                      ) : (
-                        <path
-                          d={buildDecoPathD(p.anchors, p.isClosed)}
-                          fill="none"
-                          stroke={p.strokeColor}
-                          strokeWidth={3}
-                        />
-                      )}
-                    </g>
-                  </g>
-                ))}
-              </svg>
-              <span style={{ flex: 1, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
-              <Button
-                type="text"
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => navigate(`/decoration-editor?id=${d.id}`)}
-              />
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => removeCustomDecoration(d.id)}
-              />
-            </div>
-            );
-          })}
-        </div>
-      )}
-    </>
-  );
-}

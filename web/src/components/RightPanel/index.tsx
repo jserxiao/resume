@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import { useResumeStore } from '@/store';
 import BlockDetailPanel from './BlockDetailPanel';
 import GroupPanel from './GroupPanel';
@@ -7,8 +6,6 @@ import CanvasLayoutPanel from './CanvasLayoutPanel';
 import './index.less';
 
 export default function RightPanel() {
-  const navigate = useNavigate();
-
   const {
     resume,
     blockTemplates,
@@ -33,10 +30,12 @@ export default function RightPanel() {
 
   const selectedBlock = selectedBlocks.length === 1 ? selectedBlocks[0] : null;
 
-  // 是否为自定义装饰块
-  const isCustomDecorationBlock = selectedBlock?.templateId === 'custom-decoration';
   // 是否为 antd 图标块
   const isIconBlock = selectedBlock?.templateId === 'antd-icon';
+  // 是否为头像块
+  const isAvatarBlock = selectedBlock?.templateId === 'tpl-avatar';
+  // 是否为弹性盒子块
+  const isFlexboxBlock = selectedBlock?.templateId === 'tpl-flexbox';
 
   // 判断是否选中了分组
   const isGroupMode = !!selectedGroup;
@@ -51,20 +50,15 @@ export default function RightPanel() {
         <MultiSelectPanel selectedBlockIds={selectedBlockIds} selectedBlocks={selectedBlocks} />
       ) : !selectedBlock ? (
         /* 无选中 - 画布设置 */
-        <CanvasLayoutPanel resume={resume} navigate={navigate} />
+        <CanvasLayoutPanel resume={resume} />
       ) : (
         /* 单选模式 - 统一详情面板 */
         <BlockDetailPanel
           block={selectedBlock}
           template={blockTemplates.find((t) => t.id === selectedBlock.templateId)}
           isIconBlock={isIconBlock}
-          isCustomDecorationBlock={isCustomDecorationBlock}
-          onEditDecoration={isCustomDecorationBlock ? () => {
-            const deco = (selectedBlock.decorations[0] as any);
-            if (deco?.decorationId) {
-              navigate(`/decoration-editor?id=${deco.decorationId}`);
-            }
-          } : undefined}
+          isAvatarBlock={isAvatarBlock}
+          isFlexboxBlock={isFlexboxBlock}
         />
       )}
     </div>

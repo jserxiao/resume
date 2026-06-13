@@ -15,7 +15,7 @@ import type {
 import { getNextZIndex, getUniqueName } from '../../utils/block';
 import { getDefaultBlockWidth, getDefaultBlockHeight, DEFAULT_PRIMARY_COLOR } from '../../utils/constants';
 import { buildDecoPathD } from '../../utils/geometry';
-import { presetBlockTemplates } from '../../utils/presets';
+import { presetBlockTemplates, presetLayoutTemplates } from '../../utils/presets';
 import type { StoreSet, StoreGet, ResumeStoreInternal } from '../types';
 
 // ========== Slice 类型 ==========
@@ -62,6 +62,11 @@ export interface BlockSlice {
   // 分组模板操作
   saveAsGroupTemplate: (groupId: string, name?: string) => void;
   removeGroupTemplate: (templateId: string) => void;
+
+  // 弹性盒子操作
+  addBlockToFlexbox: (blockId: string, flexboxId: string, insertIndex?: number) => boolean;
+  removeBlockFromFlexbox: (blockId: string, flexboxId: string) => void;
+  reorderFlexboxChildren: (flexboxId: string, childIds: string[]) => void;
 
   // 选择器
   getSelectedBlock: () => BlockInstance | undefined;
@@ -111,7 +116,7 @@ function ensureUniqueGroupName(state: ResumeStoreInternal, name: string): string
 
 // ========== Slice 实现 ==========
 export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
-  blockTemplates: [...presetBlockTemplates],
+  blockTemplates: [...presetBlockTemplates, ...presetLayoutTemplates],
   customElementTemplates: [],
   groupTemplates: [],
 
@@ -132,7 +137,7 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
       });
 
       const defaultWidth = width || getDefaultBlockWidth(template.category);
-      const defaultHeight = height || getDefaultBlockHeight(template.name);
+      const defaultHeight = height || (templateId === 'tpl-avatar' ? defaultWidth : getDefaultBlockHeight(template.name));
 
       const block: BlockInstance = {
         id: `${state.resume.id}-${templateId}-${uuid().slice(0, 8)}`,
@@ -701,6 +706,120 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
   removeBlockTemplate: (templateId) =>
     set(produce<ResumeStoreInternal>((state) => {
       state.blockTemplates = state.blockTemplates.filter((t) => t.id !== templateId);
+    })),
+
+  addBlockToFlexbox: (blockId, flexboxId, insertIndex) => {
+    // 前置检查：不允许属于分组的块拖入弹性盒子
+    const currentResume = get().resume;
+    if (currentResume) {
+      const block = currentResume.blocks.find((b) => b.id === blockId);
+      if (block && block.groupId) {
+        const isInGroup = currentResume.groups.some((g) => g.id === block.groupId);
+        if (isInGroup) return false;
+      }
+    }
+    set(produce<ResumeStoreInternal>((state) => {
+      if (!state.resume) return;
+      const block = findBlock(state, blockId);
+      const flexbox = findBlock(state, flexboxId);
+      if (!block || !flexbox || flexbox.templateId !== 'tpl-flexbox') return;
+
+      // 不允许将弹性盒子自身或已在其中的块再次加入
+      if (block.templateId === 'tpl-flexbox') return;
+      if (block.groupId === flexboxId) return;
+
+      // 如果块之前在别的分组中，先移出
+      if (block.groupId) {
+        const prevGroup = state.resume.groups.find((g) => g.id === block.groupId);
+        if (prevGroup) {
+          prevGroup.blockIds = prevGroup.blockIds.filter((id) => id !== blockId);
+          if (prevGroup.blockIds.length === 0) {
+            state.resume.groups = state.resume.groups.filter((g) => g.id !== prevGroup.id);
+          }
+        }
+      }
+
+      // 将块设置为弹性盒子的子元素
+      block.groupId = flexboxId;
+
+      // 子元素在 flexbox 中的顺序通过 blocks 数组中 groupId 相同的元素排列顺序决定
+      // 如果指定了插入位置，将块移到对应位置
+      if (insertIndex !== undefined) {
+        const siblings = state.resume.blocks.filter((b) => b.groupId === flexboxId && b.visible);
+        const currentIdx = siblings.findIndex((b) => b.id === blockId);
+        // 将块在 blocks 数组中移到指定位置
+        const allBlocks = state.resume.blocks;
+        const blockArrayIdx = allBlocks.findIndex((b) => b.id === blockId);
+        if (blockArrayIdx !== -1) {
+          const [moved] = allBlocks.splice(blockArrayIdx, 1);
+          // 计算在总 blocks 数组中的目标位置
+          const targetSiblings = allBlocks.filter((b) => b.groupId === flexboxId && b.visible);
+          if (insertIndex >= targetSiblings.length) {
+            allBlocks.push(moved);
+          } else {
+            const targetBlock = targetSiblings[insertIndex];
+            const targetIdx = allBlocks.findIndex((b) => b.id === targetBlock.id);
+            allBlocks.splice(targetIdx, 0, moved);
+          }
+        }
+      }
+
+      state.resume.updatedAt = Date.now();
+    }));
+    return true;
+  },
+
+  removeBlockFromFlexbox: (blockId, flexboxId) =>
+    set(produce<ResumeStoreInternal>((state) => {
+      if (!state.resume) return;
+      const block = findBlock(state, blockId);
+      if (!block || block.groupId !== flexboxId) return;
+
+      const flexbox = findBlock(state, flexboxId);
+      if (!flexbox) return;
+
+      // 将块移出弹性盒子，放到弹性盒子下方
+      block.groupId = undefined;
+      block.x = flexbox.x;
+      block.y = flexbox.y + flexbox.height + 10;
+
+      state.resume.updatedAt = Date.now();
+    })),
+
+  reorderFlexboxChildren: (flexboxId, childIds) =>
+    set(produce<ResumeStoreInternal>((state) => {
+      if (!state.resume) return;
+      // 根据 childIds 顺序重新排列 blocks 数组中属于该弹性盒子的块
+      const allBlocks = state.resume.blocks;
+      const childIdSet = new Set(childIds);
+
+      // 取出所有子块
+      const children: BlockInstance[] = [];
+      const otherBlocks: BlockInstance[] = [];
+
+      for (const b of allBlocks) {
+        if (childIdSet.has(b.id)) {
+          children.push(b);
+        } else {
+          otherBlocks.push(b);
+        }
+      }
+
+      // 按 childIds 顺序排列子块
+      const sortedChildren = childIds
+        .map((id) => children.find((c) => c.id === id))
+        .filter(Boolean) as BlockInstance[];
+
+      // 找到弹性盒子在 otherBlocks 中的位置，将子块紧跟其后插入
+      const flexboxIdx = otherBlocks.findIndex((b) => b.id === flexboxId);
+      if (flexboxIdx !== -1) {
+        otherBlocks.splice(flexboxIdx + 1, 0, ...sortedChildren);
+      } else {
+        otherBlocks.push(...sortedChildren);
+      }
+
+      state.resume.blocks = otherBlocks;
+      state.resume.updatedAt = Date.now();
     })),
 
   getSelectedBlock: () => {

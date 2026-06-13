@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { App } from 'antd';
 import Toolbar from '@/components/Toolbar';
 import LeftPanel from '@/components/LeftPanel';
@@ -8,12 +7,13 @@ import RightPanel from '@/components/RightPanel';
 import PreviewDrawer from '@/components/PreviewDrawer';
 import { useResumeStore } from '@/store';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { useAutoSave, restoreFromLocalStorage, getAutoSaveTimestamp, clearLocalStorage } from '@/hooks/useAutoSave';
+import { useAutoSave, restoreFromLocalStorage, getAutoSaveTimestamp } from '@/hooks/useAutoSave';
+import { presetColorSchemes } from '@/utils/presets';
 import '@/App.less';
 
 /**
- * 编辑器页面
- * 路由：/editor
+ * 编辑器页面（首页）
+ * 路由：/
  * 布局：[左侧面板: 块模板] [中间: 编辑画布] [右侧: 属性面板] + 悬浮图层面板 + 预览抽屉
  *
  * 自动保存功能：
@@ -22,8 +22,6 @@ import '@/App.less';
  * - 页面关闭前自动保存
  */
 export default function EditorPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { resume, initResume } = useResumeStore();
   const { manualSave } = useAutoSave();
   const { modal } = App.useApp();
@@ -34,7 +32,7 @@ export default function EditorPage() {
   // 全局键盘快捷键
   useKeyboardShortcuts();
 
-  // 如果没有简历数据，尝试从 localStorage 恢复
+  // 如果没有简历数据，尝试恢复或自动创建
   useEffect(() => {
     if (resume) return;
     if (restoreModalShownRef.current) return;
@@ -54,10 +52,10 @@ export default function EditorPage() {
         okText: '知道了',
       });
     } else {
-      // 没有可恢复的数据，重定向到首页
-      navigate('/', { replace: true });
+      // 没有可恢复的数据，自动创建默认简历
+      initResume('我的简历', presetColorSchemes[0]);
     }
-  }, [resume, navigate, modal]);
+  }, [resume, initResume, modal]);
 
   if (!resume) return null;
 

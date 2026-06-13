@@ -1,5 +1,5 @@
 import { InputNumber, Input, Divider, Button, Select, Switch, Slider } from 'antd';
-import { BgColorsOutlined, LayoutOutlined, StarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, FontSizeOutlined } from '@ant-design/icons';
+import { BgColorsOutlined, LayoutOutlined, StarOutlined, PlusOutlined, EditOutlined, DeleteOutlined, FontSizeOutlined, FormOutlined } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import type { Resume, WatermarkConfig } from '@/types';
 import {
@@ -29,7 +29,7 @@ interface CanvasLayoutPanelProps {
  * 包含：画布尺寸、页面规格预设、内边距、背景颜色、背景图片、水印、重置
  */
 export default function CanvasLayoutPanel({ resume, navigate }: CanvasLayoutPanelProps) {
-  const { setCanvasConfig } = useResumeStore();
+  const { setCanvasConfig, setResumeTitle } = useResumeStore();
 
   const watermark = resume.canvas.watermark;
   const isWatermarkEnabled = !!watermark;
@@ -62,6 +62,19 @@ export default function CanvasLayoutPanel({ resume, navigate }: CanvasLayoutPane
 
   return (
     <div className="right-panel-content">
+      {/* 简历标题设置 */}
+      <div className="right-panel-section-title"><FormOutlined /> 标题</div>
+      <div className="right-panel-field">
+        <Input
+          value={resume.title}
+          onChange={(e) => setResumeTitle(e.target.value)}
+          size="small"
+          placeholder="请输入简历标题"
+        />
+      </div>
+
+      <Divider style={{ margin: '8px 0' }} />
+
       <div className="right-panel-section-title"><LayoutOutlined /> 画布设置</div>
 
       {/* 画布尺寸 */}

@@ -60,7 +60,6 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
   const removeBlock = useResumeStore((s) => s.removeBlock);
   const removeBlocks = useResumeStore((s) => s.removeBlocks);
   const saveAsGroupTemplate = useResumeStore((s) => s.saveAsGroupTemplate);
-  const selectBlockInGroup = useResumeStore((s) => s.selectBlockInGroup);
 
   // 使用提取的 hooks
   const { layers, isGroupExpanded, toggleGroupExpand, isSelected } = useLayerItems();
@@ -80,12 +79,12 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
       return;
     }
 
-    // 如果点击的元素属于当前选中的分组，保留分组选中状态（"进入分组"选择子元素）
-    if (item.groupId && item.groupId === selectedGroupId) {
+    // 如果点击的元素属于分组，直接选中该元素（显示元素配置面板）
+    if (item.groupId) {
       if (e.shiftKey) {
         addToSelection(item.id);
       } else {
-        selectBlockInGroup(item.id, item.groupId);
+        selectBlock(item.id);
       }
       return;
     }

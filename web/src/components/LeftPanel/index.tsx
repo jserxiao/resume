@@ -86,12 +86,11 @@ export default function LeftPanel() {
   );
 
   // 分类排序顺序
-  const CATEGORY_ORDER = ['基础组件', '组合组件'];
+  const CATEGORY_ORDER = ['基础组件'];
   const CATEGORY_ICONS: Record<string, React.ReactNode> = {
     '基础组件': <AppstoreOutlined />,
-    '组合组件': <GroupOutlined />,
     '分组组件': <GroupOutlined />,
-  '自定义元素': <StarOutlined />,
+    '自定义元素': <StarOutlined />,
   };
 
   // 按分类分组

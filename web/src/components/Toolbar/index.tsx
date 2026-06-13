@@ -1,7 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { Button, Tooltip, Divider, Switch, Popover } from 'antd';
+import { Button, Tooltip, Switch, Popover } from 'antd';
 import {
-  ArrowLeftOutlined,
   SaveOutlined,
   EyeOutlined,
   BorderOutlined,
@@ -19,15 +17,9 @@ interface ToolbarProps {
 }
 
 export default function Toolbar({ onSave }: ToolbarProps) {
-  const navigate = useNavigate();
-  const { resume, editor, markSaved, clearResume, setPreviewOpen, setShowAlignGuides, setSnapToGrid } = useResumeStore();
+  const { resume, editor, markSaved, setPreviewOpen, setShowAlignGuides, setSnapToGrid } = useResumeStore();
 
   if (!resume) return null;
-
-  const handleBack = () => {
-    clearResume();
-    navigate('/');
-  };
 
   const handleSave = () => {
     // 先调用外部保存回调（localStorage 自动保存）
@@ -43,15 +35,6 @@ export default function Toolbar({ onSave }: ToolbarProps) {
   return (
     <div className="toolbar">
       <div className="toolbar-left">
-        <Button
-          type="text"
-          icon={<ArrowLeftOutlined />}
-          onClick={handleBack}
-          className="toolbar-back-btn"
-        >
-          返回
-        </Button>
-        <Divider orientation="vertical" />
         <span className="toolbar-title">{resume.title}</span>
         <span className="toolbar-save-status">{saveStatus}</span>
       </div>

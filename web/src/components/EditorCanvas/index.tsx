@@ -29,9 +29,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     editor,
     addBlock,
     selectBlock,
-    selectGroup,
     addToSelection,
-    selectBlocks,
     clearSelection,
     updateBlockPosition,
     updateBlockSize,
@@ -205,11 +203,13 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     // 标记拖拽已开始处理选择，防止 onClick 重复
     blockDragStartedRef.current = true;
 
-    // 如果块属于分组且分组尚未被选中，则选中整个分组
-    if (block.groupId && editor.selectedGroupId !== block.groupId) {
-      selectGroup(block.groupId);
-    } else if (block.groupId && editor.selectedGroupId === block.groupId) {
-      // 分组已选中，拖拽分组内的块时保持分组选中
+    // 画布上点击/拖拽分组内的元素时，直接选中该元素，不选中分组
+    // 只有在图层面板点击分组才选中分组（由 LayerDrawer 处理）
+    if (block.groupId) {
+      // 分组内的块，直接选中该块进行拖拽
+      if (!editor.selectedBlockIds.includes(blockId)) {
+        selectBlock(blockId);
+      }
     } else if (e.shiftKey) {
       // Shift多选（无分组块）
       if (!editor.selectedBlockIds.includes(blockId)) {
@@ -244,7 +244,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       }
       dragStateRef.current.multiBlockPositions = blockPositions;
     }
-  }, [isPreview, resume, selectBlock, selectGroup, addToSelection, selectBlocks, editor.selectedBlockIds, editor.selectedGroupId]);
+  }, [isPreview, resume, selectBlock, addToSelection, editor.selectedBlockIds]);
 
   // 全局鼠标移动和松开事件
   useEffect(() => {
@@ -390,21 +390,14 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     const block = resume.blocks.find((b) => b.id === blockId);
     if (!block) return;
 
-    // 如果块属于分组，始终选中整个分组而不是单个块
+    // 画布上点击分组内的元素时，直接选中该元素（显示元素配置面板）
+    // 只有图层面板中点击分组才选中分组（由 LayerDrawer 处理）
     if (block.groupId) {
       if (e?.shiftKey) {
-        // Shift+点击分组内块：追加整个分组到选中
-        const group = resume.groups.find((g) => g.id === block.groupId);
-        if (group) {
-          const newSelectedIds = new Set(editor.selectedBlockIds);
-          for (const id of group.blockIds) {
-            newSelectedIds.add(id);
-          }
-          selectBlocks([...newSelectedIds]);
-          selectGroup(block.groupId);
-        }
+        // Shift+点击分组内块：追加该块到选中
+        addToSelection(blockId);
       } else {
-        selectGroup(block.groupId);
+        selectBlock(blockId);
       }
     } else if (e?.shiftKey) {
       // 无分组的块，Shift多选
@@ -414,7 +407,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     }
     setActiveBlockId(blockId);
     refreshDistances(blockId);
-  }, [isPreview, resume, selectBlock, selectGroup, addToSelection, selectBlocks, editor.selectedBlockIds, refreshDistances]);
+  }, [isPreview, resume, selectBlock, addToSelection, refreshDistances]);
 
   const handleBlockHover = useCallback((blockId: string) => {
     if (isPreview || !blockId || !resume) return;

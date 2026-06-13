@@ -1023,7 +1023,7 @@ export default function DecorationEditorPage() {
 
     saveCustomDecoration(decoration);
     message.success(isEditMode ? '装饰已更新' : '自定义装饰已保存');
-    navigate('/editor');
+    navigate('/');
   }, [paths, decoName, stageWidth, stageHeight, isEditMode, editDecoId, saveCustomDecoration, navigate, customDecorations]);
 
   // ===== 渲染网格 =====
@@ -1401,7 +1401,7 @@ export default function DecorationEditorPage() {
         <div className="deco-editor-toolbar-left">
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/editor')}
+            onClick={() => navigate('/')}
             size="small"
           >
             返回

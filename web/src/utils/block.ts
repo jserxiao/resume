@@ -195,28 +195,48 @@ export function calculateDistances(
     distances.push({ direction: 'vertical', from: bounds.bottom, to: canvas.height - canvas.padding, value: canvas.height - canvas.padding - bounds.bottom });
   }
 
-  // 到其他块的距离
+  // 到其他块的距离（每个方向只展示到最近元素的距离）
+  let closestRight: { from: number; to: number; value: number } | null = null;   // 当前块右侧 → 最近元素左侧
+  let closestLeft: { from: number; to: number; value: number } | null = null;    // 最近元素右侧 → 当前块左侧
+  let closestBottom: { from: number; to: number; value: number } | null = null; // 当前块下侧 → 最近元素上侧
+  let closestTop: { from: number; to: number; value: number } | null = null;    // 最近元素下侧 → 当前块上侧
+
   for (const other of otherBlocks) {
     const otherBounds = getBlockBounds(other);
 
     // 水平距离（块在垂直方向上有重叠）
     if (bounds.top < otherBounds.bottom && bounds.bottom > otherBounds.top) {
-      if (otherBounds.left >= bounds.right && bounds.right <= canvas.width - canvas.padding) {
-        distances.push({ direction: 'horizontal', from: bounds.right, to: otherBounds.left, value: otherBounds.left - bounds.right });
-      } else if (otherBounds.right <= bounds.left && bounds.left >= canvas.padding) {
-        distances.push({ direction: 'horizontal', from: otherBounds.right, to: bounds.left, value: bounds.left - otherBounds.right });
+      // 其他块在当前块右侧
+      if (otherBounds.left >= bounds.right) {
+        const dist = { from: bounds.right, to: otherBounds.left, value: otherBounds.left - bounds.right };
+        if (!closestRight || dist.value < closestRight.value) closestRight = dist;
+      }
+      // 其他块在当前块左侧
+      else if (otherBounds.right <= bounds.left) {
+        const dist = { from: otherBounds.right, to: bounds.left, value: bounds.left - otherBounds.right };
+        if (!closestLeft || dist.value < closestLeft.value) closestLeft = dist;
       }
     }
 
     // 垂直距离（块在水平方向上有重叠）
     if (bounds.left < otherBounds.right && bounds.right > otherBounds.left) {
-      if (otherBounds.top >= bounds.bottom && bounds.bottom <= canvas.height - canvas.padding) {
-        distances.push({ direction: 'vertical', from: bounds.bottom, to: otherBounds.top, value: otherBounds.top - bounds.bottom });
-      } else if (otherBounds.bottom <= bounds.top && bounds.top >= canvas.padding) {
-        distances.push({ direction: 'vertical', from: otherBounds.bottom, to: bounds.top, value: bounds.top - otherBounds.bottom });
+      // 其他块在当前块下方
+      if (otherBounds.top >= bounds.bottom) {
+        const dist = { from: bounds.bottom, to: otherBounds.top, value: otherBounds.top - bounds.bottom };
+        if (!closestBottom || dist.value < closestBottom.value) closestBottom = dist;
+      }
+      // 其他块在当前块上方
+      else if (otherBounds.bottom <= bounds.top) {
+        const dist = { from: otherBounds.bottom, to: bounds.top, value: bounds.top - otherBounds.bottom };
+        if (!closestTop || dist.value < closestTop.value) closestTop = dist;
       }
     }
   }
+
+  if (closestRight) distances.push({ direction: 'horizontal', ...closestRight });
+  if (closestLeft) distances.push({ direction: 'horizontal', ...closestLeft });
+  if (closestBottom) distances.push({ direction: 'vertical', ...closestBottom });
+  if (closestTop) distances.push({ direction: 'vertical', ...closestTop });
 
   return distances;
 }

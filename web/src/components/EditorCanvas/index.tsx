@@ -347,6 +347,9 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     setDraggingBlockId(blockId);
     setActiveBlockId(blockId);
 
+    // 立即刷新距离标注，避免快速点击其他元素时距离标注不更新
+    refreshDistances(blockId);
+
     dragStateRef.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -367,7 +370,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       }
       dragStateRef.current.multiBlockPositions = blockPositions;
     }
-  }, [isPreview, resume, selectBlock, addToSelection, editor.selectedBlockIds]);
+  }, [isPreview, resume, selectBlock, addToSelection, editor.selectedBlockIds, refreshDistances]);
 
   // 全局鼠标移动和松开事件
   useEffect(() => {
@@ -583,7 +586,8 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
   const handleBlockHover = useCallback((blockId: string) => {
     if (isPreview || !blockId || !resume) return;
     if (dragStateRef.current || resizeStateRef.current) return;
-    if (!editor.selectedBlockId) {
+    // 始终更新距离标注，支持快速 hover 不同元素时实时展示距离
+    if (!editor.selectedBlockId || editor.selectedBlockId !== blockId) {
       setActiveBlockId(blockId);
       refreshDistances(blockId);
     }

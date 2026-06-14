@@ -12,6 +12,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   MinusOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import { useDragPreview } from '@/hooks/useDragPreview';
@@ -28,7 +29,7 @@ import './index.less';
  */
 export default function LeftPanel() {
   const navigate = useNavigate();
-  const { resume, blockTemplates, customElementTemplates, groupTemplates, customDecorations, editor, removeCustomDecoration, removeGroupTemplate } = useResumeStore();
+  const { resume, blockTemplates, customElementTemplates, groupTemplates, customDecorations, editor, removeCustomDecoration, removeGroupTemplate, initSampleResume } = useResumeStore();
   const [searchText, setSearchText] = useState('');
   const [iconSearchText, setIconSearchText] = useState('');
   const [layerCollapsed, setLayerCollapsed] = useState(false);
@@ -242,9 +243,46 @@ export default function LeftPanel() {
 
   const allItems = [...templateItems, ...groupTemplateItems, ...customItems];
 
+  // 预设模版列表
+  const PRESET_TEMPLATES = [
+    { id: 'tpl-sample-1', name: 'Kelly Blackwell', description: '行政助理蓝' },
+  ];
+
   return (
     <div className="left-panel-wrapper" style={{ width: editor.leftPanelWidth }}>
     <div className="left-panel">
+      {/* 模版面板 */}
+      <div className={`left-panel-templates-section ${sectionCollapsed['template'] ? 'left-panel-templates-section--collapsed' : ''}`}>
+        <div className="left-panel-section-header left-panel-section-header--template" onClick={() => toggleSection('template')}>
+          <FileTextOutlined />
+          <span>模版</span>
+          <Tag className="left-panel-category-count">{PRESET_TEMPLATES.length}</Tag>
+          <Button
+            type="text"
+            size="small"
+            icon={sectionCollapsed['template'] ? <PlusOutlined /> : <MinusOutlined />}
+            className="left-panel-section-toggle"
+            onClick={(e) => { e.stopPropagation(); toggleSection('template'); }}
+          />
+        </div>
+
+        {!sectionCollapsed['template'] && (
+        <div className="left-panel-template-buttons">
+          {PRESET_TEMPLATES.map((tpl) => (
+            <Button
+              key={tpl.id}
+              className="left-panel-template-btn"
+              onClick={() => initSampleResume()}
+            >
+              <FileTextOutlined />
+              <span className="left-panel-template-btn-name">{tpl.name}</span>
+              <span className="left-panel-template-btn-desc">{tpl.description}</span>
+            </Button>
+          ))}
+        </div>
+        )}
+      </div>
+
       {/* 组件面板 */}
       <div className={`left-panel-components ${sectionCollapsed['component'] ? 'left-panel-components--collapsed' : ''}`}>
         <div className="left-panel-section-header left-panel-section-header--component" onClick={() => toggleSection('component')}>

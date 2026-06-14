@@ -19,6 +19,7 @@ import {
   CURRENT_DATA_VERSION,
 } from '../../utils/constants';
 import { restoreFromJSON } from '../../utils/migration';
+import { createSampleResume } from '@/templates/temp1';
 
 // ========== 默认画布配置 ==========
 export const DEFAULT_CANVAS: CanvasConfig = {
@@ -37,6 +38,7 @@ export interface ResumeSlice {
 
   // 简历初始化
   initResume: (title: string, colorScheme: ColorScheme) => void;
+  initSampleResume: () => void;
   clearResume: () => void;
 
   // 简历操作
@@ -80,6 +82,11 @@ export const createResumeSlice = (set: StoreSet, _get: StoreGet): ResumeSlice =>
         version: CURRENT_DATA_VERSION,
       };
       // 清除编辑器选中状态（通过 editor slice 处理，这里只清除 resume）
+    })),
+
+  initSampleResume: () =>
+    set(produce<ResumeStoreInternal>((state) => {
+      state.resume = createSampleResume();
     })),
 
   clearResume: () =>

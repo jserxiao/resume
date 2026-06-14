@@ -950,15 +950,15 @@ function FlexboxChildList({
   isLocked,
 }: {
   flexboxId: string;
-  resume: Resume;
+  resume: Resume | null;
   removeBlockFromFlexbox: (blockId: string, flexboxId: string) => void;
   reorderFlexboxChildren: (flexboxId: string, childIds: string[]) => void;
   isLocked: boolean;
 }) {
   const { selectBlock } = useResumeStore();
-  const childBlocks = resume.blocks.filter(
+  const childBlocks = resume?.blocks.filter(
     (b) => b.groupId === flexboxId && b.visible
-  );
+  ) ?? [];
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dragItemId, setDragItemId] = useState<string | null>(null);
 

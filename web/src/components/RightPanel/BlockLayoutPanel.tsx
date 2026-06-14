@@ -197,7 +197,7 @@ export default function BlockLayoutPanel({ block, isIconBlock }: BlockLayoutPane
           <div className="right-panel-field compact">
             <label className="right-panel-label">圆角</label>
             <InputNumber
-              value={block.style?.borderRadius ?? BLOCK_DEFAULT_BORDER_RADIUS}}
+              value={block.style?.borderRadius ?? BLOCK_DEFAULT_BORDER_RADIUS}
               onChange={(val) => updateBlockStyle(block.id, { borderRadius: val ?? 0 })}
               size="small"
               style={{ width: '100%' }}

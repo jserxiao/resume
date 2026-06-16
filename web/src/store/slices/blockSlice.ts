@@ -13,63 +13,212 @@ import type {
   CustomDecorationDefinition,
 } from '../../types';
 import { getNextZIndex, getUniqueName } from '../../utils/block';
-import { getDefaultBlockWidth, getDefaultBlockHeight, DEFAULT_PRIMARY_COLOR } from '../../utils/constants';
+import {
+  getDefaultBlockWidth,
+  getDefaultBlockHeight,
+  DEFAULT_PRIMARY_COLOR,
+  TPL_AVATAR,
+  TPL_ICON,
+  TPL_CUSTOM_DECORATION,
+  TPL_FLEXBOX,
+  CLONE_OFFSET,
+  FLEXBOX_CHILD_GAP,
+  ICON_DEFAULT_FONT_SIZE,
+  ICON_SIZE_RATIO,
+} from '../../utils/constants';
 import { buildDecoPathD } from '../../utils/geometry';
 import { presetBlockTemplates, presetLayoutTemplates } from '../../utils/presets';
 import type { StoreSet, StoreGet, ResumeStoreInternal } from '../types';
 
 // ========== Slice 类型 ==========
 export interface BlockSlice {
-  // 数据
+  // ===== 数据 =====
+  /** 预设 + 布局块模板列表 */
   blockTemplates: BlockTemplate[];
+  /** 用户保存的自定义元素模板列表 */
   customElementTemplates: CustomElementTemplate[];
+  /** 用户保存的分组模板列表 */
   groupTemplates: CustomElementTemplate[];
 
-  // 块实例操作
+  // ===== 块实例操作 =====
+  /**
+   * 在画布指定位置添加一个块实例
+   * @param templateId - 块模板ID，如 'tpl-work-experience'
+   * @param x - 在画布上的X坐标(px)
+   * @param y - 在画布上的Y坐标(px)
+   * @param width - 可选宽度，不传则使用模板分类默认值
+   * @param height - 可选高度，不传则使用模板名称默认值
+   */
   addBlock: (templateId: string, x: number, y: number, width?: number, height?: number) => void;
+  /**
+   * 从自定义元素模板添加块组到画布
+   * @param templateId - 自定义元素模板ID
+   * @param x - 放置基准X坐标(px)
+   * @param y - 放置基准Y坐标(px)
+   */
   addBlockFromCustomTemplate: (templateId: string, x: number, y: number) => void;
+  /**
+   * 从分组模板添加块组到画布
+   * @param templateId - 分组模板ID
+   * @param x - 放置基准X坐标(px)
+   * @param y - 放置基准Y坐标(px)
+   */
   addBlockFromGroupTemplate: (templateId: string, x: number, y: number) => void;
+  /**
+   * 从自定义装饰添加装饰块到画布
+   * @param decorationId - 自定义装饰ID
+   * @param x - 放置X坐标(px)
+   * @param y - 放置Y坐标(px)
+   */
   addBlockFromCustomDecoration: (decorationId: string, x: number, y: number) => void;
+  /**
+   * 添加一个 Ant Design 图标块
+   * @param iconName - 图标名称，如 'StarOutlined'
+   * @param x - 放置X坐标(px)
+   * @param y - 放置Y坐标(px)
+   */
   addBlockFromIcon: (iconName: string, x: number, y: number) => void;
+  /**
+   * 删除指定块，同时清理其所在的分组（若分组为空则自动删除）
+   * @param blockId - 要删除的块ID
+   */
   removeBlock: (blockId: string) => void;
+  /**
+   * 批量删除多个块
+   * @param blockIds - 要删除的块ID列表
+   */
   removeBlocks: (blockIds: string[]) => void;
+  /**
+   * 克隆指定块，副本位置偏移 (20, 20)px
+   * @param blockId - 要克隆的块ID
+   */
   cloneBlock: (blockId: string) => void;
+  /**
+   * 更新块的字段值
+   * @param blockId - 块ID
+   * @param fieldId - 字段ID（对应模板中定义的 field.id）
+   * @param value - 新的字段值（字符串）
+   */
   updateBlockField: (blockId: string, fieldId: string, value: string) => void;
+  /**
+   * 更新块在画布上的位置
+   * @param blockId - 块ID
+   * @param x - 新的X坐标(px)
+   * @param y - 新的Y坐标(px)
+   */
   updateBlockPosition: (blockId: string, x: number, y: number) => void;
+  /**
+   * 更新块的尺寸
+   * @param blockId - 块ID
+   * @param width - 新的宽度(px)
+   * @param height - 新的高度(px)
+   */
   updateBlockSize: (blockId: string, width: number, height: number) => void;
+  /**
+   * 更新块的层级
+   * @param blockId - 块ID
+   * @param zIndex - 新的层级值
+   */
   updateBlockZIndex: (blockId: string, zIndex: number) => void;
+  /** 切换块的可见性 */
   toggleBlockVisibility: (blockId: string) => void;
+  /** 切换块的锁定状态（锁定后不可拖拽/编辑） */
   toggleBlockLock: (blockId: string) => void;
+  /**
+   * 设置块的颜色标签（用于图层列表中区分）
+   * @param blockId - 块ID
+   * @param color - 颜色值，undefined 表示清除
+   */
   setBlockColorTag: (blockId: string, color: string | undefined) => void;
+  /**
+   * 重命名块
+   * @param blockId - 块ID
+   * @param name - 新名称
+   */
   renameBlock: (blockId: string, name: string) => void;
+  /**
+   * 更新块的样式属性（合并更新）
+   * @param blockId - 块ID
+   * @param style - 要更新的样式片段
+   */
   updateBlockStyle: (blockId: string, style: Partial<BlockStyle>) => void;
+  /**
+   * 更新块的旋转角度
+   * @param blockId - 块ID
+   * @param rotation - 旋转角度(度)，范围 -360~360
+   */
   updateBlockRotation: (blockId: string, rotation: number) => void;
+  /**
+   * 移动块的层级顺序
+   * @param blockId - 块ID
+   * @param direction - 移动方向：'up'上移一层，'down'下移一层，'top'置顶，'bottom'置底
+   */
   moveBlockZIndex: (blockId: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
 
-  // 装饰元素操作
+  // ===== 装饰元素操作 =====
+  /**
+   * 为块添加装饰元素
+   * @param blockId - 目标块ID
+   * @param decoration - 装饰元素数据（不含id，会自动生成）
+   */
   addDecoration: (blockId: string, decoration: Omit<DecorationElement, 'id'>) => void;
+  /** 删除块上的指定装饰元素 */
   removeDecoration: (blockId: string, decorationId: string) => void;
+  /** 更新块上指定装饰元素的属性（合并更新） */
   updateDecoration: (blockId: string, decorationId: string, updates: Partial<DecorationElement>) => void;
 
-  // 自定义元素模板操作
+  // ===== 自定义元素模板操作 =====
+  /**
+   * 将选中的块保存为自定义元素模板
+   * @param name - 模板名称
+   * @param blockIds - 要保存的块ID列表
+   */
   saveAsCustomTemplate: (name: string, blockIds: string[]) => void;
+  /** 删除自定义元素模板 */
   removeCustomTemplate: (templateId: string) => void;
 
-  // 块模板操作
+  // ===== 块模板操作 =====
+  /** 更新块模板属性（合并更新） */
   updateBlockTemplate: (templateId: string, updates: Partial<BlockTemplate>) => void;
+  /** 删除块模板 */
   removeBlockTemplate: (templateId: string) => void;
 
-  // 分组模板操作
+  // ===== 分组模板操作 =====
+  /**
+   * 将分组保存为模板
+   * @param groupId - 分组ID
+   * @param name - 可选模板名称，不传则使用分组名称
+   */
   saveAsGroupTemplate: (groupId: string, name?: string) => void;
+  /** 删除分组模板 */
   removeGroupTemplate: (templateId: string) => void;
 
-  // 弹性盒子操作
+  // ===== 弹性盒子操作 =====
+  /**
+   * 将块添加到弹性盒子中
+   * @param blockId - 要添加的块ID
+   * @param flexboxId - 弹性盒子块ID
+   * @param insertIndex - 可选插入位置索引
+   * @returns 是否添加成功（属于分组的块不允许拖入弹性盒子）
+   */
   addBlockToFlexbox: (blockId: string, flexboxId: string, insertIndex?: number) => boolean;
+  /**
+   * 将块从弹性盒子中移出，放到弹性盒子下方
+   * @param blockId - 要移出的块ID
+   * @param flexboxId - 弹性盒子块ID
+   */
   removeBlockFromFlexbox: (blockId: string, flexboxId: string) => void;
+  /**
+   * 重排弹性盒子子元素的顺序
+   * @param flexboxId - 弹性盒子块ID
+   * @param childIds - 按新顺序排列的子块ID列表
+   */
   reorderFlexboxChildren: (flexboxId: string, childIds: string[]) => void;
 
-  // 选择器
+  // ===== 选择器 =====
+  /** 获取当前选中的块实例 */
   getSelectedBlock: () => BlockInstance | undefined;
+  /** 根据模板ID获取块模板定义 */
   getBlockTemplate: (templateId: string) => BlockTemplate | undefined;
 }
 
@@ -137,7 +286,7 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
       });
 
       const defaultWidth = width || getDefaultBlockWidth(template.category);
-      const defaultHeight = height || (templateId === 'tpl-avatar' ? defaultWidth : getDefaultBlockHeight(template.name));
+      const defaultHeight = height || (templateId === TPL_AVATAR ? defaultWidth : getDefaultBlockHeight(template.name));
 
       const block: BlockInstance = {
         id: `${state.resume.id}-${templateId}-${uuid().slice(0, 8)}`,
@@ -242,7 +391,7 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
       const blockId = `${state.resume.id}-cdeco-${uuid().slice(0, 8)}`;
       const block: BlockInstance = {
         id: blockId,
-        templateId: `custom-decoration`,
+        templateId: TPL_CUSTOM_DECORATION,
         templateName: '自定义装饰',
         name: decoration.name,
         fields: {},
@@ -288,13 +437,12 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
     set(produce<ResumeStoreInternal>((state) => {
       if (!state.resume) return;
       // 默认图标字号 24px，块宽高比图标稍大一点（留适当内距）
-      const iconFontSize = 24;
-      const defaultWidth = Math.ceil(iconFontSize * 1.2);
-      const defaultHeight = Math.ceil(iconFontSize * 1.2);
+      const defaultWidth = Math.ceil(ICON_DEFAULT_FONT_SIZE * ICON_SIZE_RATIO);
+      const defaultHeight = Math.ceil(ICON_DEFAULT_FONT_SIZE * ICON_SIZE_RATIO);
       const blockId = `${state.resume.id}-icon-${uuid().slice(0, 8)}`;
       const block: BlockInstance = {
         id: blockId,
-        templateId: 'antd-icon',
+        templateId: TPL_ICON,
         templateName: '图标',
         name: iconName.replace(/Outlined$|Filled$|TwoTone$/g, ''),
         fields: { 'icon-name': iconName },
@@ -391,8 +539,8 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
         ...JSON.parse(JSON.stringify(source)),
         id: `${state.resume.id}-${source.templateId}-copy-${uuid().slice(0, 8)}`,
         name: `${source.name} (副本)`,
-        x: source.x + 20,
-        y: source.y + 20,
+        x: source.x + CLONE_OFFSET,
+        y: source.y + CLONE_OFFSET,
         zIndex: getNextZIndex(state.resume.blocks),
       };
 
@@ -722,10 +870,10 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
       if (!state.resume) return;
       const block = findBlock(state, blockId);
       const flexbox = findBlock(state, flexboxId);
-      if (!block || !flexbox || flexbox.templateId !== 'tpl-flexbox') return;
+      if (!block || !flexbox || flexbox.templateId !== TPL_FLEXBOX) return;
 
       // 不允许将弹性盒子自身或已在其中的块再次加入
-      if (block.templateId === 'tpl-flexbox') return;
+      if (block.templateId === TPL_FLEXBOX) return;
       if (block.groupId === flexboxId) return;
 
       // 如果块之前在别的分组中，先移出
@@ -781,7 +929,7 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
       // 将块移出弹性盒子，放到弹性盒子下方
       block.groupId = undefined;
       block.x = flexbox.x;
-      block.y = flexbox.y + flexbox.height + 10;
+      block.y = flexbox.y + flexbox.height + FLEXBOX_CHILD_GAP;
 
       state.resume.updatedAt = Date.now();
     })),

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { message } from 'antd';
 import { useResumeStore, calculateAlignGuides } from '@/store';
-import { GRID_SIZE, RESIZE_MIN_WIDTH, RESIZE_MIN_HEIGHT, getDefaultBlockWidth, getDefaultBlockHeight } from '@/utils/constants';
+import { GRID_SIZE, RESIZE_MIN_WIDTH, RESIZE_MIN_HEIGHT, getDefaultBlockWidth, getDefaultBlockHeight, TPL_FLEXBOX, TPL_ICON } from '@/utils/constants';
 import { useDistanceIndicators } from './useDistanceIndicators';
 import { useAlignGuides } from './useAlignGuides';
 import DistanceIndicators from './DistanceIndicators';
@@ -145,7 +145,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
 
     // 查找弹性盒子块
     const flexboxBlocks = resume.blocks.filter(
-      (b) => b.templateId === 'tpl-flexbox' && b.visible
+      (b) => b.templateId === TPL_FLEXBOX && b.visible
     );
     // 从上到下（zIndex 最大的优先匹配）
     const sorted = [...flexboxBlocks].sort((a, b) => b.zIndex - a.zIndex);
@@ -192,7 +192,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       const block = resume.blocks.find((b) => b.id === draggedBlockId);
       if (block?.groupId) {
         const parentBlock = resume.blocks.find((b) => b.id === block.groupId);
-        if (parentBlock && parentBlock.templateId === 'tpl-flexbox') {
+        if (parentBlock && parentBlock.templateId === TPL_FLEXBOX) {
           const { removeBlockFromFlexbox } = useResumeStore.getState();
           // 计算落点位置
           if (pageRef.current) {
@@ -219,7 +219,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
 
     if (templateId) {
       // 不允许将弹性盒子自身拖入另一个弹性盒子
-      if (flexboxTarget && templateId === 'tpl-flexbox') {
+      if (flexboxTarget && templateId === TPL_FLEXBOX) {
         setFlexboxDropTargetId(null);
         return;
       }
@@ -455,7 +455,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
 
         // 图标块：拖拽缩放时同步更新字号
         const currentBlock = resume.blocks.find((b) => b.id === blockId);
-        if (currentBlock?.templateId === 'antd-icon') {
+        if (currentBlock?.templateId === TPL_ICON) {
           updateBlockField(blockId, 'icon-font-size', String(Math.round(Math.min(newW, newH))));
         }
 
@@ -476,7 +476,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
         if (fbTarget && fbTarget !== blockId) {
           const block = resume.blocks.find((b) => b.id === blockId);
           // 不允许弹性盒子嵌套
-        if (block && block.templateId !== 'tpl-flexbox' && block.groupId !== fbTarget) {
+        if (block && block.templateId !== TPL_FLEXBOX && block.groupId !== fbTarget) {
           const { addBlockToFlexbox } = useResumeStore.getState();
           const success = addBlockToFlexbox(blockId, fbTarget);
           if (!success) {
@@ -647,7 +647,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
           // 跳过弹性盒子子元素的顶层渲染
           if (block.groupId) {
             const parentBlock = resume.blocks.find((b) => b.id === block.groupId);
-            if (parentBlock && parentBlock.templateId === 'tpl-flexbox') {
+            if (parentBlock && parentBlock.templateId === TPL_FLEXBOX) {
               return null;
             }
           }

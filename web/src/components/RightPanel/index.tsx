@@ -1,4 +1,5 @@
 import { useResumeStore } from '@/store';
+import { TPL_ICON, TPL_AVATAR, TPL_FLEXBOX } from '@/utils/constants';
 import BlockDetailPanel from './BlockDetailPanel';
 import GroupPanel from './GroupPanel';
 import MultiSelectPanel from './MultiSelectPanel';
@@ -31,11 +32,11 @@ export default function RightPanel() {
   const selectedBlock = selectedBlocks.length === 1 ? selectedBlocks[0] : null;
 
   // 是否为 antd 图标块
-  const isIconBlock = selectedBlock?.templateId === 'antd-icon';
+  const isIconBlock = selectedBlock?.templateId === TPL_ICON;
   // 是否为头像块
-  const isAvatarBlock = selectedBlock?.templateId === 'tpl-avatar';
+  const isAvatarBlock = selectedBlock?.templateId === TPL_AVATAR;
   // 是否为弹性盒子块
-  const isFlexboxBlock = selectedBlock?.templateId === 'tpl-flexbox';
+  const isFlexboxBlock = selectedBlock?.templateId === TPL_FLEXBOX;
 
   // 判断是否选中了分组
   const isGroupMode = !!selectedGroup;

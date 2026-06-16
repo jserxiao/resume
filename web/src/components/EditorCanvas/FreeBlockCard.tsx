@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useRef } from 'react';
 import { CameraOutlined } from '@ant-design/icons';
 import type { BlockInstance, BlockTemplate, ColorScheme, FieldDefinition } from '@/types';
 import { FieldType } from '@/types';
-import { MARGIN_INDICATOR_COLOR, MARGIN_INDICATOR_BORDER_COLOR, DEFAULT_BORDER_COLOR, BLOCK_DEFAULT_BORDER_RADIUS } from '@/utils/constants';
+import { MARGIN_INDICATOR_COLOR, MARGIN_INDICATOR_BORDER_COLOR, DEFAULT_BORDER_COLOR, BLOCK_DEFAULT_BORDER_RADIUS, TPL_CUSTOM_DECORATION, TPL_ICON, TPL_AVATAR, TPL_FLEXBOX } from '@/utils/constants';
 import { uploadImage } from '@/utils/imageUpload';
 import { useResumeStore } from '@/store';
 import { useEditableField } from '@/hooks/useEditableField.tsx';
@@ -75,13 +75,13 @@ export default function FreeBlockCard({
   });
 
   // 判断是否为自定义装饰块
-  const isCustomDecorationBlock = block.templateId === 'custom-decoration';
+  const isCustomDecorationBlock = block.templateId === TPL_CUSTOM_DECORATION;
   // 判断是否为 antd 图标块
-  const isIconBlock = block.templateId === 'antd-icon';
+  const isIconBlock = block.templateId === TPL_ICON;
   // 判断是否为头像块
-  const isAvatarBlock = block.templateId === 'tpl-avatar';
+  const isAvatarBlock = block.templateId === TPL_AVATAR;
   // 判断是否为弹性盒子块
-  const isFlexboxBlock = block.templateId === 'tpl-flexbox';
+  const isFlexboxBlock = block.templateId === TPL_FLEXBOX;
 
   if (!template && !isCustomDecorationBlock && !isIconBlock) return null;
 
@@ -618,9 +618,9 @@ function FlexboxChildRenderer({
 
   // 默认背景色：基础组件和图标透明，其他跟随主题
   const isBasicCategory = template?.category === '基础组件';
-  const isIconBlock = child.templateId === 'antd-icon';
-  const isAvatarBlock = child.templateId === 'tpl-avatar';
-  const isCustomDecorationBlock = child.templateId === 'custom-decoration';
+  const isIconBlock = child.templateId === TPL_ICON;
+  const isAvatarBlock = child.templateId === TPL_AVATAR;
+  const isCustomDecorationBlock = child.templateId === TPL_CUSTOM_DECORATION;
   const isTransparentBg = isIconBlock || isAvatarBlock || isBasicCategory || isCustomDecorationBlock;
   const defaultBgColor = isTransparentBg ? 'transparent' : colorScheme.blockBackground;
   const contentBgColor = childStyle.backgroundColor || defaultBgColor;

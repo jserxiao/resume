@@ -31,31 +31,74 @@ export const DEFAULT_CANVAS: CanvasConfig = {
 
 // ========== Slice 类型 ==========
 export interface ResumeSlice {
-  // 数据
+  // ===== 数据 =====
+  /** 当前简历数据，null 表示尚未创建/加载 */
   resume: Resume | null;
+  /** 用户自定义配色方案列表 */
   customColorSchemes: ColorScheme[];
+  /** 用户自定义装饰元素定义列表 */
   customDecorations: CustomDecorationDefinition[];
 
-  // 简历初始化
+  // ===== 简历初始化 =====
+  /**
+   * 创建一份空白简历
+   * @param title - 简历标题
+   * @param colorScheme - 初始配色方案
+   */
   initResume: (title: string, colorScheme: ColorScheme) => void;
+  /** 使用内置示例简历初始化（用于首次体验引导） */
   initSampleResume: () => void;
+  /** 清除当前简历数据，回到初始状态 */
   clearResume: () => void;
 
-  // 简历操作
+  // ===== 简历操作 =====
+  /**
+   * 修改简历标题
+   * @param title - 新标题
+   */
   setResumeTitle: (title: string) => void;
+  /**
+   * 设置当前简历的配色方案（会更新所有使用主题色的元素）
+   * @param scheme - 新配色方案
+   */
   setColorScheme: (scheme: ColorScheme) => void;
+  /**
+   * 更新画布配置（合并更新，仅修改传入的字段）
+   * @param config - 要更新的画布配置片段
+   */
   setCanvasConfig: (config: Partial<CanvasConfig>) => void;
+  /** 标记当前简历为已保存状态（更新 lastSavedAt 时间戳） */
   markSaved: () => void;
 
-  // JSON 导入
+  // ===== JSON 导入 =====
+  /**
+   * 从 JSON 对象导入简历数据（会经过迁移层处理版本兼容）
+   * @param json - 简历数据的 JSON 对象
+   */
   importFromJSON: (json: Record<string, unknown>) => void;
 
-  // 配色方案操作
+  // ===== 配色方案操作 =====
+  /**
+   * 添加用户自定义配色方案
+   * @param scheme - 配色方案数据
+   */
   addCustomColorScheme: (scheme: ColorScheme) => void;
+  /**
+   * 删除用户自定义配色方案
+   * @param schemeId - 配色方案ID
+   */
   removeCustomColorScheme: (schemeId: string) => void;
 
-  // 自定义装饰元素操作
+  // ===== 自定义装饰元素操作 =====
+  /**
+   * 保存自定义装饰元素（已存在则更新，否则新增）
+   * @param decoration - 装饰元素定义数据
+   */
   saveCustomDecoration: (decoration: CustomDecorationDefinition) => void;
+  /**
+   * 删除自定义装饰元素
+   * @param decorationId - 装饰元素ID
+   */
   removeCustomDecoration: (decorationId: string) => void;
 }
 

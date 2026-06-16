@@ -137,5 +137,25 @@ export const TEXT_HINT_COLOR = '#999';
 /** 块默认圆角(px) */
 export const BLOCK_DEFAULT_BORDER_RADIUS = 6;
 
+// ========== 模板ID常量 ==========
+/** 头像模板ID */
+export const TPL_AVATAR = 'tpl-avatar';
+/** 弹性盒子模板ID */
+export const TPL_FLEXBOX = 'tpl-flexbox';
+/** Ant Design图标模板ID */
+export const TPL_ICON = 'antd-icon';
+/** 自定义装饰模板ID */
+export const TPL_CUSTOM_DECORATION = 'custom-decoration';
+
+// ========== 克隆与偏移常量 ==========
+/** 克隆块时X/Y偏移量(px) */
+export const CLONE_OFFSET = 20;
+/** 从弹性盒子移出块后，与盒子的间距(px) */
+export const FLEXBOX_CHILD_GAP = 10;
+/** 图标块默认字号(px) */
+export const ICON_DEFAULT_FONT_SIZE = 24;
+/** 图标块尺寸与字号的比例 */
+export const ICON_SIZE_RATIO = 1.2;
+
 // ========== 版本号 ==========
 export const CURRENT_DATA_VERSION = 4;

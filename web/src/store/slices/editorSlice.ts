@@ -27,44 +27,148 @@ export const INITIAL_EDITOR: EditorState = {
 
 // ========== Slice 类型 ==========
 export interface EditorSlice {
-  // 数据
+  // ===== 数据 =====
+  /** 编辑器 UI 状态（选中项、面板尺寸、主题等） */
   editor: EditorState;
 
-  // 选择操作
+  // ===== 选择操作 =====
+  /**
+   * 选中单个块（同时清除多选列表和分组选中）
+   * @param blockId - 块ID，传 null 则清除所有选中
+   */
   selectBlock: (blockId: string | null) => void;
+  /**
+   * 选中多个块（同时清除分组选中）
+   * @param blockIds - 块ID列表，首个元素成为主选中项
+   */
   selectBlocks: (blockIds: string[]) => void;
+  /**
+   * 将块添加到当前多选列表
+   * @param blockId - 要追加的块ID
+   */
   addToSelection: (blockId: string) => void;
+  /**
+   * 从当前多选列表中移除指定块
+   * @param blockId - 要移除的块ID
+   */
   removeFromSelection: (blockId: string) => void;
+  /** 清除所有选中状态（块 + 分组） */
   clearSelection: () => void;
 
-  // 分组内选择
+  // ===== 分组内选择 =====
+  /**
+   * 在分组内选中某个块（保持分组选中状态）
+   * @param blockId - 块ID
+   * @param groupId - 所属分组ID
+   */
   selectBlockInGroup: (blockId: string, groupId: string) => void;
 
-  // 分组操作
+  // ===== 分组操作 =====
+  /**
+   * 创建空分组
+   * @param name - 分组名称
+   * @returns 新创建的分组ID
+   */
   createGroup: (name: string) => string;
+  /**
+   * 将多个块添加到分组中
+   * @param groupId - 目标分组ID
+   * @param blockIds - 要添加的块ID列表
+   */
   addBlocksToGroup: (groupId: string, blockIds: string[]) => void;
+  /**
+   * 将块从分组中移出（分组为空时自动删除分组）
+   * @param groupId - 分组ID
+   * @param blockIds - 要移出的块ID列表
+   */
   removeBlocksFromGroup: (groupId: string, blockIds: string[]) => void;
+  /**
+   * 删除分组（组内块解除分组关系，不会被删除）
+   * @param groupId - 分组ID
+   */
   removeGroup: (groupId: string) => void;
+  /**
+   * 重命名分组
+   * @param groupId - 分组ID
+   * @param name - 新名称
+   */
   renameGroup: (groupId: string, name: string) => void;
+  /**
+   * 更新分组的旋转角度
+   * @param groupId - 分组ID
+   * @param rotation - 旋转角度(度)
+   */
   updateGroupRotation: (groupId: string, rotation: number) => void;
+  /**
+   * 整体平移分组内所有块的位置
+   * @param groupId - 分组ID
+   * @param dx - X方向偏移量(px)
+   * @param dy - Y方向偏移量(px)
+   */
   updateGroupPosition: (groupId: string, dx: number, dy: number) => void;
+  /**
+   * 选中整个分组（自动选中组内所有块）
+   * @param groupId - 分组ID，传 null 则仅清除分组选中
+   */
   selectGroup: (groupId: string | null) => void;
+  /**
+   * 将当前多选的块创建为分组
+   * @returns 新分组ID，选中不足2个块时返回 null
+   */
   groupSelectedBlocks: () => string | null;
 
-  // 编辑器 UI 操作
+  // ===== 编辑器 UI 操作 =====
+  /** 切换全屏模式 */
   toggleFullscreen: () => void;
+  /**
+   * 设置左侧面板宽度
+   * @param width - 宽度(px)
+   */
   setLeftPanelWidth: (width: number) => void;
+  /**
+   * 设置右侧面板宽度
+   * @param width - 宽度(px)
+   */
   setRightPanelWidth: (width: number) => void;
+  /**
+   * 设置编辑器主题
+   * @param theme - 'light' | 'dark' | 'system'
+   */
   setEditorTheme: (theme: 'light' | 'dark' | 'system') => void;
+  /**
+   * 设置预览抽屉开关
+   * @param open - 是否打开
+   */
   setPreviewOpen: (open: boolean) => void;
+  /**
+   * 设置是否显示对齐参考线
+   * @param show - 是否显示
+   */
   setShowAlignGuides: (show: boolean) => void;
+  /**
+   * 设置是否启用网格吸附
+   * @param snap - 是否启用
+   */
   setSnapToGrid: (snap: boolean) => void;
 
-  // 距离标注回调注册
+  // ===== 距离标注回调注册 =====
+  /**
+   * 注册距离标注刷新回调（由 EditorCanvas 组件调用）
+   * @param fn - 刷新回调函数，传 null 注销
+   */
   registerDistanceRefresh: (fn: ((blockId: string) => void) | null) => void;
+  /**
+   * 手动触发指定块的距离标注刷新
+   * @param blockId - 需要刷新距离标注的块ID
+   */
   refreshDistancesForBlock: (blockId: string) => void;
 
-  // 选择器
+  // ===== 选择器 =====
+  /**
+   * 获取分组内的所有块实例
+   * @param groupId - 分组ID
+   * @returns 块实例数组
+   */
   getGroupBlocks: (groupId: string) => BlockInstance[];
 }
 

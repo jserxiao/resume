@@ -11,6 +11,8 @@ import { saveToLocalStorage } from '@/hooks/useAutoSave';
  * - Escape: 取消选择
  * - Ctrl/⌘ + S: 保存（localStorage 自动保存 + 标记已保存）
  * - Ctrl/⌘ + D: 克隆选中块
+ * - Ctrl/⌘ + Z: 撤销
+ * - Ctrl/⌘ + Shift + Z / Ctrl/⌘ + Y: 重做
  */
 export function useKeyboardShortcuts() {
   const { editor, clearSelection } = useResumeStore();
@@ -80,6 +82,24 @@ export function useKeyboardShortcuts() {
       // Escape 取消选择
       if (e.key === 'Escape') {
         clearSelection();
+      }
+
+      // Ctrl+Z 撤销 / Ctrl+Shift+Z / Ctrl+Y 重做
+      if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        const { undo, redo } = useResumeStore.getState();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      }
+
+      // Ctrl+Y 重做（Windows 风格）
+      if (e.key === 'y' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        const { redo } = useResumeStore.getState();
+        redo();
       }
 
       // Ctrl+S 保存

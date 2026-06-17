@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { CameraOutlined } from '@ant-design/icons';
 import type { BlockInstance, BlockTemplate, ColorScheme, FieldDefinition } from '@/types';
 import { FieldType } from '@/types';
@@ -61,7 +61,6 @@ export default function FreeBlockCard({
   onMouseLeave,
 }: FreeBlockCardProps) {
   const isPreview = mode === 'preview';
-  const [isHovered, setIsHovered] = useState(false);
   const { updateBlockField } = useResumeStore();
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -502,7 +501,7 @@ export default function FreeBlockCard({
   return (
     <div
       ref={cardRef}
-      className={`free-block-card ${isPreview ? 'preview-mode' : ''} ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isResizing ? 'resizing' : ''} ${isGroupSelected && !isSelected ? 'group-selected' : ''} ${isHovered && !isPreview ? 'hovered' : ''} ${block.locked ? 'locked' : ''} ${isFlexboxDropTarget && isFlexboxBlock ? 'flexbox-drop-target' : ''}`}
+      className={`free-block-card ${isPreview ? 'preview-mode' : ''} ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''} ${isResizing ? 'resizing' : ''} ${isGroupSelected && !isSelected ? 'group-selected' : ''} ${block.locked ? 'locked' : ''} ${isFlexboxDropTarget && isFlexboxBlock ? 'flexbox-drop-target' : ''}`}
       style={outerStyle}
       onClick={(e) => {
         e.stopPropagation();
@@ -515,13 +514,11 @@ export default function FreeBlockCard({
       }}
       onMouseEnter={() => {
         if (!isPreview) {
-          setIsHovered(true);
           onMouseEnter();
         }
       }}
       onMouseLeave={() => {
         if (!isPreview) {
-          setIsHovered(false);
           onMouseLeave();
         }
       }}

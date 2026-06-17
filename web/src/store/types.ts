@@ -5,9 +5,10 @@
 import type { ResumeSlice } from './slices/resumeSlice';
 import type { BlockSlice } from './slices/blockSlice';
 import type { EditorSlice } from './slices/editorSlice';
+import type { HistorySlice } from './slices/historySlice';
 
 /** Store 内部完整状态（各 slice 数据 + 方法的合集） */
-export type ResumeStoreInternal = ResumeSlice & BlockSlice & EditorSlice;
+export type ResumeStoreInternal = ResumeSlice & BlockSlice & EditorSlice & HistorySlice;
 
 /**
  * Zustand 的 set 函数类型

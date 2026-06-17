@@ -272,7 +272,7 @@ export default function LeftPanel() {
             <Button
               key={tpl.id}
               className="left-panel-template-btn"
-              onClick={() => initSampleResume()}
+              onClick={() => initSampleResume(resume?.canvas ? { padding: resume.canvas.padding, width: resume.canvas.width } : undefined)}
             >
               <FileTextOutlined />
               <span className="left-panel-template-btn-name">{tpl.name}</span>

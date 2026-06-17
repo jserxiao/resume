@@ -46,8 +46,11 @@ export interface ResumeSlice {
    * @param colorScheme - 初始配色方案
    */
   initResume: (title: string, colorScheme: ColorScheme) => void;
-  /** 使用内置示例简历初始化（用于首次体验引导） */
-  initSampleResume: () => void;
+  /**
+   * 使用内置示例简历初始化（用于首次体验引导）
+   * @param canvasOverrides - 可选的画布配置覆盖项，padding 等将用于定位块的位置
+   */
+  initSampleResume: (canvasOverrides?: Partial<CanvasConfig>) => void;
   /** 清除当前简历数据，回到初始状态 */
   clearResume: () => void;
 
@@ -127,9 +130,9 @@ export const createResumeSlice = (set: StoreSet, _get: StoreGet): ResumeSlice =>
       // 清除编辑器选中状态（通过 editor slice 处理，这里只清除 resume）
     })),
 
-  initSampleResume: () =>
+  initSampleResume: (canvasOverrides) =>
     set(produce<ResumeStoreInternal>((state) => {
-      state.resume = createSampleResume();
+      state.resume = createSampleResume(canvasOverrides);
     })),
 
   clearResume: () =>

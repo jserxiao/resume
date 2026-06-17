@@ -4,8 +4,8 @@ import { v4 as uuid } from 'uuid';
 /**
  * 创建顶部 Header 区域（蓝色背景 + 头像 + 姓名 + 职位）
  */
-export function createHeaderBlocks(resumeId: string, padding: number, nextZ: () => number): BlockInstance[] {
-  const contentWidth = 794 - padding * 2;
+export function createHeaderBlocks(resumeId: string, padding: number, nextZ: () => number, canvasWidth: number): BlockInstance[] {
+  const contentWidth = canvasWidth - padding * 2;
 
   return [
     // 顶部蓝色背景

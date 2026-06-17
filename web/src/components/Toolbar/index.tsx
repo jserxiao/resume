@@ -5,6 +5,8 @@ import {
   BorderOutlined,
   AppstoreAddOutlined,
   BgColorsOutlined,
+  UndoOutlined,
+  RedoOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import ExportMenu from '@/components/ExportMenu';
@@ -17,7 +19,7 @@ interface ToolbarProps {
 }
 
 export default function Toolbar({ onSave }: ToolbarProps) {
-  const { resume, editor, markSaved, setPreviewOpen, setShowAlignGuides, setSnapToGrid } = useResumeStore();
+  const { resume, editor, markSaved, setPreviewOpen, setShowAlignGuides, setSnapToGrid, canUndo, canRedo, undo, redo } = useResumeStore();
 
   if (!resume) return null;
 
@@ -40,6 +42,22 @@ export default function Toolbar({ onSave }: ToolbarProps) {
       </div>
 
       <div className="toolbar-center">
+        <Tooltip title="撤销 (Ctrl+Z)">
+          <Button
+            type="text"
+            icon={<UndoOutlined />}
+            disabled={!canUndo}
+            onClick={undo}
+          />
+        </Tooltip>
+        <Tooltip title="重做 (Ctrl+Shift+Z)">
+          <Button
+            type="text"
+            icon={<RedoOutlined />}
+            disabled={!canRedo}
+            onClick={redo}
+          />
+        </Tooltip>
         <Tooltip title="对齐辅助线">
           <div className="toolbar-toggle">
             <BorderOutlined />

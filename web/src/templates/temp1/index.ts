@@ -8,8 +8,9 @@ import { createRightColumnBlocks } from './rightColumn';
 /**
  * 创建示例简历（Kelly Blackwell 风格）
  * 使用基础组件 + 弹性盒子 + 自定义装饰搭建
+ * @param canvasOverrides - 可选的画布配置覆盖项，padding 等将用于定位块的位置
  */
-export function createSampleResume(): Resume {
+export function createSampleResume(canvasOverrides?: Partial<CanvasConfig>): Resume {
   const resumeId = `resume-${uuid().slice(0, 8)}`;
 
   const colorScheme: ColorScheme = {
@@ -27,20 +28,21 @@ export function createSampleResume(): Resume {
   };
 
   const canvas: CanvasConfig = {
-    width: CANVAS_DEFAULT_WIDTH,
-    height: CANVAS_DEFAULT_HEIGHT,
-    padding: CANVAS_DEFAULT_PADDING,
-    background: CANVAS_DEFAULT_BACKGROUND,
+    width: canvasOverrides?.width ?? CANVAS_DEFAULT_WIDTH,
+    height: canvasOverrides?.height ?? CANVAS_DEFAULT_HEIGHT,
+    padding: canvasOverrides?.padding ?? CANVAS_DEFAULT_PADDING,
+    background: canvasOverrides?.background ?? CANVAS_DEFAULT_BACKGROUND,
   };
 
   let zIndex = 1;
   const nextZ = () => zIndex++;
 
-  const padding = CANVAS_DEFAULT_PADDING;
+  const padding = canvas.padding;
+  const canvasWidth = canvas.width;
 
   // 组合所有块
   const blocks = [
-    ...createHeaderBlocks(resumeId, padding, nextZ),
+    ...createHeaderBlocks(resumeId, padding, nextZ, canvasWidth),
   ];
 
   // 左侧栏

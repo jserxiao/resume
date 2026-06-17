@@ -4,7 +4,7 @@ export const CANVAS_DEFAULT_WIDTH = 794;
 /** A4 297mm @96dpi */
 export const CANVAS_DEFAULT_HEIGHT = 1123;
 /** 约10mm内边距 */
-export const CANVAS_DEFAULT_PADDING = 40;
+export const CANVAS_DEFAULT_PADDING = 0;
 /** 默认画布背景色 */
 export const CANVAS_DEFAULT_BACKGROUND = '#ffffff';
 

@@ -14,6 +14,10 @@
     padding: 0;
     justify-content: flex-start;
     align-items: center;
+    // 预览模式下收缩到页面宽度，避免容器比页面宽导致两侧出现间距
+    flex: 0 0 auto;
+    align-self: center;
+    width: fit-content;
   }
 
   &-page {

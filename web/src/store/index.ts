@@ -3,6 +3,7 @@
  * 将各 slice 合并为单一 store，保持完整的 API 向后兼容
  */
 import { create } from 'zustand';
+import { v4 as _uuid } from 'uuid';
 import { createResumeSlice, type ResumeSlice } from './slices/resumeSlice';
 import { createBlockSlice, type BlockSlice } from './slices/blockSlice';
 import { createEditorSlice, type EditorSlice } from './slices/editorSlice';
@@ -33,6 +34,12 @@ export const useResumeStore = create<ResumeStore>()((originalSet: StoreSet, get:
     ...createHistorySlice(originalSet, get), // history slice 使用原始 set，避免自身操作产生快照
   };
 });
+
+// ========== 开发调试：暴露到 window ==========
+if (import.meta.env.DEV) {
+  (window as any).__store__ = useResumeStore;
+  (window as any).__uuid__ = _uuid;
+}
 
 // ========== HMR 热更新支持 ==========
 // Vite 热更新时保留 store 状态，避免白屏

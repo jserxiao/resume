@@ -200,6 +200,42 @@
       outline-offset: -2px;
     }
 
+    // 拖拽排序：上方插入指示线
+    &--drop-before {
+      position: relative;
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: -1px;
+        left: 6px;
+        right: 6px;
+        height: 2px;
+        background: var(--color-primary);
+        border-radius: 1px;
+        z-index: 10;
+        box-shadow: 0 0 4px rgba(59, 130, 246, 0.4);
+      }
+    }
+
+    // 拖拽排序：下方插入指示线
+    &--drop-after {
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 6px;
+        right: 6px;
+        height: 2px;
+        background: var(--color-primary);
+        border-radius: 1px;
+        z-index: 10;
+        box-shadow: 0 0 4px rgba(59, 130, 246, 0.4);
+      }
+    }
+
     // 正在拖拽的项
     &.dragging {
       opacity: 0.4;

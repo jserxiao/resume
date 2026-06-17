@@ -21,7 +21,7 @@ import type { AnchorPixel } from './decoration/types';
 import { useDecoAnchors } from './decoration/useDecoAnchors';
 import { useDecoSnapGuides } from './decoration/useDecoSnapGuides';
 import DecoStageCanvas from './decoration/DecoStageCanvas';
-import DecoToolbar from './decoration/DecoToolbar';
+import DecoToolbar, { DecoShapesToolbar } from './decoration/DecoToolbar';
 import DecoPathList from './decoration/DecoPathList';
 import './DecorationEditorPage.less';
 
@@ -35,7 +35,7 @@ export default function DecorationEditorPage() {
   const [stageHeight, setStageHeight] = useState(400);
 
   // ===== 核心状态 Hook =====
-  const anchors = useDecoAnchors(stageWidth, stageHeight, editId);
+  const anchors = useDecoAnchors(stageWidth, stageHeight, editId, setStageWidth, setStageHeight);
   const snap = useDecoSnapGuides(anchors.activePath, stageWidth, stageHeight);
 
   const stageRef = useRef<HTMLDivElement>(null);
@@ -546,47 +546,51 @@ export default function DecorationEditorPage() {
       <DecoToolbar
         isEditMode={anchors.isEditMode}
         canUndo={anchors.historyIdxRef.current > 0}
-        activeShape={anchors.activeShape}
-        selectionRect={anchors.selectionRect}
         onBack={() => navigate('/')}
         onUndo={anchors.handleUndo}
         onReset={anchors.handleReset}
         onSave={handleSaveAndNavigate}
-        onShapeSelect={anchors.handleShapeSelect}
-        onCrop={anchors.handleCrop}
       />
 
       <div className="deco-editor-body">
-        <DecoStageCanvas
-          stageWidth={stageWidth}
-          stageHeight={stageHeight}
-          paths={anchors.paths}
-          activePathIdx={anchors.activePathIdx}
-          activePath={anchors.activePath}
-          isMouseOnStage={snap.isMouseOnStage}
-          mousePos={snap.mousePos}
-          guideLines={snap.guideLines}
-          distances={snap.distances}
-          selectedAnchorIdx={anchors.selectedAnchorIdx}
-          selectedEdgeIdx={anchors.selectedEdgeIdx}
-          selectionRect={anchors.selectionRect}
+        <DecoShapesToolbar
           activeShape={anchors.activeShape}
-          isSelecting={anchors.isSelecting}
-          getEdgeMidpoint={anchors.getEdgeMidpoint}
-          getEdgeCount={anchors.getEdgeCount}
-          onStageClick={handleStageClick}
-          onStageContextMenu={handleStageContextMenu}
-          onStageMouseDown={handleStageMouseDown}
-          onStageMouseMove={handleStageMouseMove}
-          onStageMouseLeave={handleStageMouseLeave}
-          onAnchorMouseDown={handleAnchorMouseDown}
-          onAnchorClick={handleAnchorClick}
-          onHandleOutMouseDown={handleHandleOutMouseDown}
-          onHandleInMouseDown={handleHandleInMouseDown}
-          onEdgeMidMouseDown={handleEdgeMidMouseDown}
-          onEdgeMidClick={handleEdgeMidClick}
-          stageRef={stageRef}
+          selectionRect={anchors.selectionRect}
+          onShapeSelect={anchors.handleShapeSelect}
+          onCrop={anchors.handleCrop}
         />
+        <div className="deco-editor-stage-wrapper">
+          <DecoStageCanvas
+            stageWidth={stageWidth}
+            stageHeight={stageHeight}
+            paths={anchors.paths}
+            activePathIdx={anchors.activePathIdx}
+            activePath={anchors.activePath}
+            isMouseOnStage={snap.isMouseOnStage}
+            mousePos={snap.mousePos}
+            guideLines={snap.guideLines}
+            distances={snap.distances}
+            selectedAnchorIdx={anchors.selectedAnchorIdx}
+            selectedEdgeIdx={anchors.selectedEdgeIdx}
+            selectionRect={anchors.selectionRect}
+            activeShape={anchors.activeShape}
+            isSelecting={anchors.isSelecting}
+            getEdgeMidpoint={anchors.getEdgeMidpoint}
+            getEdgeCount={anchors.getEdgeCount}
+            onStageClick={handleStageClick}
+            onStageContextMenu={handleStageContextMenu}
+            onStageMouseDown={handleStageMouseDown}
+            onStageMouseMove={handleStageMouseMove}
+            onStageMouseLeave={handleStageMouseLeave}
+            onAnchorMouseDown={handleAnchorMouseDown}
+            onAnchorClick={handleAnchorClick}
+            onHandleOutMouseDown={handleHandleOutMouseDown}
+            onHandleInMouseDown={handleHandleInMouseDown}
+            onEdgeMidMouseDown={handleEdgeMidMouseDown}
+            onEdgeMidClick={handleEdgeMidClick}
+            stageRef={stageRef}
+          />
+        </div>
 
         <DecoPathList
           decoName={anchors.decoName}

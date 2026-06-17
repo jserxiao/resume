@@ -154,6 +154,13 @@ export interface BlockSlice {
    * @param direction - 移动方向：'up'上移一层，'down'下移一层，'top'置顶，'bottom'置底
    */
   moveBlockZIndex: (blockId: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
+  /**
+   * 拖拽排序：将 sourceBlockId 移动到 targetBlockId 的位置（之前或之后）
+   * @param sourceBlockId - 被拖拽的块ID
+   * @param targetBlockId - 目标位置的块ID
+   * @param position - 'before' 放在目标之前，'after' 放在目标之后
+   */
+  reorderBlock: (sourceBlockId: string, targetBlockId: string, position: 'before' | 'after') => void;
 
   // ===== 装饰元素操作 =====
   /**
@@ -576,9 +583,37 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
 
   updateBlockZIndex: (blockId, zIndex) =>
     set(produce<ResumeStoreInternal>((state) => {
-      withBlockUpdate(state, blockId, (block) => {
-        block.zIndex = zIndex;
+      if (!state.resume) return;
+      const block = findBlock(state, blockId);
+      if (!block) return;
+
+      const oldZIndex = block.zIndex;
+      block.zIndex = zIndex;
+
+      // 对同层级中 zIndex >= 新值的其他块，自动 +1 避免重复
+      const siblings = block.groupId
+        ? state.resume.blocks.filter((b) => b.groupId === block.groupId && b.id !== blockId)
+        : state.resume.blocks.filter((b) => !b.groupId && b.id !== blockId);
+
+      for (const sibling of siblings) {
+        if (sibling.zIndex >= zIndex) {
+          sibling.zIndex += 1;
+        }
+      }
+
+      // 压缩断层：同层级按当前顺序重新分配连续 zIndex
+      const allSiblings = block.groupId
+        ? state.resume.blocks.filter((b) => b.groupId === block.groupId)
+        : state.resume.blocks.filter((b) => !b.groupId);
+      const sorted = [...allSiblings].sort((a, b) => a.zIndex - b.zIndex);
+      sorted.forEach((b, i) => {
+        const actual = findBlock(state, b.id);
+        if (actual) {
+          actual.zIndex = i + 1;
+        }
       });
+
+      state.resume.updatedAt = Date.now();
     })),
 
   toggleBlockVisibility: (blockId) =>
@@ -676,6 +711,42 @@ export const createBlockSlice = (set: StoreSet, get: StoreGet): BlockSlice => ({
           break;
         }
       }
+      state.resume.updatedAt = Date.now();
+    })),
+
+  reorderBlock: (sourceBlockId, targetBlockId, position) =>
+    set(produce<ResumeStoreInternal>((state) => {
+      if (!state.resume) return;
+      const sourceBlock = findBlock(state, sourceBlockId);
+      const targetBlock = findBlock(state, targetBlockId);
+      if (!sourceBlock || !targetBlock) return;
+
+      // 只允许同层级（同分组或都是未分组）之间排序
+      if (sourceBlock.groupId !== targetBlock.groupId) return;
+
+      // 获取同层级的所有可见块，按 zIndex 排序
+      const siblings = sourceBlock.groupId
+        ? state.resume.blocks.filter((b) => b.groupId === sourceBlock.groupId && b.visible)
+        : state.resume.blocks.filter((b) => !b.groupId && b.visible);
+
+      const sortedSiblings = [...siblings].sort((a, b) => a.zIndex - b.zIndex);
+
+      // 移除 source，然后插入到 target 的位置
+      const withoutSource = sortedSiblings.filter((b) => b.id !== sourceBlockId);
+      const targetIdx = withoutSource.findIndex((b) => b.id === targetBlockId);
+      if (targetIdx === -1) return;
+
+      const insertIdx = position === 'before' ? targetIdx : targetIdx + 1;
+      withoutSource.splice(insertIdx, 0, sourceBlock);
+
+      // 重新分配 zIndex
+      withoutSource.forEach((b, i) => {
+        const block = findBlock(state, b.id);
+        if (block) {
+          block.zIndex = i + 1;
+        }
+      });
+
       state.resume.updatedAt = Date.now();
     })),
 

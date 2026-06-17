@@ -102,6 +102,8 @@ export function useDecoAnchors(
   stageWidth: number,
   stageHeight: number,
   editId: string | null,
+  setStageWidth?: (w: number) => void,
+  setStageHeight?: (h: number) => void,
 ): UseDecoAnchorsReturn {
   const { saveCustomDecoration, customDecorations } = useResumeStore();
 
@@ -164,6 +166,10 @@ export function useDecoAnchors(
         const sw = existing.stageWidth || 400;
         const sh = existing.stageHeight || 400;
 
+        // 同步画布大小到页面 state
+        setStageWidth?.(sw);
+        setStageHeight?.(sh);
+
         const editPaths: EditablePath[] = existing.paths.map(p => ({
           id: p.id || uuid().slice(0, 8),
           anchors: p.anchors.map(a => ({
@@ -193,7 +199,7 @@ export function useDecoAnchors(
         pushHistory(editPaths);
       }
     }
-  }, [editId, customDecorations, pushHistory]);
+  }, [editId, customDecorations, pushHistory, setStageWidth, setStageHeight]);
 
   // 撤销
   const handleUndo = useCallback(() => {

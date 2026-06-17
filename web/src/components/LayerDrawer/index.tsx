@@ -1,13 +1,11 @@
-import { useCallback } from 'react';
-import { Button, Tooltip, Empty, Dropdown, Popconfirm } from 'antd';
+import { useCallback, useState } from 'react';
+import { Button, Tooltip, Empty, Dropdown, Popconfirm, Modal, InputNumber } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   EyeOutlined,
   EyeInvisibleOutlined,
   LockOutlined,
   UnlockOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined,
   VerticalAlignTopOutlined,
   VerticalAlignBottomOutlined,
   GroupOutlined,
@@ -20,10 +18,12 @@ import {
   ScissorOutlined,
   DeleteOutlined,
   SaveOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import { useResumeStore } from '@/store';
 import { useLayerItems } from './useLayerItems';
 import { useLayerDrag } from './useLayerDrag';
+import type { DropPosition } from './useLayerDrag';
 import { useLayerContextMenu, useCreateGroupFromBlocks } from './useLayerContextMenu.tsx';
 import type { LayerItem } from './useLayerItems';
 import './index.less';
@@ -56,6 +56,7 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
   const toggleBlockVisibility = useResumeStore((s) => s.toggleBlockVisibility);
   const toggleBlockLock = useResumeStore((s) => s.toggleBlockLock);
   const moveBlockZIndex = useResumeStore((s) => s.moveBlockZIndex);
+  const updateBlockZIndex = useResumeStore((s) => s.updateBlockZIndex);
   const removeGroup = useResumeStore((s) => s.removeGroup);
   const removeBlocksFromGroup = useResumeStore((s) => s.removeBlocksFromGroup);
   const removeBlock = useResumeStore((s) => s.removeBlock);
@@ -65,8 +66,36 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
   // 使用提取的 hooks
   const { layers, isGroupExpanded, toggleGroupExpand, isSelected, orderedBlockIds } = useLayerItems();
   const drag = useLayerDrag();
+
+  /** 计算图层项的拖拽排序 class */
+  const getDropClass = (itemId: string): string => {
+    if (drag.dragOverItemId !== itemId || !drag.dropPosition) return '';
+    return drag.dropPosition === 'before' ? 'layer-drawer-item--drop-before' : 'layer-drawer-item--drop-after';
+  };
   const contextMenu = useLayerContextMenu();
   const createGroupFromBlocks = useCreateGroupFromBlocks();
+
+  // ===== 设置层级弹窗 =====
+  const [zIndexModalVisible, setZIndexModalVisible] = useState(false);
+  const [zIndexModalBlockId, setZIndexModalBlockId] = useState<string | null>(null);
+  const [zIndexModalValue, setZIndexModalValue] = useState<number>(0);
+
+  const handleOpenZIndexModal = useCallback((blockId: string) => {
+    if (!resume) return;
+    const block = resume.blocks.find((b) => b.id === blockId);
+    if (!block) return;
+    setZIndexModalBlockId(blockId);
+    setZIndexModalValue(block.zIndex);
+    setZIndexModalVisible(true);
+  }, [resume]);
+
+  const handleZIndexModalOk = useCallback(() => {
+    if (zIndexModalBlockId) {
+      updateBlockZIndex(zIndexModalBlockId, zIndexModalValue);
+    }
+    setZIndexModalVisible(false);
+    setZIndexModalBlockId(null);
+  }, [zIndexModalBlockId, zIndexModalValue, updateBlockZIndex]);
 
   const selectedGroupId = editor.selectedGroupId;
   const selectedBlockIds = editor.selectedBlockIds;
@@ -142,18 +171,6 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
   /** 获取图层项的下拉菜单（MoreOutlined 按钮） */
   const getLayerMenuItems = (item: LayerItem): MenuProps['items'] => [
     {
-      key: 'up',
-      label: '上移一层',
-      icon: <ArrowUpOutlined />,
-      onClick: ({ domEvent }) => handleZIndexMove(domEvent as React.MouseEvent, item.id, 'up'),
-    },
-    {
-      key: 'down',
-      label: '下移一层',
-      icon: <ArrowDownOutlined />,
-      onClick: ({ domEvent }) => handleZIndexMove(domEvent as React.MouseEvent, item.id, 'down'),
-    },
-    {
       key: 'top',
       label: '置顶',
       icon: <VerticalAlignTopOutlined />,
@@ -165,6 +182,13 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
       icon: <VerticalAlignBottomOutlined />,
       onClick: ({ domEvent }) => handleZIndexMove(domEvent as React.MouseEvent, item.id, 'bottom'),
     },
+    { type: 'divider' },
+    {
+      key: 'setZIndex',
+      label: '设置层级',
+      icon: <EditOutlined />,
+      onClick: () => handleOpenZIndexModal(item.id),
+    },
   ];
 
   /** 渲染子图层项（分组内的块） */
@@ -175,10 +199,13 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
       trigger={['contextMenu']}
     >
       <div
-        className={`layer-drawer-item layer-drawer-item--child ${isSelected(item) ? 'selected' : ''} ${!item.visible ? 'hidden-layer' : ''}`}
+        className={`layer-drawer-item layer-drawer-item--child ${isSelected(item) ? 'selected' : ''} ${!item.visible ? 'hidden-layer' : ''} ${getDropClass(item.id)}`}
         onMouseDown={(e) => handleLayerMouseDown(e, item)}
         draggable
         onDragStart={(e) => drag.handleDragStart(e, item)}
+        onDragOver={(e) => drag.handleDragOverItem(e, item)}
+        onDragLeave={(e) => drag.handleDragLeaveItem(e, item.id)}
+        onDrop={(e) => drag.handleDropOnItem(e, item)}
         onDragEnd={drag.handleDragEnd}
       >
         <span className="layer-drawer-item-name">{item.name}</span>
@@ -453,10 +480,13 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
                         trigger={['contextMenu']}
                       >
                         <div
-                          className={`layer-drawer-item ${isSelected(item) ? 'selected' : ''} ${!item.visible ? 'hidden-layer' : ''}`}
+                          className={`layer-drawer-item ${isSelected(item) ? 'selected' : ''} ${!item.visible ? 'hidden-layer' : ''} ${getDropClass(item.id)}`}
                           onMouseDown={(e) => handleLayerMouseDown(e, item)}
                           draggable
                           onDragStart={(e) => drag.handleDragStart(e, item)}
+                          onDragOver={(e) => drag.handleDragOverItem(e, item)}
+                          onDragLeave={(e) => drag.handleDragLeaveItem(e, item.id)}
+                          onDrop={(e) => drag.handleDropOnItem(e, item)}
                           onDragEnd={drag.handleDragEnd}
                         >
                           <span className="layer-drawer-item-name">{item.name}</span>
@@ -521,6 +551,33 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
           </Dropdown>
         </>
       )}
+
+      {/* ===== 设置层级弹窗 ===== */}
+      <Modal
+        title="设置层级"
+        open={zIndexModalVisible}
+        onOk={handleZIndexModalOk}
+        onCancel={() => {
+          setZIndexModalVisible(false);
+          setZIndexModalBlockId(null);
+        }}
+        okText="确定"
+        cancelText="取消"
+        width={280}
+        destroyOnClose
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+          <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>z-index:</span>
+          <InputNumber
+            value={zIndexModalValue}
+            onChange={(val) => setZIndexModalValue(val ?? 0)}
+            min={-9999}
+            max={9999}
+            style={{ flex: 1 }}
+            autoFocus
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

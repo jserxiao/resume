@@ -214,6 +214,7 @@ export interface ExportOptions {
 export interface EditorState {
   selectedBlockId: string | null;
   selectedBlockIds: string[];     // 多选的块ID列表（Shift多选）
+  selectionAnchorId: string | null; // Shift范围选择的锚点（非Shift点击时设置）
   selectedGroupId: string | null; // 选中的分组ID
   isFullscreen: boolean;
   theme: 'light' | 'dark' | 'system';

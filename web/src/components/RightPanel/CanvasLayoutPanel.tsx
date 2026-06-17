@@ -102,26 +102,6 @@ export default function CanvasLayoutPanel({ resume }: CanvasLayoutPanelProps) {
         </div>
       </div>
 
-      {/* 快捷预设 */}
-      <div className="right-panel-field">
-        <label className="right-panel-label">页面规格</label>
-        <Select
-          value={`${resume.canvas.width}x${resume.canvas.height}`}
-          onChange={(val) => {
-            const [w, h] = val.split('x').map(Number);
-            setCanvasConfig({ width: w, height: h });
-          }}
-          size="small"
-          style={{ width: '100%' }}
-          options={[
-            { label: 'A4 (794×1123)', value: '794x1123' },
-            { label: 'A4 横向 (1123×794)', value: '1123x794' },
-            { label: 'Letter (816×1056)', value: '816x1056' },
-            { label: '16:9 (794×447)', value: '794x447' },
-          ]}
-        />
-      </div>
-
       {/* 自动分页 */}
       <div className="right-panel-field">
         <label className="right-panel-label">每页高度</label>

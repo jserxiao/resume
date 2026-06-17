@@ -118,6 +118,7 @@ export function restoreFromLocalStorage(): boolean {
         // 清除选中状态（不恢复上次的选中）
         state.editor.selectedBlockId = null;
         state.editor.selectedBlockIds = [];
+        state.editor.selectionAnchorId = null;
         state.editor.selectedGroupId = null;
         state.editor.previewOpen = false;
       }));

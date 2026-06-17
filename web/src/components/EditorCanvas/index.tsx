@@ -32,6 +32,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     addBlock,
     selectBlock,
     addToSelection,
+    selectRangeBetween,
     clearSelection,
     updateBlockPosition,
     updateBlockSize,
@@ -55,11 +56,14 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     if (isPreview) return;
 
     const handleGlobalMouseDown = (e: MouseEvent) => {
-      // 如果点击发生在画布页面内，由画布内部逻辑处理，不重复清除
+      // 如果点击发生在画布页面内，由画布内部逻辑处理，不重复清除选中
       const pageEl = pageRef.current;
       if (pageEl && pageEl.contains(e.target as Node)) return;
 
-      // 点击发生在画布外部，清除选中
+      // 如果点击发生在图层面板内，由图层面板处理，不清除选中
+      if ((e.target as HTMLElement).closest('.layer-drawer')) return;
+
+      // 点击发生在画布外部且不在图层面板内，清除选中
       const { selectedBlockId, selectedBlockIds, selectedGroupId } = useResumeStore.getState().editor;
       if (selectedBlockId || selectedBlockIds.length > 0 || selectedGroupId) {
         clearSelection();
@@ -358,6 +362,9 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     // 标记拖拽已开始处理选择，防止 onClick 重复
     blockDragStartedRef.current = true;
 
+    // 获取按 zIndex 降序排列的块 ID 列表（与图层面板顺序一致）
+    const orderedBlockIds = [...resume.blocks].sort((a, b) => b.zIndex - a.zIndex).map((b) => b.id);
+
     // 画布上点击/拖拽分组内的元素时，直接选中该元素，不选中分组
     // 只有在图层面板点击分组才选中分组（由 LayerDrawer 处理）
     // 弹性盒子子元素也通过 groupId 关联，直接选中该块进行拖拽
@@ -366,11 +373,9 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       if (!editor.selectedBlockIds.includes(blockId)) {
         selectBlock(blockId);
       }
-    } else if (e.shiftKey) {
-      // Shift多选（无分组块）
-      if (!editor.selectedBlockIds.includes(blockId)) {
-        addToSelection(blockId);
-      }
+    } else if (e.shiftKey && editor.selectedBlockIds.length > 0) {
+      // 按住 Shift 且已有选中元素 → 范围选择
+      selectRangeBetween(blockId, orderedBlockIds);
     } else {
       if (!editor.selectedBlockIds.includes(blockId)) {
         selectBlock(blockId);
@@ -403,7 +408,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
       }
       dragStateRef.current.multiBlockPositions = blockPositions;
     }
-  }, [isPreview, resume, selectBlock, addToSelection, editor.selectedBlockIds, refreshDistances]);
+  }, [isPreview, resume, selectBlock, addToSelection, selectRangeBetween, editor.selectedBlockIds, refreshDistances]);
 
   // 全局鼠标移动和松开事件
   useEffect(() => {
@@ -597,24 +602,20 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     const block = resume.blocks.find((b) => b.id === blockId);
     if (!block) return;
 
+    // 获取按 zIndex 降序排列的块 ID 列表（与图层面板顺序一致）
+    const orderedBlockIds = [...resume.blocks].sort((a, b) => b.zIndex - a.zIndex).map((b) => b.id);
+
     // 画布上点击分组内的元素时，直接选中该元素（显示元素配置面板）
     // 只有图层面板中点击分组才选中分组（由 LayerDrawer 处理）
-    if (block.groupId) {
-      if (e?.shiftKey) {
-        // Shift+点击分组内块：追加该块到选中
-        addToSelection(blockId);
-      } else {
-        selectBlock(blockId);
-      }
-    } else if (e?.shiftKey) {
-      // 无分组的块，Shift多选
-      addToSelection(blockId);
+    if (e?.shiftKey && editor.selectedBlockIds.length > 0) {
+      // 按住 Shift 且已有选中元素 → 范围选择
+      selectRangeBetween(blockId, orderedBlockIds);
     } else {
       selectBlock(blockId);
     }
     setActiveBlockId(blockId);
     refreshDistances(blockId);
-  }, [isPreview, resume, selectBlock, addToSelection, refreshDistances]);
+  }, [isPreview, resume, selectBlock, addToSelection, selectRangeBetween, refreshDistances]);
 
   const handleBlockHover = useCallback((blockId: string) => {
     if (isPreview || !blockId || !resume) return;
@@ -645,6 +646,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     <div className={`editor-canvas ${isPreview ? 'preview-mode' : ''}`}>
       <div
         ref={pageRef}
+        key={resume.id}
         className="editor-canvas-page"
         style={pageStyle}
         onDragOver={isPreview ? undefined : handleDragOver}

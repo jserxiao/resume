@@ -50,6 +50,7 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
   const selectBlock = useResumeStore((s) => s.selectBlock);
   const selectBlocks = useResumeStore((s) => s.selectBlocks);
   const addToSelection = useResumeStore((s) => s.addToSelection);
+  const selectRangeBetween = useResumeStore((s) => s.selectRangeBetween);
   const clearSelection = useResumeStore((s) => s.clearSelection);
   const selectGroup = useResumeStore((s) => s.selectGroup);
   const toggleBlockVisibility = useResumeStore((s) => s.toggleBlockVisibility);
@@ -62,7 +63,7 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
   const saveAsGroupTemplate = useResumeStore((s) => s.saveAsGroupTemplate);
 
   // 使用提取的 hooks
-  const { layers, isGroupExpanded, toggleGroupExpand, isSelected } = useLayerItems();
+  const { layers, isGroupExpanded, toggleGroupExpand, isSelected, orderedBlockIds } = useLayerItems();
   const drag = useLayerDrag();
   const contextMenu = useLayerContextMenu();
   const createGroupFromBlocks = useCreateGroupFromBlocks();
@@ -72,31 +73,23 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
 
   if (!resume) return null;
 
-  /** 点击图层项 - 支持 Shift 多选 */
-  const handleLayerClick = (e: React.MouseEvent, item: LayerItem) => {
+  /** 鼠标按下图层项 - 支持 Shift 范围多选
+   *  使用 onMouseDown 而非 onClick，因为 draggable 元素的 click 事件在拖拽时不可靠
+   */
+  const handleLayerMouseDown = (e: React.MouseEvent, item: LayerItem) => {
+    // 只响应左键
+    if (e.button !== 0) return;
+
     if (item.type === 'group') {
       selectGroup(item.id);
       return;
     }
 
-    // 如果点击的元素属于分组，直接选中该元素（显示元素配置面板）
-    if (item.groupId) {
-      if (e.shiftKey) {
-        addToSelection(item.id);
-      } else {
-        selectBlock(item.id);
-      }
-      return;
-    }
-
-    if (e.shiftKey) {
-      if (selectedBlockIds.includes(item.id)) {
-        const newIds = selectedBlockIds.filter((id) => id !== item.id);
-        selectBlocks(newIds);
-      } else {
-        addToSelection(item.id);
-      }
+    if (e.shiftKey && selectedBlockIds.length > 0) {
+      // 按住 Shift 且已有选中元素 → 范围选择（从锚点到当前点击）
+      selectRangeBetween(item.id, orderedBlockIds);
     } else {
+      // 未按 Shift 或没有已选中元素 → 单选（同时设为新的锚点）
       selectBlock(item.id);
     }
   };
@@ -183,7 +176,7 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
     >
       <div
         className={`layer-drawer-item layer-drawer-item--child ${isSelected(item) ? 'selected' : ''} ${!item.visible ? 'hidden-layer' : ''}`}
-        onClick={(e) => handleLayerClick(e, item)}
+        onMouseDown={(e) => handleLayerMouseDown(e, item)}
         draggable
         onDragStart={(e) => drag.handleDragStart(e, item)}
         onDragEnd={drag.handleDragEnd}
@@ -461,7 +454,7 @@ export default function LayerDrawer({ collapsed, onToggle }: LayerDrawerProps) {
                       >
                         <div
                           className={`layer-drawer-item ${isSelected(item) ? 'selected' : ''} ${!item.visible ? 'hidden-layer' : ''}`}
-                          onClick={(e) => handleLayerClick(e, item)}
+                          onMouseDown={(e) => handleLayerMouseDown(e, item)}
                           draggable
                           onDragStart={(e) => drag.handleDragStart(e, item)}
                           onDragEnd={drag.handleDragEnd}

@@ -120,6 +120,23 @@ export function useLayerItems() {
     return selectedBlockIds.includes(item.id);
   }, [selectedGroupId, selectedBlockIds]);
 
+  /** 按图层顺序排列的所有块ID列表（用于 Shift 范围选择） */
+  const orderedBlockIds = useMemo<string[]>(() => {
+    const ids: string[] = [];
+    for (const item of layers) {
+      if (item.type === 'group') {
+        if (item.children) {
+          for (const child of item.children) {
+            ids.push(child.id);
+          }
+        }
+      } else {
+        ids.push(item.id);
+      }
+    }
+    return ids;
+  }, [layers]);
+
   return {
     layers,
     isGroupExpanded,
@@ -127,5 +144,6 @@ export function useLayerItems() {
     isSelected,
     selectedGroupId,
     selectedBlockIds,
+    orderedBlockIds,
   };
 }

@@ -33,10 +33,9 @@ export default function EditorPage() {
   useKeyboardShortcuts();
 
   // 如果没有简历数据，尝试恢复或自动创建
+  // 注意：HMR 热更新 store 后 resume 会变为 null，需要重新恢复
   useEffect(() => {
     if (resume) return;
-    if (restoreModalShownRef.current) return;
-    restoreModalShownRef.current = true;
 
     // 尝试从 localStorage 恢复
     const restored = restoreFromLocalStorage();
@@ -44,17 +43,22 @@ export default function EditorPage() {
       // 恢复成功后标记为已保存，避免 beforeunload 弹出未保存提示
       useResumeStore.getState().markSaved();
 
-      const timestamp = getAutoSaveTimestamp();
-      const timeStr = timestamp ? new Date(timestamp).toLocaleString() : '未知时间';
-      modal.info({
-        title: '已恢复自动保存的数据',
-        content: `您的简历数据已于 ${timeStr} 自动保存，现已恢复。`,
-        okText: '知道了',
-      });
+      // 仅首次加载时弹窗提示
+      if (!restoreModalShownRef.current) {
+        const timestamp = getAutoSaveTimestamp();
+        const timeStr = timestamp ? new Date(timestamp).toLocaleString() : '未知时间';
+        modal.info({
+          title: '已恢复自动保存的数据',
+          content: `您的简历数据已于 ${timeStr} 自动保存，现已恢复。`,
+          okText: '知道了',
+        });
+      }
     } else {
       // 没有可恢复的数据，自动创建默认简历
       initResume('我的简历', presetColorSchemes[0]);
     }
+
+    restoreModalShownRef.current = true;
   }, [resume, initResume, modal]);
 
   if (!resume) return null;

@@ -12,6 +12,7 @@ import { getUniqueName } from '../../utils/block';
 export const INITIAL_EDITOR: EditorState = {
   selectedBlockId: null,
   selectedBlockIds: [],
+  selectionAnchorId: null,
   selectedGroupId: null,
   isFullscreen: false,
   theme: 'light',
@@ -47,6 +48,12 @@ export interface EditorSlice {
    * @param blockId - 要追加的块ID
    */
   addToSelection: (blockId: string) => void;
+  /**
+   * 范围选择：选中当前已选中的最后一个块与目标块之间（按图层顺序）的所有块
+   * @param blockId - Shift 点击的目标块ID
+   * @param orderedBlockIds - 当前图层列表中所有可选块的ID（按从上到下的图层顺序）
+   */
+  selectRangeBetween: (blockId: string, orderedBlockIds: string[]) => void;
   /**
    * 从当前多选列表中移除指定块
    * @param blockId - 要移除的块ID
@@ -184,6 +191,7 @@ export const createEditorSlice = (set: StoreSet, get: StoreGet): EditorSlice => 
     set(produce<ResumeStoreInternal>((state) => {
       state.editor.selectedBlockId = blockId;
       state.editor.selectedBlockIds = blockId ? [blockId] : [];
+      state.editor.selectionAnchorId = blockId;
       state.editor.selectedGroupId = null;
     })),
 
@@ -202,6 +210,45 @@ export const createEditorSlice = (set: StoreSet, get: StoreGet): EditorSlice => 
       state.editor.selectedBlockId = blockId;
     })),
 
+  selectRangeBetween: (blockId, orderedBlockIds) =>
+    set(produce<ResumeStoreInternal>((state) => {
+      // 锚点优先使用 selectionAnchorId（非Shift点击时设置的），回退到选中列表第一个
+      const anchorId = state.editor.selectionAnchorId
+        && orderedBlockIds.includes(state.editor.selectionAnchorId)
+        ? state.editor.selectionAnchorId
+        : state.editor.selectedBlockIds.find((id) => orderedBlockIds.includes(id)) || null;
+
+      if (!anchorId) {
+        // 没有已选中的元素，直接选中目标并设为锚点
+        state.editor.selectedBlockIds = [blockId];
+        state.editor.selectedBlockId = blockId;
+        state.editor.selectionAnchorId = blockId;
+        state.editor.selectedGroupId = null;
+        return;
+      }
+
+      const anchorIdx = orderedBlockIds.indexOf(anchorId);
+      const targetIdx = orderedBlockIds.indexOf(blockId);
+
+      if (anchorIdx === -1 || targetIdx === -1) {
+        // 找不到位置，降级为普通追加
+        if (!state.editor.selectedBlockIds.includes(blockId)) {
+          state.editor.selectedBlockIds.push(blockId);
+        }
+        state.editor.selectedBlockId = blockId;
+        return;
+      }
+
+      // 取范围（包含两端）
+      const start = Math.min(anchorIdx, targetIdx);
+      const end = Math.max(anchorIdx, targetIdx);
+      const rangeIds = orderedBlockIds.slice(start, end + 1);
+
+      state.editor.selectedBlockIds = rangeIds;
+      state.editor.selectedBlockId = blockId;
+      state.editor.selectedGroupId = null;
+    })),
+
   removeFromSelection: (blockId) =>
     set(produce<ResumeStoreInternal>((state) => {
       state.editor.selectedBlockIds = state.editor.selectedBlockIds.filter((id) => id !== blockId);
@@ -214,6 +261,7 @@ export const createEditorSlice = (set: StoreSet, get: StoreGet): EditorSlice => 
     set(produce<ResumeStoreInternal>((state) => {
       state.editor.selectedBlockId = null;
       state.editor.selectedBlockIds = [];
+      state.editor.selectionAnchorId = null;
       state.editor.selectedGroupId = null;
     })),
 

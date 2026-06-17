@@ -33,3 +33,13 @@ export const useResumeStore = create<ResumeStore>()((originalSet: StoreSet, get:
     ...createHistorySlice(originalSet, get), // history slice 使用原始 set，避免自身操作产生快照
   };
 });
+
+// ========== HMR 热更新支持 ==========
+// Vite 热更新时保留 store 状态，避免白屏
+if (import.meta.hot) {
+  import.meta.hot.accept((newModule) => {
+    if (!newModule) return;
+    // 将当前 store 状态传递给新模块
+    newModule.useResumeStore.setState(useResumeStore.getState());
+  });
+}

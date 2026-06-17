@@ -21,19 +21,23 @@ export default function ExportMenu() {
     setIsExporting(true);
 
     try {
-      const pageElement = document.querySelector('.preview-area-page') as HTMLElement;
+      // 优先选择编辑区的画布（排除预览抽屉中的画布）
+      const pageElement = (document.querySelector('.editor-canvas:not(.preview-mode) .editor-canvas-page') || document.querySelector('.editor-canvas-page')) as HTMLElement;
       if (!pageElement) {
         return;
       }
 
       const fileName = resume.title || 'resume';
+      // 分页高度：如果设置了 pageHeight 则使用，否则使用画布高度
+      // 当内容超过一页时自动分页导出
+      const pageHeight = resume.canvas.pageHeight || resume.canvas.height;
 
       switch (format) {
         case 'pdf':
-          await exportToPDF(pageElement, fileName);
+          await exportToPDF(pageElement, fileName, pageHeight);
           break;
         case 'png':
-          await exportToImage(pageElement, fileName);
+          await exportToImage(pageElement, fileName, pageHeight);
           break;
         case 'json':
           exportToJSON(resume, fileName);

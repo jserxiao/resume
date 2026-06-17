@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { message } from 'antd';
 import { useResumeStore, calculateAlignGuides } from '@/store';
-import { GRID_SIZE, RESIZE_MIN_WIDTH, RESIZE_MIN_HEIGHT, getDefaultBlockWidth, getDefaultBlockHeight, TPL_FLEXBOX, TPL_ICON } from '@/utils/constants';
+import { GRID_SIZE, RESIZE_MIN_WIDTH, RESIZE_MIN_HEIGHT, getDefaultBlockWidth, getDefaultBlockHeight, TPL_FLEXBOX, TPL_ICON, computePageBreaks } from '@/utils/constants';
 import { useDistanceIndicators } from './useDistanceIndicators';
 import { useAlignGuides } from './useAlignGuides';
 import DistanceIndicators from './DistanceIndicators';
@@ -11,6 +11,7 @@ import FreeBlockCard from './FreeBlockCard';
 import GroupBorder from './GroupBorder';
 import CanvasOverlay from './CanvasOverlay';
 import WatermarkOverlay from './WatermarkOverlay';
+import PageBreakOverlay from './PageBreakOverlay';
 import './index.less';
 
 interface EditorCanvasProps {
@@ -48,6 +49,27 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
 
   // 标记块拖拽已处理选择，防止 onClick 重复处理
   const blockDragStartedRef = useRef(false);
+
+  // 点击画布外部时清除选中状态
+  useEffect(() => {
+    if (isPreview) return;
+
+    const handleGlobalMouseDown = (e: MouseEvent) => {
+      // 如果点击发生在画布页面内，由画布内部逻辑处理，不重复清除
+      const pageEl = pageRef.current;
+      if (pageEl && pageEl.contains(e.target as Node)) return;
+
+      // 点击发生在画布外部，清除选中
+      const { selectedBlockId, selectedBlockIds, selectedGroupId } = useResumeStore.getState().editor;
+      if (selectedBlockId || selectedBlockIds.length > 0 || selectedGroupId) {
+        clearSelection();
+        setActiveBlockId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleGlobalMouseDown, true);
+    return () => document.removeEventListener('mousedown', handleGlobalMouseDown, true);
+  }, [isPreview, clearSelection]);
 
   // 使用封装的 hooks
   const { refreshDistances, clearDistances, distances, activeBlockPos } = useDistanceIndicators(isPreview);
@@ -95,10 +117,21 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
   const { colorScheme, canvas } = resume;
   const visibleBlocks = resume.blocks.filter((b) => b.visible);
 
+  // ===== 分页计算 =====
+  // pageHeight 默认等于 canvas.height（单页模式），设置后启用自动分页
+  const pageHeight = canvas.pageHeight || canvas.height;
+  // 计算内容实际所需高度：所有可见块的最大底部坐标
+  const contentBottom = visibleBlocks.length > 0
+    ? Math.max(...visibleBlocks.map((b) => b.y + b.height + (b.style?.margin?.bottom || 0)))
+    : canvas.height;
+  const minHeight = Math.max(canvas.height, contentBottom);
+  const { pageCount, totalHeight, breakPositions } = computePageBreaks(minHeight, pageHeight);
+
   // 页面样式
   const pageStyle: React.CSSProperties = {
     width: canvas.width,
-    minHeight: canvas.height,
+    minHeight: totalHeight,
+    height: totalHeight,
     backgroundColor: canvas.background || colorScheme.background,
     ...(canvas.backgroundImage ? {
       backgroundImage: `url(${canvas.backgroundImage})`,
@@ -597,6 +630,17 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
     // 离开块时不立即清除，保持当前选中块的距离显示
   }, []);
 
+  // 鼠标离开画布页面时，如果没有选中元素则清除距离标注
+  // （hover 状态随鼠标离开自然失效，有选中元素则保留距离标注）
+  const handlePageMouseLeave = useCallback(() => {
+    if (isPreview) return;
+    const { selectedBlockId } = useResumeStore.getState().editor;
+    if (!selectedBlockId) {
+      clearDistances();
+      setActiveBlockId(null);
+    }
+  }, [isPreview, clearDistances]);
+
   return (
     <div className={`editor-canvas ${isPreview ? 'preview-mode' : ''}`}>
       <div
@@ -608,6 +652,7 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
         onDrop={isPreview ? undefined : handleDrop}
         onMouseDown={isPreview ? undefined : marquee.handleCanvasMouseDown}
         onClick={marquee.handleCanvasClick}
+        onMouseLeave={isPreview ? undefined : handlePageMouseLeave}
       >
         {/* 画布覆盖层：内边距、网格、对齐线、距离、提示、框选 */}
         <CanvasOverlay
@@ -627,8 +672,20 @@ export default function EditorCanvas({ mode = 'edit' }: EditorCanvasProps) {
           <WatermarkOverlay
             watermark={canvas.watermark}
             canvasWidth={canvas.width}
-            canvasHeight={canvas.height}
+            canvasHeight={totalHeight}
           />
+        )}
+
+        {/* 分页分隔线 */}
+        {pageCount > 1 && (
+          <div data-page-break-overlay>
+            <PageBreakOverlay
+              breakPositions={breakPositions}
+              canvasWidth={canvas.width}
+              isPreview={isPreview}
+              pageHeight={pageHeight}
+            />
+          </div>
         )}
 
         {/* 渲染分组边框 */}

@@ -122,6 +122,29 @@ export default function CanvasLayoutPanel({ resume }: CanvasLayoutPanelProps) {
         />
       </div>
 
+      {/* 自动分页 */}
+      <div className="right-panel-field">
+        <label className="right-panel-label">每页高度</label>
+        <InputNumber
+          value={resume.canvas.pageHeight || resume.canvas.height}
+          onChange={(val) => {
+            if (val !== null) {
+              // 当值等于画布高度时，清除 pageHeight（使用默认值）
+              setCanvasConfig({ pageHeight: val === resume.canvas.height ? undefined : val });
+            }
+          }}
+          size="small"
+          style={{ width: '100%' }}
+          step={1}
+          min={200}
+          max={5000}
+          addonAfter="px"
+        />
+      </div>
+      <div style={{ fontSize: 11, color: '#999', marginBottom: 4, lineHeight: 1.4 }}>
+        内容超过此高度时自动分页，默认等于画布高度
+      </div>
+
       <Divider style={{ margin: '8px 0' }} />
 
       {/* 画布内边距 */}
@@ -278,6 +301,7 @@ export default function CanvasLayoutPanel({ resume }: CanvasLayoutPanelProps) {
           backgroundImage: undefined,
           backgroundSize: undefined,
           watermark: undefined,
+          pageHeight: undefined,
         })}
         style={{ width: '100%' }}
       >

@@ -8,6 +8,39 @@ export const CANVAS_DEFAULT_PADDING = 40;
 /** 默认画布背景色 */
 export const CANVAS_DEFAULT_BACKGROUND = '#ffffff';
 
+// ========== 分页配置 ==========
+/** 分页分隔线颜色 */
+export const PAGE_BREAK_LINE_COLOR = 'rgba(0, 0, 0, 0.15)';
+/** 分页分隔线标签背景色 */
+export const PAGE_BREAK_LABEL_BG = 'rgba(0, 0, 0, 0.06)';
+/** 分页分隔线标签文字色 */
+export const PAGE_BREAK_LABEL_COLOR = 'rgba(0, 0, 0, 0.45)';
+/** 分页间距（编辑模式下页面之间的间距） */
+export const PAGE_GAP = 12;
+
+/**
+ * 计算分页信息
+ * @param contentHeight - 实际内容所需的最小高度
+ * @param pageHeight - 每页高度
+ * @returns 分页数据：总页数、总画布高度、各分页线Y坐标
+ */
+export function computePageBreaks(contentHeight: number, pageHeight: number): {
+  pageCount: number;
+  totalHeight: number;
+  breakPositions: number[];
+} {
+  if (pageHeight <= 0) {
+    return { pageCount: 1, totalHeight: contentHeight, breakPositions: [] };
+  }
+  const pageCount = Math.max(1, Math.ceil(contentHeight / pageHeight));
+  const totalHeight = pageCount * pageHeight;
+  const breakPositions: number[] = [];
+  for (let i = 1; i < pageCount; i++) {
+    breakPositions.push(i * pageHeight);
+  }
+  return { pageCount, totalHeight, breakPositions };
+}
+
 // ========== 水印默认配置 ==========
 /** 水印默认文字 */
 export const WATERMARK_DEFAULT_TEXT = '';

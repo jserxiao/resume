@@ -147,6 +147,7 @@ export interface CanvasConfig {
   backgroundImage?: string;     // 画布背景图片URL
   backgroundSize?: 'cover' | 'contain' | 'auto'; // 背景图片适配方式
   watermark?: WatermarkConfig;  // 水印配置
+  pageHeight?: number;          // 每页高度（px），默认等于 height，超过自动分页
 }
 
 // ========== 水印配置 ==========
